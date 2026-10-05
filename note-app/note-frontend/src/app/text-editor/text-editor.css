@@ -1,0 +1,144 @@
+.editor-toolbar {
+  display: flex;
+  gap: 4px;
+  padding: 8px;
+  background: #2a2d3a;
+  flex-wrap: wrap;
+  align-items: center;
+  border-radius: 8px;
+}
+
+.toolbar-btn {
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 14px;
+  min-width: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  color: #e8e8e8;
+  border: 1px solid transparent;
+}
+
+.toolbar-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.toolbar-btn.active {
+  background: #3d5a73;
+  border-color: #5a9fd4;
+  color: #ffffff;
+}
+
+.toolbar-divider {
+  width: 1px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.15);
+  margin: 0 4px;
+}
+
+.color-picker {
+  width: 36px;
+  height: 32px;
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.highlight-btn {
+  font-weight: bold;
+  font-size: 13px;
+}
+
+/* TipTap Editor Styles */
+.content-text {
+  flex: 1;
+  overflow: auto;
+  padding: 0;
+}
+
+.tiptap-wrapper {
+  height: 100%;
+  display: block;
+}
+
+/* Style the TipTap content */
+::ng-deep .tiptap-editor-content {
+  outline: none;
+  padding: 16px;
+  min-height: 300px;
+  height: 100%;
+  color: #e0e0e0;
+  line-height: 1.6;
+}
+
+::ng-deep .tiptap-editor-content p {
+  margin: 0 0 1em 0;
+}
+
+::ng-deep .tiptap-editor-content h1 {
+  font-size: 2em;
+  font-weight: bold;
+  margin: 0.67em 0;
+  color: #f0f0f0;
+}
+
+::ng-deep .tiptap-editor-content h2 {
+  font-size: 1.5em;
+  font-weight: bold;
+  margin: 0.75em 0;
+  color: #f0f0f0;
+}
+
+::ng-deep .tiptap-editor-content h3 {
+  font-size: 1.25em;
+  font-weight: bold;
+  margin: 0.83em 0;
+  color: #f0f0f0;
+}
+
+::ng-deep .tiptap-editor-content ul,
+::ng-deep .tiptap-editor-content ol {
+  padding-left: 1.5em;
+  margin: 0.5em 0;
+}
+
+::ng-deep .tiptap-editor-content li {
+  margin: 0.25em 0;
+}
+
+::ng-deep .tiptap-editor-content mark {
+  padding: 0 0.2em;
+  border-radius: 2px;
+  background-color: rgba(255, 235, 59, 0.3);
+}
+
+::ng-deep .tiptap-editor-content strong {
+  font-weight: bold;
+  color: #f5f5f5;
+}
+
+::ng-deep .tiptap-editor-content em {
+  font-style: italic;
+}
+
+::ng-deep .tiptap-editor-content u {
+  text-decoration: underline;
+  text-decoration-color: rgba(255, 255, 255, 0.5);
+}
+
+::ng-deep .tiptap-editor-content s {
+  text-decoration: line-through;
+  text-decoration-color: rgba(255, 255, 255, 0.5);
+}
+
+/* Focus styles */
+::ng-deep .tiptap-editor-content:focus {
+  outline: none;
+}

@@ -1,0 +1,207 @@
+
+/** Mini Assistant Widget **/
+.assistant-widget {
+  position: fixed;
+  right: 1rem;
+  bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(10px);
+  padding: 0.5rem 0.6rem 0.5rem 0.5rem;
+  border-radius: 999px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  z-index: 1000;
+}
+
+.assistant-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: assistantFloat 4s ease-in-out infinite;
+  border: 1px solid var(--glass-border);
+  cursor: pointer;
+}
+
+.assistant-avatar img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+}
+
+@keyframes assistantFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+.assistant-input {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.assistant-input input {
+  width: 180px;
+  max-width: 52vw;
+  padding: 0.5rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border);
+  outline: none;
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--text-light);
+}
+
+.assistant-input input::placeholder {
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.assistant-send {
+  background: linear-gradient(135deg, var(--accent-color), var(--primary-color));
+  border: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  color: var(--text-light);
+  cursor: pointer;
+  box-shadow: 0 10px 20px rgba(240, 147, 251, 0.3);
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+.assistant-send:hover {
+  transform: translateY(-1px) scale(1.03);
+  box-shadow: 0 12px 24px rgba(240, 147, 251, 0.45);
+}
+
+.assistant-input.sent {
+  transform: scale(0.98);
+  transition: transform 0.2s ease;
+}
+
+/* Small chat window panel */
+.assistant-panel {
+  position: absolute;
+  right: 0;
+  bottom: 56px; /* sit above the bar */
+  width: 280px;
+  height: 340px;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.35);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  backdrop-filter: blur(10px);
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--glass-border);
+}
+
+.panel-header .title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--text-light);
+  font-weight: 600;
+}
+
+.panel-header .title img {
+  width: 20px;
+  height: 20px;
+}
+
+.panel-header .close {
+  background: transparent;
+  border: none;
+  color: var(--text-light);
+  font-size: 20px;
+  cursor: pointer;
+}
+
+.messages {
+  flex: 1;
+  padding: 0.75rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.message {
+  display: flex;
+}
+.message.user {
+  justify-content: flex-end;
+}
+.message.assistant {
+  justify-content: flex-start;
+}
+
+.bubble {
+  max-width: 80%;
+  padding: 0.5rem 0.6rem;
+  border-radius: 12px;
+  line-height: 1.25;
+  font-size: 0.92rem;
+  color: var(--text-light);
+}
+.message.user .bubble {
+  background: rgba(255,255,255,0.18);
+  border: 1px solid var(--glass-border);
+}
+.message.assistant .bubble {
+  background: rgba(240,147,251,0.15);
+  border: 1px solid rgba(240,147,251,0.35);
+}
+
+.panel-input {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.6rem 0.6rem 0.6rem;
+}
+.panel-input input {
+  flex: 1;
+  padding: 0.5rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid var(--glass-border);
+  outline: none;
+  background: rgba(255,255,255,0.12);
+  color: var(--text-light);
+}
+.panel-input button {
+  background: linear-gradient(135deg, var(--accent-color), var(--primary-color));
+  border: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  color: var(--text-light);
+  cursor: pointer;
+}
+
+@media (max-width: 480px) {
+  .assistant-input input {
+    width: 44vw;
+  }
+  .assistant-widget {
+    right: 0.75rem;
+    bottom: 0.75rem;
+  }
+  .assistant-panel {
+    width: 88vw;
+    height: 54vh;
+  }
+}

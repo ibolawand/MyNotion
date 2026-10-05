@@ -1,0 +1,74 @@
+@if (modelService.isOpen$ | async) {
+  <div class="main-content">
+      <div class="content-header">
+        <input placeholder="Write your title here" type="text" [(ngModel)]="title" (ngModelChange)="onTitleChange($event)">
+      <div class="content-actions">
+        <button class="icon-btn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
+          </svg>
+        </button>
+        <button class="icon-btn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+          </svg>
+        </button>
+        <button class="icon-btn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="1"></circle>
+            <circle cx="12" cy="5" r="1"></circle>
+            <circle cx="12" cy="19" r="1"></circle>
+          </svg>
+        </button>
+      </div>
+    </div>
+    <div class="content-body">
+      <div class="editor-toolbar">
+        <button class="toolbar-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
+          </svg>
+        </button>
+        <button class="toolbar-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="4" y1="9" x2="20" y2="9"></line>
+            <line x1="4" y1="15" x2="20" y2="15"></line>
+          </svg>
+        </button>
+        <button class="toolbar-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+          </svg>
+        </button>
+        <button class="toolbar-btn">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M12 16v-4"></path>
+            <path d="M12 8h.01"></path>
+          </svg>
+        </button>
+      </div>
+      <div class="content-text">
+        <textarea placeholder="Start writing your note here..." [(ngModel)]="content" (ngModelChange)="onContentChange($event)"></textarea>
+      </div>
+    </div>
+    <div class="content-footer">
+      <div style="display:flex; gap:8px; align-items:center;">
+        <label for="categorySelect" style="font-size:12px;color:#6b7280;">Category:</label>
+        <select id="categorySelect" [(ngModel)]="currentNote.categoryID" (ngModelChange)="onCategoryChange($event)">
+          <option [value]="0">Uncategorized</option>
+          @for (cat of categories; track cat.id) {
+            <option value="{{cat.id}}">{{ cat.name }}</option>
+          }
+        </select>
+      </div>
+      <div style="margin-left:auto;">
+        <span>Words: 450 | Chars: 2896</span>
+        <span style="margin-left:12px">🔄 <small>{{ noteService.saveStatus$ | async }}</small></span>
+      </div>
+    </div>
+  </div>
+
+}
+

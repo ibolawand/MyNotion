@@ -1,0 +1,61 @@
+@if (modelService.openCalendar$ | async) {
+<div class="calendar-container">
+  <div class="calendar-header">
+    <h2 class="calendar-title">{{ weekRangeText }}</h2>
+    <div class="calendar-nav">
+      <button class="nav-btn today-btn" (click)="goToToday()">Today</button>
+      <button class="nav-btn" (click)="previousWeek()">◀ Prev</button>
+      <button class="nav-btn" (click)="nextWeek()">Next ▶</button>
+    </div>
+  </div>
+
+  <div class="week-header">
+    <div class="timezone-label">GMT+02</div>
+    @for (day of weekDates; track day.date) {
+    <div class="day-header" [class.today]="day.isToday">
+      <div class="day-name">{{ day.dayName }}</div>
+      <div class="day-number">{{ day.date }}</div>
+    </div>
+    }
+  </div>
+
+  <div class="all-day-section">
+    <div class="all-day-label">All-day</div>
+    @for (day of weekDates; track day.date; let i = $index) {
+    <div class="all-day-cell">
+      @for (event of getAllDayEventsForDay(i); track event.title) {
+      <div class="all-day-event">{{ event.title }} </div>
+      }
+    </div>
+    }
+  </div>
+
+  <div class="calendar-grid">
+    <div class="time-column">
+      @for (hour of hours; track hour) {
+      <div class="time-slot">{{ hour }}</div>
+      }
+    </div>
+
+    @for (day of weekDates; track day.date; let i = $index) {
+    <div class="day-column">
+      @for (hour of hours; track hour; let hIndex = $index) {
+      <div class="hour-slot" (click)="createEvent(i, hIndex + 8)"></div>
+      }
+
+      @for (event of getEventsForDay(i); track event.title) {
+      <div class="event" [ngClass]="'event-' + event.color" [style.top.px]="(event.startHour - 8) * 100"
+        [style.height.px]="event.duration * 100">
+        <div class="event-title">{{ event.title }}</div>
+        <div class="event-time">{{ formatEventTime(event.startHour, event.duration) }}</div>
+      </div>
+      }
+
+      @if (i === currentDayIndex && currentTimePosition >= 0) {
+      <div class="current-time-indicator" [style.top.px]="currentTimePosition"></div>
+      }
+    </div>
+    }
+  </div>
+</div>
+}

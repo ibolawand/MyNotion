@@ -1,0 +1,263 @@
+.register-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    height: 100vh;
+    width: 100vw;
+    background: #1a2332;
+    position: fixed;
+    top: 0;
+    left: 0;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+.register-container::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.register-card {
+    width: 100%;
+    max-width: 520px;
+    background: transparent;
+    backdrop-filter: none;
+    border: none;
+    border-radius: 0;
+    padding: 60px 50px;
+    box-shadow: none;
+    animation: slideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+    z-index: 1;
+    margin: auto;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 36px;
+}
+
+.logo-icon {
+    font-size: 32px;
+    width: 56px;
+    height: 56px;
+    background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 24px;
+    box-shadow: 0 8px 24px rgba(34, 197, 94, 0.25);
+}
+
+h2 {
+    color: #ffffff;
+    font-size: 28px;
+    font-weight: 600;
+    margin-bottom: 8px;
+    letter-spacing: -0.5px;
+}
+
+.header p {
+    color: #8b95a8;
+    font-size: 15px;
+    font-weight: 400;
+}
+
+.form-group {
+    margin-bottom: 18px;
+}
+
+.form-row {
+    display: flex;
+    gap: 14px;
+}
+
+.form-row .form-group {
+    flex: 1;
+}
+
+label {
+    display: block;
+    color: #d1d5db;
+    font-size: 14px;
+    font-weight: 500;
+    margin-bottom: 8px;
+    margin-left: 0;
+}
+
+.input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.input-wrapper svg {
+    position: absolute;
+    left: 14px;
+    color: #6b7280;
+    pointer-events: none;
+    transition: color 0.2s;
+}
+
+input {
+    width: 100%;
+    padding: 12px 14px 12px 42px;
+    background: #2a3544;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    color: #ffffff;
+    font-size: 15px;
+    transition: all 0.2s;
+    outline: none;
+}
+
+input::placeholder {
+    color: #6b7280;
+}
+
+input:hover {
+    background: #303c4d;
+    border-color: rgba(255, 255, 255, 0.05);
+}
+
+input:focus {
+    background: #303c4d;
+    border-color: #4ade80;
+    box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.08);
+}
+
+.input-wrapper:focus-within svg {
+    color: #4ade80;
+}
+
+.submit-btn {
+    width: 100%;
+    padding: 13px;
+    background: #3d4a5c;
+    color: #b4bcc8;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 24px;
+    transition: all 0.2s;
+    box-shadow: none;
+}
+
+.submit-btn:hover:not(:disabled) {
+    background: #4a5768;
+    color: #d1d5db;
+    transform: none;
+}
+
+.submit-btn:active:not(:disabled) {
+    transform: scale(0.98);
+}
+
+.submit-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    background: #3d4a5c;
+    color: #6b7280;
+}
+
+.divider {
+    text-align: center;
+    color: #6b7280;
+    font-size: 13px;
+    margin: 28px 0;
+    position: relative;
+}
+
+.divider::before,
+.divider::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 45%;
+    height: 1px;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.divider::before {
+    left: 0;
+}
+
+.divider::after {
+    right: 0;
+}
+
+.footer-links {
+    text-align: center;
+}
+
+.footer-links p {
+    color: #8b95a8;
+    font-size: 14px;
+}
+
+.footer-links a {
+    color: #4ade80;
+    font-weight: 600;
+    text-decoration: none;
+    margin-left: 4px;
+    transition: color 0.2s;
+}
+
+.footer-links a:hover {
+    color: #86efac;
+    text-decoration: none;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+    .register-card {
+        padding: 40px 24px;
+        border-radius: 0;
+    }
+
+    .register-container {
+        padding: 16px;
+    }
+
+    .form-row {
+        flex-direction: column;
+        gap: 0;
+    }
+
+    h2 {
+        font-size: 24px;
+    }
+
+    .logo-icon {
+        width: 48px;
+        height: 48px;
+        font-size: 28px;
+    }
+}
