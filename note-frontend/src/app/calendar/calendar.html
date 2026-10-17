@@ -1,0 +1,148 @@
+@if (modelService.openCalendar$ | async) {
+<div class="calendar-container">
+
+  <div class="calendar-header">
+    <h2 class="calendar-title">{{ weekRangeText }}</h2>
+    <div class="calendar-nav">
+      <button class="nav-btn add-btn" (click)="openAddEvent()">+ New Event</button>
+      <button class="nav-btn today-btn" (click)="goToToday()">Today</button>
+      <button class="nav-btn" (click)="previousWeek()">◀ Prev</button>
+      <button class="nav-btn" (click)="nextWeek()">Next ▶</button>
+    </div>
+  </div>
+
+  <div class="calendar-scroll" #scrollArea>
+
+    <div class="calendar-sticky">
+      <div class="week-header">
+        <div class="timezone-label">GMT+02</div>
+        @for (day of weekDates; track day.iso) {
+        <div class="day-header" [class.today]="day.isToday">
+          <div class="day-name">{{ day.dayName }}</div>
+          <div class="day-number">{{ day.date }}</div>
+        </div>
+        }
+      </div>
+
+      <div class="all-day-section">
+        <div class="all-day-label">All-day</div>
+        @for (day of weekDates; track day.iso; let i = $index) {
+        <div class="all-day-cell">
+          @for (event of getAllDayEventsForDay(i); track event.id) {
+          <div class="all-day-event">
+            <span class="all-day-title">{{ event.title }}</span>
+            <button class="all-day-delete" title="Delete" (click)="deleteEvent(event.id)">×</button>
+          </div>
+          }
+        </div>
+        }
+      </div>
+    </div>
+
+    <div class="calendar-grid">
+      <div class="time-column">
+        @for (hour of hours; track hour) {
+        <div class="time-slot">{{ hour }}</div>
+        }
+      </div>
+
+      @for (day of weekDates; track day.iso; let i = $index) {
+      <div class="day-column" [class.today]="day.isToday">
+        @for (hour of hours; track hour; let hIndex = $index) {
+        <div class="hour-slot" title="Add event" (click)="createEvent(i, hIndex + 8)"></div>
+        }
+
+        @for (event of getEventsForDay(i); track event.id) {
+        <div class="event" [ngClass]="'event-' + event.color"
+          [style.top.px]="(event.startHour - 8) * 100"
+          [style.height.px]="event.duration * 100">
+          <button class="event-delete" title="Delete" (click)="deleteEvent(event.id)">×</button>
+          <div class="event-title">{{ event.title }}</div>
+          <div class="event-time">{{ formatEventTime(event.startHour, event.duration) }}</div>
+        </div>
+        }
+
+        @if (i === currentDayIndex && currentTimePosition >= 0) {
+        <div class="current-time-indicator" [style.top.px]="currentTimePosition"></div>
+        }
+      </div>
+      }
+    </div>
+
+  </div>
+
+  <!-- ===== ADD EVENT DIALOG ===== -->
+  @if (showAddEvent) {
+  <div class="modal-backdrop" (click)="closeAddEvent()">
+    <div class="event-modal" (click)="$event.stopPropagation()">
+
+      <div class="modal-header">
+        <div class="modal-title">New Event</div>
+        <button class="modal-close" (click)="closeAddEvent()" title="Close">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <div class="field">
+        <label class="field-label">Title</label>
+        <input class="field-input" type="text" placeholder="e.g. Dentist, Study session..."
+               [(ngModel)]="form.title" (keydown.enter)="saveEvent()" autofocus>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label class="field-label">Date</label>
+          <input class="field-input" type="date" [(ngModel)]="form.date">
+        </div>
+        @if (!form.allDay) {
+        <div class="field">
+          <label class="field-label">Start</label>
+          <input class="field-input" type="time" step="900" min="08:00" max="22:45" [(ngModel)]="form.start">
+        </div>
+        }
+      </div>
+
+      <label class="check-row">
+        <input type="checkbox" [(ngModel)]="form.allDay">
+        <span>All-day event</span>
+      </label>
+
+      @if (!form.allDay) {
+      <div class="field">
+        <label class="field-label">Duration</label>
+        <select class="field-input" [(ngModel)]="form.duration">
+          @for (d of durations; track d.value) {
+          <option [ngValue]="d.value">{{ d.label }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="field">
+        <label class="field-label">Color</label>
+        <div class="swatches">
+          @for (c of colors; track c) {
+          <button class="swatch" [ngClass]="'swatch-' + c" [class.selected]="form.color === c"
+                  (click)="form.color = c" [title]="c"></button>
+          }
+        </div>
+      </div>
+      }
+
+      @if (formError) {
+      <div class="form-error">{{ formError }}</div>
+      }
+
+      <div class="modal-actions">
+        <button class="btn btn-cancel" (click)="closeAddEvent()">Cancel</button>
+        <button class="btn btn-create" (click)="saveEvent()">Add Event</button>
+      </div>
+
+    </div>
+  </div>
+  }
+
+</div>
+}

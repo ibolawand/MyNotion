@@ -1,0 +1,111 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+.container {
+  display: flex;
+  height: 100vh;
+  padding-top: 40px;
+  background: linear-gradient(135deg, #1a1d2e 0%, #252837 100%);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  color: #e4e7eb;
+}
+
+app-side-bar {
+  display: flex;
+  flex: 0 0 280px;
+  min-width: 0;
+  height: 100%;
+}
+
+app-overview-panel {
+  display: flex;
+  flex: 0 0 360px;
+  min-width: 0;
+  height: 100%;
+}
+
+app-adder,
+app-editor,
+app-calendar {
+  flex: 1;
+  display: flex;
+  min-width: 0;
+  height: 100%;
+}
+
+.empty-workspace {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  text-align: center;
+  padding: 32px;
+  color: #6b7280;
+}
+
+.empty-workspace-icon {
+  font-size: 48px;
+}
+
+.empty-workspace h2 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #cbd5e1;
+}
+
+.empty-workspace p {
+  font-size: 14px;
+  max-width: 340px;
+  line-height: 1.5;
+}
+
+.chevron {
+  transition: transform 0.2s;
+  flex-shrink: 0;
+}
+
+.chevron.expanded {
+  transform: rotate(90deg);
+}
+
+.sublist {
+  padding-left: 30px;
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease;
+}
+
+.sublist {
+  max-height: 500px;
+  /* Adjust as needed */
+}
+
+.submenu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.submenu-item:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.delete-icon {
+  margin-left: auto;
+  cursor: pointer;
+  opacity: 0.4;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.delete-icon:hover {
+  opacity: 1;
+  stroke: #ef4444;
+}

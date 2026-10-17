@@ -1,0 +1,30 @@
+<div class="event-adder-overlay" (click)="close()">
+    <div class="event-adder" (click)="$event.stopPropagation()">
+        <div class="header">
+            <h2>Add Event</h2>
+            <button class="close-btn" (click)="close()">×</button>
+        </div>
+        <form (ngSubmit)="submit()">
+            <div class="form-group">
+                <label for="title">Title:</label>
+                <input type="text" id="title" name="title" [(ngModel)]="title" required>
+            </div>
+            <div class="form-group">
+                <label for="start-time">Start Time:</label>
+                <input type="datetime-local" id="start-time" name="start-time" [(ngModel)]="startTime" required>
+            </div>
+            <div class="form-group">
+                <label for="end-time">End Time:</label>
+                <input type="datetime-local" id="end-time" name="end-time" [(ngModel)]="endTime" required>
+            </div>
+            <div class="form-group">
+                <label for="description">Description:</label>
+                <textarea id="description" name="description" [(ngModel)]="description"></textarea>
+            </div>
+            <div class="actions">
+                <button type="button" (click)="close()">Cancel</button>
+                <button type="submit" class="primary">Add Event</button>
+            </div>
+        </form>
+    </div>
+</div>

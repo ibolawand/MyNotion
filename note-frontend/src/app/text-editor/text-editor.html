@@ -1,0 +1,49 @@
+<div class="content-body">
+  <div class="editor-toolbar">
+    @for (format of textFormats; track format.command) {
+    <button class="toolbar-btn" [class.active]="isActive(format.checkActive)" (click)="executeCommand(format.command)"
+      [title]="format.title">
+      @switch (format.label) {
+      @case ('B') { <strong>B</strong> }
+      @case ('I') { <em>I</em> }
+      @case ('U') { <u>U</u> }
+      @case ('S') { <s>S</s> }
+      }
+    </button>
+    }
+    <div class="toolbar-divider"></div>
+
+    @for (heading of headings; track heading.level) {
+    <button class="toolbar-btn" [class.active]="isActive('heading', { level: heading.level })"
+      (click)="executeCommand('toggleHeading', { level: heading.level })" [title]="heading.title">
+      {{ heading.label }}
+    </button>
+    }
+
+    <div class="toolbar-divider"></div>
+
+    @for (list of lists; track list.command) {
+    <button class="toolbar-btn" [class.active]="isActive(list.checkActive)" (click)="executeCommand(list.command)"
+      [title]="list.title">
+      {{ list.icon }}
+    </button>
+    }
+
+    <div class="toolbar-divider"></div>
+
+    <!-- Colors -->
+    <input type="color" class="color-picker" (input)="setColor($any($event.target).value)" title="Text Color">
+
+    <!-- Highlights -->
+    @for (highlight of highlights; track highlight.color) {
+    <button class="toolbar-btn highlight-btn" (click)="setHighlight(highlight.color)"
+      [style.background]="highlight.color" [style.color]="highlight.color === '#ffeb3b' ? '#000' : '#fff'"
+      [title]="highlight.label + ' Highlight'">
+      A
+    </button>
+    }
+  </div>
+  <div class="content-text">
+    <tiptap-editor [editor]="editor"></tiptap-editor>
+  </div>
+</div>

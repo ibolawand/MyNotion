@@ -1,0 +1,26 @@
+<div class="container">
+  <app-window-bar></app-window-bar>
+
+  @if (!(modelService.isLoggedIn | async)) {
+  <app-create-account></app-create-account>
+  }
+
+  @if (modelService.openDashboard$ | async) {
+  <app-side-bar></app-side-bar>
+  <app-overview-panel></app-overview-panel>
+
+  @if (modelService.isOpen$ | async) {
+  <app-adder></app-adder>
+  } @else if (modelService.isExistingNoteOpen$ | async) {
+  <app-editor></app-editor>
+  } @else if (modelService.openCalendar$ | async) {
+  <app-calendar></app-calendar>
+  } @else {
+  <div class="empty-workspace">
+    <div class="empty-workspace-icon">📝</div>
+    <h2>No note open</h2>
+    <p>Click “New Note” to start writing, or pick a note from the list.</p>
+  </div>
+  }
+  }
+</div>
