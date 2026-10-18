@@ -2,6 +2,7 @@ interface Note {
     title: string,
     content: string,
     categoryID: number,
+    folderID?: number,
     userID:number,
 }
 interface Category {
@@ -14,6 +15,8 @@ interface Folder {
     id: number,
     name: string,
     colour: string,
+    userID: number | null,
+    parentID: number | null,
 }
 interface User {
     id: number,

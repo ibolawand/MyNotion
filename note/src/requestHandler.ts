@@ -142,9 +142,9 @@ export function setUpHandlers() {
     ipcMain.handle('create:note', async (event, data: any) => {
         try {
             const db = await DB.getConnection();
-            const stmt = await db.prepare(`INSERT INTO notes (title, content, categoryID, userID)
-                                           VALUES (?, ?, ?, ?)`);
-            const res = await stmt.run(data.title, data.content, data.categoryID, data.userID);
+            const stmt = await db.prepare(`INSERT INTO notes (title, content, categoryID, folderID, userID)
+                                           VALUES (?, ?, ?, ?, ?)`);
+            const res = await stmt.run(data.title, data.content, data.categoryID, data.folderID ?? 0, data.userID);
             await stmt.finalize();
             const id = res?.lastID;
             return { ok: true, id };
@@ -169,9 +169,9 @@ export function setUpHandlers() {
         try {
             const db = await DB.getConnection();
             const stmt = await db.prepare(`UPDATE notes
-                                           SET title = ?, content = ?, categoryID = ?, updated_at = CURRENT_TIMESTAMP
+                                           SET title = ?, content = ?, categoryID = ?, folderID = ?, updated_at = CURRENT_TIMESTAMP
                                            WHERE id = ?`);
-            await stmt.run(data.title, data.content, data.categoryID, data.id);
+            await stmt.run(data.title, data.content, data.categoryID, data.folderID ?? 0, data.id);
             await stmt.finalize();
             return { ok: true };
         } catch (err) {
@@ -273,8 +273,8 @@ export function setUpHandlers() {
     ipcMain.handle('addFolder', async (event, folder: Folder) => {
         try {
             const db = await DB.getConnection();
-            const stmt = await db.prepare(`INSERT INTO FOLDERS (name, colour) VALUES (?, ?)`)
-            const res = await stmt.run(folder.name, folder.colour);
+            const stmt = await db.prepare(`INSERT INTO FOLDERS (name, colour, userID, parentID) VALUES (?, ?, ?, ?)`);
+            const res = await stmt.run(folder.name, folder.colour, folder.userID, folder.parentID ?? null);
             await stmt.finalize();
             return { ok: true, id: res?.lastID };
         } catch (err) {
@@ -294,6 +294,18 @@ export function setUpHandlers() {
             return [];
         }
     })
+    ipcMain.handle('getNoteInFolder', async (event, folderId: number, userId: number) => {
+        try {
+            const db = await DB.getConnection();
+            const stmt = await db.prepare(`SELECT * FROM notes WHERE folderID = ? AND userID = ?`);
+            const result: Note[] = await stmt.all(folderId, userId);
+            await stmt.finalize();
+            return result;
+        } catch (err) {
+            console.error('getNoteInFolder error:', err);
+            return [];
+        }
+    })  
     ipcMain.handle('deleteFolder', async (event, folder: Folder) => {
         try {
             const db = await DB.getConnection();

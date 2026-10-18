@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Subject } from 'rxjs';
-import { Note } from '../model/models';
+import { Folder, Note } from '../model/models';
 
 @Injectable({ providedIn: 'root' })
 export class ModelService {
@@ -11,6 +11,7 @@ export class ModelService {
   openOverview = new BehaviorSubject(false);
   isStartingPageOpen = new BehaviorSubject(true);
   isLoggedIn = new BehaviorSubject(false);
+  isAllNotesFolderOpen = new BehaviorSubject(false);
 
 
   isOpen$ = this.isOpen.asObservable();
@@ -21,12 +22,21 @@ export class ModelService {
   openCalendar$ = this.openCalendar.asObservable();
   openOverview$ = this.openOverview.asObservable();
   isStartingPageOpen$ = this.isStartingPageOpen.asObservable();
+  isAllNotesFolderOpen$ = this.isAllNotesFolderOpen.asObservable();
 
   // current selected/edited note observable
   private currentNoteSubject: BehaviorSubject<Note | null> = new BehaviorSubject<Note | null>(null);
   public currentNote$ = this.currentNoteSubject.asObservable();
   private openDashboardSubject = new BehaviorSubject<boolean>(false);
   public readonly openDashboard$ = this.openDashboardSubject.asObservable();
+
+  //selected/edited folder observable
+  private currentFolderSubject: BehaviorSubject<Folder | null> = new BehaviorSubject<Folder | null>(null);
+  public currentFolder$ = this.currentFolderSubject.asObservable();
+  currentFolderIds = new BehaviorSubject<number[]>([]);
+
+
+
   toggleLogin() {
     this.isLoggedIn.next(!this.isLoggedIn.value);
   }
@@ -80,12 +90,31 @@ export class ModelService {
   private isFolderAdderOpen: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
   isOpenFolder$ = this.isFolderAdderOpen.asObservable();
 
-  openFolderAdder() {
-    this.isFolderAdderOpen.next(true);
+  openAllNotesFolder() {
+    this.isAllNotesFolderOpen.next(true);
   }
+  
+  closeAllNotesFolder() {
+    this.isAllNotesFolderOpen.next(false);
+  }
+
+  getCurrentFolder() {
+    return this.currentFolderSubject.value;
+  }
+
+  setCurrentFolder(folder: Folder | null) {
+    this.currentFolderSubject.next(folder);
+  }
+
 
   closeFolderAdder() {
     this.isFolderAdderOpen.next(false);
+  }
+  // ModelService
+  folderAdderParent: number | null = null;
+  openFolderAdder(parentID: number | null = null) {
+    this.folderAdderParent = parentID;
+    this.isFolderAdderOpen.next(true);
   }
 
   //endregion
@@ -105,18 +134,6 @@ export class ModelService {
   closeEventAdder() {
     this.isEventAdderOpen.next(false);
     this.selectedDate.next(null);
-  }
-  addEvent(event: any) {
-    // logic to add event to the calendar
-  }
-  addAllDayEvent(event: any) {
-    // logic to add all-day event to the calendar
-  }
-  deleteEvent(eventId: number) {
-    // logic to delete event from the calendar
-  }
-  updateEvent(event: any) {
-    // logic to update event in the calendar
   }
   //endregion
   public openDashboard() {

@@ -66,14 +66,19 @@ export class OverviewPanel implements OnInit {
 
   async ngOnInit(): Promise<void> {
     try {
+      const folderID: number  = this.modelService.getCurrentFolder()?.id ?? 0; // Default to 0 if no folder is selected
+      const ids = this.modelService.currentFolderIds.value;
+      const inFolder = (n: Note) => ids.length === 0 || ids.includes(n.folderID!);
       console.log(this.currentCategories);
       await this.getNotes();
       await this.noteService.loadCategories();
       this.noteService.notes$.subscribe(list => {
         this.allNotes = list;
-        // Also update the filtered notes for the current category
-        if (this.openCategoryId !== null) {
-          this.notes = this.allNotes.filter(n => n.categoryID === this.openCategoryId);
+        if (this.openCategoryId !== null ) {
+          this.notes = this.allNotes.filter(n => n.categoryID === this.openCategoryId && n.folderID === folderID);
+        }
+        if (folderID !== 0 && !this.modelService.isAllNotesFolderOpen.value) {
+          this.notes = this.allNotes.filter(n => n.folderID === folderID);
         }
       });
 

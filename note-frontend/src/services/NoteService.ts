@@ -17,6 +17,7 @@ declare global {
         updateNote: (note: Note) => Promise<{ ok: boolean; error?: string }>;
         getAllNotes: (userId:number) => Promise<Note[]>;
         getNoteWithCertainCategory: (categoryID: number,userID:number) => Promise<Note[]>;
+        getNoteInFolder: (folderId:number, userId:number) => Promise<Note[]>;
         deleteNote: (id: number) => Promise<{ ok: boolean; error?: string }>;
         getCategories: (userId: number) => Promise<Category[]>;
         createCategory: (category: Partial<Category>) => Promise<Category>;
@@ -114,7 +115,7 @@ export class NoteService {
       debounceTime(600),
       distinctUntilChanged(
         (previous, current) => previous === current,
-        (note: Note) => JSON.stringify({ title: note.title, content: note.content, categoryID: note.categoryID })
+        (note: Note) => JSON.stringify({ title: note.title, content: note.content, categoryID: note.categoryID, folderID: note.folderID })
       ),
       switchMap(note => {
         this.saveStatusSubject.next(SaveStatus.SAVING);
@@ -154,6 +155,7 @@ export class NoteService {
       console.error('Failed to load notes:', err);
     }
   }
+
 
   // update an existing note
   async updateNote(note: Note) {
@@ -266,10 +268,18 @@ export class NoteService {
   private isFolderAdded: Subject<void> = new Subject<void>();
   public readonly folderChanged$ = this.isFolderAdded.asObservable();
 
-  async getFolders(): Promise<Folder[]> {
+
+
+  async getNotesInFolder(folderId: number) {
+    const userId = this.getUserId();
+    const res = await window.electronAPI.notes.getNoteInFolder(folderId, userId);
+    console.log('NoteService.getNotesInFolder', folderId, res);
+    return res;
+  }
+  async loadFolders(): Promise<Folder[]> {
     return await window.electronAPI.folder.getAllFolders();
   }
-  async addFolder(folder: Folder): Promise<void> {
+  async addFolder(folder: Partial<Folder>): Promise<void> {
     return await window.electronAPI.folder.addFolder(folder);
   }
   async deleteFolder(folder: Folder): Promise<void> {

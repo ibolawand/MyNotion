@@ -13,6 +13,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
         login: (user: User) => ipcRenderer.invoke('login', user),
         logout: (user: User) => ipcRenderer.invoke('logout', user),
         getAllNotes: (userId:number) => ipcRenderer.invoke('getAllNotes',userId),
+        getNoteInFolder: (folderId:number, userId:number) => ipcRenderer.invoke('getNoteInFolder',folderId,userId),
         createNote: (note: any) => ipcRenderer.invoke('create:note', note),
         updateNote: (note: any) => ipcRenderer.invoke('update:note', note),
         deleteNote: (id: number): Promise<{ ok: boolean; error?: string }> => ipcRenderer.invoke('delete:note', id),

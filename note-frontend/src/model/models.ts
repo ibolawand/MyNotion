@@ -4,17 +4,16 @@ export interface Note {
   content: string,
   categoryID: number,
   userID?: number,
+  folderID?: number,
 }
 export interface Category {
   id: number,
   name: string,
   userID: number | null,
 }
-export interface Folder {
-  id: number,
-  name: string,
-  colour: string,
-}
+export interface Folder { id: number; name: string; colour?: string; userID: number; parentID: number | null; }
+export interface FolderRow { folder: Folder; depth: number; hasChildren: boolean; }
+
 
 export interface ToolbarFormat {
   command: string;

@@ -29,6 +29,7 @@ export class DB {
             CREATE TABLE IF NOT EXISTS notes (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 categoryID INTEGER NOT NULL DEFAULT 0,
+                folderID INTEGER NOT NULL DEFAULT 0,
                 userID INTEGER NOT NULL,
                 title TEXT NOT NULL,
                 content TEXT,
@@ -40,10 +41,12 @@ export class DB {
                 category TEXT NOT NULL,
                 userID INTEGER NOT NULL
             );
-            CREATE TABLE IF NOT EXISTS FOLDERS (
+           CREATE TABLE IF NOT EXISTS FOLDERS (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL,
-                colour TEXT DEFAULT '#4ade80'
+                colour TEXT DEFAULT '#4ade80',
+                parentID INTEGER DEFAULT NULL REFERENCES FOLDERS(id) ON DELETE CASCADE,
+                userID INTEGER NOT NULL
             );
             CREATE TABLE IF NOT EXISTS USERS (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,

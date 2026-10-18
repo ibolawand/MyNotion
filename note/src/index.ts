@@ -42,7 +42,7 @@ const createWindow = (): void => {
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(async () => {
     await DB.getConnection();
-    //await DB.dropTables();
+    await DB.dropTables();
     await DB.initializeTables();
     setUpHandlers();
     createWindow();

@@ -4,7 +4,7 @@ import {ModelService} from '../model.service';
 import {AsyncPipe} from '@angular/common';
 import {NoteService} from '../../services/NoteService';
 import {FormsModule} from '@angular/forms';
-import {Category, Note} from '../../model/models';
+import {Category, Folder, Note} from '../../model/models';
 import {BehaviorSubject, from, Observable} from 'rxjs';
 
 @Component({
@@ -22,7 +22,8 @@ export class Adder implements OnInit {
   categoryID: number = 0;
   categories$ = new Observable<Category[]>();
   categories: Category[] = [];
-  currentNote: Note= {title: '', content: '', categoryID: 0};
+  folders: Folder[] = [];
+  currentNote: Note= {title: '', content: '', categoryID: 0, folderID: 0};
 
 
 
@@ -36,13 +37,18 @@ export class Adder implements OnInit {
   async ngOnInit() {
     this.noteService.categories$.subscribe(list => this.categories = list);
 
+    this.folders = await this.noteService.loadFolders();
+    this.noteService.folderChanged$.subscribe(async () => {
+      this.folders = await this.noteService.loadFolders();
+    });
+
     // Start a fresh note every time the "New Note" editor is opened.
     this.modelService.isOpen$.subscribe(open => {
       if (open) {
         this.title = '';
         this.content = '';
         this.categoryID = 0;
-        this.currentNote = { title: '', content: '', categoryID: 0 };
+        this.currentNote = { title: '', content: '', categoryID: 0, folderID: 0 };
       }
     });
   }
@@ -62,6 +68,11 @@ export class Adder implements OnInit {
 
   onCategoryChange(value: any) {
     this.currentNote.categoryID = Number(value) || 0;
+    this.noteService.triggerAutoSave(this.currentNote);
+  }
+
+  onFolderChange(value: any) {
+    this.currentNote.folderID = Number(value) || 0;
     this.noteService.triggerAutoSave(this.currentNote);
   }
 }

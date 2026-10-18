@@ -12,8 +12,8 @@ import {FormsModule} from '@angular/forms';
     AsyncPipe,
     FormsModule
   ],
-  templateUrl: './note-adder.html',
-  styleUrls: ['./note-adder.css']
+  templateUrl: './folder-adder.html',
+  styleUrls: ['./folder-adder.css']
 })
 export class FolderAdder {
   name: string = "";
@@ -31,10 +31,9 @@ export class FolderAdder {
   }
 
   async addNoteFolder(): Promise<void> {
-    let id =await this.noteService.getFolders();
-    const folder: Folder = {
-      id:id.length,
+    const folder: Partial<Folder> = {
       name: this.name?.trim() ?? "",
+      userID: this.noteService.getUserId(),
       colour: this.colour,
     };
 

@@ -55,6 +55,15 @@
     </div>
     <div class="content-footer">
       <div style="display:flex; gap:8px; align-items:center;">
+        <label for="folderSelect" style="font-size:12px;color:#6b7280;">Folder:</label>
+        <select id="folderSelect" [(ngModel)]="currentNote.folderID" (ngModelChange)="onFolderChange($event)">
+          <option [value]="0">No folder</option>
+          @for (folder of folders; track folder.id) {
+            <option [value]="folder.id">{{ folder.name }}</option>
+          }
+        </select>
+      </div>
+      <div style="display:flex; gap:8px; align-items:center;">
         <label for="categorySelect" style="font-size:12px;color:#6b7280;">Category:</label>
         <select id="categorySelect" [(ngModel)]="currentNote.categoryID" (ngModelChange)="onCategoryChange($event)">
           <option [value]="0">Uncategorized</option>
