@@ -10,6 +10,7 @@ export class DB {
                 filename: `./${this.DB_NAME}`,
                 driver: sqlite3.Database,
             });
+            await this.dbInstance.exec('PRAGMA foreign_keys = ON;');
             return this.dbInstance;
         } catch (err: any) {
             console.error('Failed to open database:', err);
@@ -71,27 +72,47 @@ export class DB {
         await this.migrateLegacySchema();
     }
 
-    // Older builds created FOLDERS with `description` and `userID` NOT NULL
-    // columns that the app never writes, which made every addFolder INSERT
-    // fail. Rebuild the table if it still has that shape and is empty.
+    // Ensure FOLDERS table has all required columns (parentID, userID, colour)
     private static async migrateLegacySchema() {
         const db = this.dbInstance;
         if (!db) return;
 
-        const folderCols = await db.all(`PRAGMA table_info(FOLDERS)`);
-        const hasLegacyFolders = folderCols.some((c: any) => c.name === 'description');
-        if (!hasLegacyFolders) return;
+        try {
+            const folderCols = await db.all(`PRAGMA table_info(FOLDERS)`);
+            if (!folderCols || folderCols.length === 0) return;
 
-        const row = await db.get(`SELECT COUNT(*) AS n FROM FOLDERS`) as { n: number };
-        if (row.n === 0) {
-            await db.exec(`
-                DROP TABLE FOLDERS;
-                CREATE TABLE IF NOT EXISTS FOLDERS (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    name TEXT NOT NULL,
-                    colour TEXT DEFAULT '#4ade80'
-                );
-            `);
+            const hasParentID = folderCols.some((c: any) => c.name === 'parentID');
+            const hasUserID = folderCols.some((c: any) => c.name === 'userID');
+            const hasColour = folderCols.some((c: any) => c.name === 'colour');
+            const hasLegacyDesc = folderCols.some((c: any) => c.name === 'description');
+
+            if (!hasParentID) {
+                await db.exec(`ALTER TABLE FOLDERS ADD COLUMN parentID INTEGER DEFAULT NULL REFERENCES FOLDERS(id) ON DELETE CASCADE;`);
+            }
+            if (!hasUserID) {
+                await db.exec(`ALTER TABLE FOLDERS ADD COLUMN userID INTEGER NOT NULL DEFAULT 0;`);
+            }
+            if (!hasColour) {
+                await db.exec(`ALTER TABLE FOLDERS ADD COLUMN colour TEXT DEFAULT '#4ade80';`);
+            }
+
+            if (hasLegacyDesc) {
+                const row = await db.get(`SELECT COUNT(*) AS n FROM FOLDERS`) as { n: number };
+                if (row && row.n === 0) {
+                    await db.exec(`
+                        DROP TABLE FOLDERS;
+                        CREATE TABLE IF NOT EXISTS FOLDERS (
+                            id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            name TEXT NOT NULL,
+                            colour TEXT DEFAULT '#4ade80',
+                            parentID INTEGER DEFAULT NULL REFERENCES FOLDERS(id) ON DELETE CASCADE,
+                            userID INTEGER NOT NULL DEFAULT 0
+                        );
+                    `);
+                }
+            }
+        } catch (err) {
+            console.error('migrateLegacySchema error:', err);
         }
     }
     public static async dropTables() {

@@ -1,9 +1,9 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { NoteService } from '../../services/NoteService';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
-import { AsyncPipe } from '@angular/common';
+import { AsyncPipe, CommonModule } from '@angular/common';
 import { Subscription } from 'rxjs';
-import { Note } from '../../model/models';
+import { Category, Folder, Note } from '../../model/models';
 import { ModelService } from '../model.service';
 import { TextEditor } from '../text-editor/text-editor';
 
@@ -13,45 +13,92 @@ import { TextEditor } from '../text-editor/text-editor';
     ReactiveFormsModule,
     FormsModule,
     AsyncPipe,
+    CommonModule,
     TextEditor
   ],
   templateUrl: './editor.html',
   styleUrl: './editor.css'
 })
-export class Editor implements OnInit {
+export class Editor implements OnInit, OnDestroy {
   title: string = '';
   content: string = '';
+  folderID: number = 0;
+  categoryID: number = 0;
   currentNote: Note | null = null;
-  private noteSub?: Subscription;
+  folders: Folder[] = [];
+  categories: Category[] = [];
 
-  constructor(protected modelService: ModelService, protected noteService: NoteService) {
-  }
+  private subscriptions: Subscription[] = [];
 
-  ngOnInit(): void {
-    this.noteSub = this.modelService.currentNote$.subscribe((note: Note | null) => {
-      if (note) {
-        this.currentNote = note;
-        this.title = note.title ?? '';
-        this.content = note.content ?? '';
-      } else {
-        this.currentNote = null;
-        this.title = '';
-        this.content = '';
-      }
-    });
+  constructor(protected modelService: ModelService, protected noteService: NoteService) {}
+
+  async ngOnInit(): Promise<void> {
+    this.folders = await this.noteService.loadFolders();
+    await this.noteService.loadCategories();
+
+    this.subscriptions.push(
+      this.modelService.currentNote$.subscribe((note: Note | null) => {
+        if (note) {
+          this.currentNote = note;
+          this.title = note.title ?? '';
+          this.content = note.content ?? '';
+          this.folderID = note.folderID ?? 0;
+          this.categoryID = note.categoryID ?? 0;
+        } else {
+          this.currentNote = null;
+          this.title = '';
+          this.content = '';
+          this.folderID = 0;
+          this.categoryID = 0;
+        }
+      }),
+      this.noteService.folderChanged$.subscribe(async () => {
+        this.folders = await this.noteService.loadFolders();
+      }),
+      this.noteService.categories$.subscribe(cats => {
+        this.categories = cats || [];
+      })
+    );
   }
 
   ngOnDestroy(): void {
-    this.noteSub?.unsubscribe();
+    this.subscriptions.forEach(s => s.unsubscribe());
   }
 
   onTitleChange(value: string) {
     this.title = value;
     if (this.currentNote) {
       this.currentNote.title = value;
-      // notify other components and trigger autosave
       this.modelService.updateCurrentNote(this.currentNote);
       this.noteService.triggerAutoSave(this.currentNote);
+    }
+  }
+
+  async onFolderChange(value: any) {
+    const id = Number(value) || 0;
+    this.folderID = id;
+    if (this.currentNote) {
+      this.currentNote.folderID = id;
+      this.modelService.updateCurrentNote(this.currentNote);
+      if (this.currentNote.id) {
+        await this.noteService.updateNote(this.currentNote);
+      } else {
+        this.noteService.triggerAutoSave(this.currentNote);
+      }
+    }
+  }
+
+  async onCategoryChange(value: any) {
+    const id = Number(value) || 0;
+    this.categoryID = id;
+    if (this.currentNote) {
+      this.currentNote.categoryID = id;
+      this.modelService.updateCurrentNote(this.currentNote);
+      if (this.currentNote.id) {
+        await this.noteService.updateNote(this.currentNote);
+      } else {
+        this.noteService.triggerAutoSave(this.currentNote);
+      }
     }
   }
 
@@ -63,9 +110,9 @@ export class Editor implements OnInit {
       this.noteService.triggerAutoSave(this.currentNote);
     }
   }
+
   isTextSelected(): boolean {
     const selection = window.getSelection();
     return selection !== null && selection.toString().length > 0;
   }
-
 }

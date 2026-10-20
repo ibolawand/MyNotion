@@ -274,50 +274,97 @@ export function setUpHandlers() {
         try {
             const db = await DB.getConnection();
             const stmt = await db.prepare(`INSERT INTO FOLDERS (name, colour, userID, parentID) VALUES (?, ?, ?, ?)`);
-            const res = await stmt.run(folder.name, folder.colour, folder.userID, folder.parentID ?? null);
+            const res = await stmt.run(
+                folder.name,
+                folder.colour || '#4ade80',
+                folder.userID || 0,
+                folder.parentID ?? null
+            );
             await stmt.finalize();
             return { ok: true, id: res?.lastID };
         } catch (err) {
             console.error('createFolder error:', err);
             return { ok: false, error: String(err) };
         }
-    })
-    ipcMain.handle('getAllFolders', async (event) => {
+    });
+
+    ipcMain.handle('getAllFolders', async (event, userId?: number) => {
         try {
             const db = await DB.getConnection();
-            const stmt = await db.prepare(`SELECT * FROM Folders`)
-            const result: Folder[] = await stmt.all();
-            await stmt.finalize();
-            return result;
+            let result: Folder[];
+            if (userId && userId > 0) {
+                const stmt = await db.prepare(`SELECT * FROM FOLDERS WHERE userID = ? OR userID = 0 ORDER BY id ASC`);
+                result = await stmt.all(userId);
+                await stmt.finalize();
+            } else {
+                const stmt = await db.prepare(`SELECT * FROM FOLDERS ORDER BY id ASC`);
+                result = await stmt.all();
+                await stmt.finalize();
+            }
+            return result || [];
         } catch (err) {
             console.error('getAllFolders error:', err);
             return [];
         }
-    })
-    ipcMain.handle('getNoteInFolder', async (event, folderId: number, userId: number) => {
+    });
+
+    ipcMain.handle('getNoteInFolder', async (event, folderId: number, userId?: number) => {
         try {
             const db = await DB.getConnection();
-            const stmt = await db.prepare(`SELECT * FROM notes WHERE folderID = ? AND userID = ?`);
-            const result: Note[] = await stmt.all(folderId, userId);
-            await stmt.finalize();
-            return result;
+            let result: Note[];
+            if (userId && userId > 0) {
+                const stmt = await db.prepare(`SELECT * FROM notes WHERE folderID = ? AND userID = ? ORDER BY created_at DESC`);
+                result = await stmt.all(folderId, userId);
+                await stmt.finalize();
+            } else {
+                const stmt = await db.prepare(`SELECT * FROM notes WHERE folderID = ? ORDER BY created_at DESC`);
+                result = await stmt.all(folderId);
+                await stmt.finalize();
+            }
+            return result || [];
         } catch (err) {
             console.error('getNoteInFolder error:', err);
             return [];
         }
-    })  
-    ipcMain.handle('deleteFolder', async (event, folder: Folder) => {
+    });
+
+    ipcMain.handle('deleteFolder', async (event, folder: Folder | number) => {
         try {
+            const folderId = typeof folder === 'number' ? folder : folder?.id;
+            if (!folderId) {
+                return { ok: false, error: 'Invalid folder ID' };
+            }
             const db = await DB.getConnection();
-            const stmt = await db.prepare(`DELETE FROM FOLDERS WHERE id = ?;`);
-            await stmt.run(folder.id);
-            await stmt.finalize();
-            return { ok: true };
+            await db.exec('BEGIN');
+            try {
+                // Recursively collect all descendant folder IDs
+                const allFolderIds: number[] = [folderId];
+                const collectDescendants = async (parentId: number) => {
+                    const children = await db.all(`SELECT id FROM FOLDERS WHERE parentID = ?`, [parentId]);
+                    for (const child of children) {
+                        allFolderIds.push(child.id);
+                        await collectDescendants(child.id);
+                    }
+                };
+                await collectDescendants(folderId);
+
+                const placeholders = allFolderIds.map(() => '?').join(',');
+                // Delete notes belonging to these folders
+                await db.run(`DELETE FROM notes WHERE folderID IN (${placeholders})`, allFolderIds);
+                // Delete the folders themselves
+                await db.run(`DELETE FROM FOLDERS WHERE id IN (${placeholders})`, allFolderIds);
+
+                await db.exec('COMMIT');
+                return { ok: true, deletedFolderIds: allFolderIds };
+            } catch (err) {
+                await db.exec('ROLLBACK');
+                throw err;
+            }
         } catch (e) {
             console.error('deleteFolder error:', e);
             return { ok: false, error: String(e) };
         }
-    })
+    });
     //#endregion folders
     // #region calendar
     ipcMain.handle('getAllEvents', async (event, userId: number) => {

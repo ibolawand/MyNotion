@@ -67,7 +67,7 @@ export class SideBar implements OnInit, OnDestroy {
   }
 
   openFolderAdder(): void {
-    this.modelService.openFolderAdder();
+    this.modelService.openFolderAdder(null);
   } 
   closeFolderAdder(): void {
     this.modelService.closeFolderAdder();
@@ -95,18 +95,20 @@ export class SideBar implements OnInit, OnDestroy {
     const ids: number[] = [];
     const addDescendants = (parentId: number) => {
       for (const folder of this.folders) {
-        if ((folder as any).parent_id === parentId) {
+        if (folder.parentID === parentId) {
           ids.push(folder.id);
           addDescendants(folder.id);
         }
       }
-    }
+    };
     addDescendants(folderId);
     return ids;
   }
  
   openAddFolderWindow(parentID: number | null = null) {
-    this.newFolderParent = parentID;
+    if (parentID !== null) {
+      this.expanded.add(parentID);
+    }
     this.modelService.openFolderAdder(parentID);
   }
 
@@ -115,17 +117,28 @@ export class SideBar implements OnInit, OnDestroy {
     this.expanded.has(id) ? this.expanded.delete(id) : this.expanded.add(id);
   }
   selectFolder(folder: Folder) {
-    this.modelService.setCurrentFolder(folder);
-    this.modelService.currentFolderIds.next([folder.id, ...this.decendantFolderIds(folder.id)]);
+    const descendants = this.decendantFolderIds(folder.id);
+    this.modelService.setCurrentFolder(folder, descendants);
+    this.modelService.openHome();
   }
   selectAll() {
-    this.modelService.setCurrentFolder(null);
-    this.modelService.currentFolderIds.next([]);
+    this.modelService.setCurrentFolder(null, []);
+    this.modelService.openHome();
   }
   async deleteFolder(folder: Folder): Promise<void> {
+    const current = this.modelService.getCurrentFolder();
+    const descendants = this.decendantFolderIds(folder.id);
+    const isAffected = current && (current.id === folder.id || descendants.includes(current.id));
+
     await this.noteService.deleteFolder(folder);
-    this.folders = this.folders.filter(f => f.id !== folder.id);
+    this.folders = this.folders.filter(f => f.id !== folder.id && !descendants.includes(f.id));
+
+    if (isAffected) {
+      this.selectAll();
+    }
+
     this.noteService.notifyFolderChanged();
+    await this.noteService.loadNotes();
   }
   
   

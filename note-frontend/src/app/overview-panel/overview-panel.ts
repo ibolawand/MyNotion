@@ -1,7 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit } from '@angular/core';
 import { NoteService } from '../../services/NoteService';
-import { Category, Note } from '../../model/models';
-import { BehaviorSubject, Observable, Subscription } from 'rxjs';
+import { Category, Folder, Note } from '../../model/models';
+import { BehaviorSubject, Subscription } from 'rxjs';
 import { AsyncPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ModelService } from '../model.service';
@@ -15,118 +15,107 @@ import { ModelService } from '../model.service';
   templateUrl: './overview-panel.html',
   styleUrl: './overview-panel.css'
 })
-export class OverviewPanel implements OnInit {
-  notes: Note[] = []
-  allNotes: Note[] = []
+export class OverviewPanel implements OnInit, OnDestroy {
+  allNotes: Note[] = [];
   currentCategories: Category[] = [];
-  categories: Category[] = []
+  currentFolder: Folder | null = null;
+  currentFolderIds: number[] = [];
   newCategory: string = '';
   addCategoryWindow: BehaviorSubject<boolean> = new BehaviorSubject<boolean>(false);
   openCategoryId: number | null = null;
-  openNote = false;
-  clickedCategory: number | null = null;
 
-  constructor(protected noteService: NoteService, public modelService: ModelService) {
+  private subscriptions: Subscription[] = [];
 
+  constructor(protected noteService: NoteService, public modelService: ModelService) {}
+
+  async ngOnInit(): Promise<void> {
+    try {
+      await this.getNotes();
+      await this.noteService.loadCategories();
+
+      this.subscriptions.push(
+        this.noteService.notes$.subscribe(list => {
+          this.allNotes = list || [];
+        }),
+        this.noteService.notesChanged$.subscribe(async () => {
+          await this.getNotes();
+        }),
+        this.noteService.categories$.subscribe(list => {
+          this.currentCategories = list || [];
+        }),
+        this.modelService.currentFolder$.subscribe(folder => {
+          this.currentFolder = folder;
+        }),
+        this.modelService.currentFolderIds$.subscribe(ids => {
+          this.currentFolderIds = ids || [];
+        })
+      );
+    } catch (error) {
+      console.error('OverviewPanel initialization error:', error);
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.subscriptions.forEach(s => s.unsubscribe());
   }
 
   async getNotes(): Promise<void> {
     await this.noteService.loadNotes();
   }
 
-
-  async getNotesFromCertainCategories(categoryID: number): Promise<void> {
-    console.log('Clicked category ID:', categoryID);
-    if (this.openCategoryId === categoryID) {
-      this.openCategoryId = null;
-      this.clickedCategory = null;
-      this.notes = [];
-      console.log('Closed category');
-      return;
+  get filteredNotes(): Note[] {
+    if (!this.currentFolderIds || this.currentFolderIds.length === 0) {
+      return this.allNotes;
     }
-
-    this.openCategoryId = categoryID;
-    this.clickedCategory = categoryID; // Set it when opening
-
-    try {
-      const fetched = await this.noteService.getNoteWithCertainCategory(Number(categoryID));
-      console.log('Fetched raw notes for category', categoryID, fetched);
-      if (Array.isArray(fetched)) {
-        this.notes = fetched as Note[];
-        console.log(`Assigned ${this.notes.length} notes to UI for category`, categoryID);
-      } else {
-        console.warn('getNoteWithCertainCategory returned non-array value:', fetched);
-        this.notes = [];
-      }
-    } catch (err) {
-      console.error('Error fetching notes for category', categoryID, err);
-      this.notes = [];
-    }
+    return this.allNotes.filter(n => n.folderID && this.currentFolderIds.includes(n.folderID));
   }
 
-  async ngOnInit(): Promise<void> {
-    try {
-      const folderID: number  = this.modelService.getCurrentFolder()?.id ?? 0; // Default to 0 if no folder is selected
-      const ids = this.modelService.currentFolderIds.value;
-      const inFolder = (n: Note) => ids.length === 0 || ids.includes(n.folderID!);
-      console.log(this.currentCategories);
-      await this.getNotes();
-      await this.noteService.loadCategories();
-      this.noteService.notes$.subscribe(list => {
-        this.allNotes = list;
-        if (this.openCategoryId !== null ) {
-          this.notes = this.allNotes.filter(n => n.categoryID === this.openCategoryId && n.folderID === folderID);
-        }
-        if (folderID !== 0 && !this.modelService.isAllNotesFolderOpen.value) {
-          this.notes = this.allNotes.filter(n => n.folderID === folderID);
-        }
-      });
-
-      this.noteService.notesChanged$.subscribe(async () => {
-        await this.getNotes();
-      });
-      this.noteService.categories$.subscribe(list => {
-        this.currentCategories = list
-      })
-
-    } catch (error) {
-      console.error(error);
-    }
+  getNotesForCategory(categoryId: number): Note[] {
+    return this.filteredNotes.filter(n => n.categoryID === categoryId);
   }
 
-  openAddCategoryWindow() {
+  toggleCategory(categoryId: number): void {
+    this.openCategoryId = this.openCategoryId === categoryId ? null : categoryId;
+  }
+
+  openAddCategoryWindow(): void {
     this.addCategoryWindow.next(true);
   }
 
-  closeAddCategoryWindow() {
+  closeAddCategoryWindow(): void {
     this.addCategoryWindow.next(false);
+    this.newCategory = '';
   }
 
   async addCategory(categoryName: string): Promise<void> {
-    console.log("categoryName", categoryName);
-    console.log("userId", this.noteService!.getUserId());
+    const trimmed = categoryName?.trim();
+    if (!trimmed) return;
+
     const category: Partial<Category> = {
-      name: categoryName,
-      userID: this.noteService!.getUserId()
-    }
+      name: trimmed,
+      userID: this.noteService.getUserId()
+    };
     const created = await this.noteService.addCategory(category);
 
-
     if (created && (created as any).id !== undefined) {
-      this.noteService.notifyCategoriesChanged(created.id);
+      this.noteService.notifyCategoriesChanged((created as any).id);
     }
     this.newCategory = '';
     this.closeAddCategoryWindow();
     await this.noteService.loadCategories();
-    console.log("Categories", this.currentCategories);
   }
-  async deleteCategory(id: number) {
-    await this.noteService.deleteCategory(id)
+
+  async deleteCategory(id: number): Promise<void> {
+    await this.noteService.deleteCategory(id);
     this.noteService.notifyCategoriesChanged(id);
+    if (this.openCategoryId === id) {
+      this.openCategoryId = null;
+    }
     await this.noteService.loadCategories();
     await this.getNotes();
   }
-  async deleteNote(id: number) {
-    await this.noteService.deleteNote(id)
+
+  async deleteNote(id: number): Promise<void> {
+    await this.noteService.deleteNote(id);
   }
 }

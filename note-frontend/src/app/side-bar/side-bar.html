@@ -74,7 +74,7 @@
     </div>
 
     <!-- all notes -->
-    <div class="folder-item" (click)="selectAll()">
+    <div class="folder-item" [class.active]="(modelService.currentFolder$ | async) === null" (click)="selectAll()">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#3B82F6" stroke-width="2"
            stroke-linecap="round" stroke-linejoin="round">
         <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
@@ -86,10 +86,13 @@
 
     <!-- notebooks -->
     @for (row of folderRows; track row.folder.id) {
-      <div class="folder-item" [style.padding-left.px]="12 + row.depth * 16" (click)="selectFolder(row.folder)">
+      <div class="folder-item"
+           [class.active]="(modelService.currentFolder$ | async)?.id === row.folder.id"
+           [style.padding-left.px]="12 + row.depth * 16"
+           (click)="selectFolder(row.folder)">
 
         @if (row.hasChildren) {
-          <button type="button" class="folder-toggle" (click)="toggleExpand(row.folder.id, $event)">
+          <button type="button" class="folder-toggle" (click)="toggleExpand(row.folder.id, $event)" aria-label="Toggle folder">
             <svg [class.expanded]="expanded.has(row.folder.id)" width="12" height="12" viewBox="0 0 24 24"
                 fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
           </button>
@@ -97,15 +100,24 @@
           <span class="folder-toggle-spacer"></span>
         }
 
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" [attr.stroke]="row.folder.colour" stroke-width="2">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" [attr.stroke]="row.folder.colour || '#4ade80'" stroke-width="2">
           <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
         </svg>
         <span class="folder-name">{{ row.folder.name }}</span>
 
-        <button type="button" class="folder-add" title="Add subfolder"
-                (click)="$event.stopPropagation(); openAddFolderWindow(row.folder.id)">+</button>
-        <button type="button" class="folder-delete" title="Delete notebook"
-                (click)="$event.stopPropagation(); deleteFolder(row.folder)">…dein Trash-SVG…</button>
+        <button type="button" class="folder-add" title="Add subfolder" aria-label="Add subfolder"
+                (click)="$event.stopPropagation(); openAddFolderWindow(row.folder.id)">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+        </button>
+        <button type="button" class="folder-delete" title="Delete notebook" aria-label="Delete notebook"
+                (click)="$event.stopPropagation(); deleteFolder(row.folder)">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2M10 11v6M14 11v6" />
+          </svg>
+        </button>
       </div>
     }
   </div>

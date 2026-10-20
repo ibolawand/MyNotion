@@ -33,8 +33,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     },
     folder: {
         addFolder: (folder: any) => ipcRenderer.invoke('addFolder', folder),
-        getAllFolders: (): Promise<Folder[]> => ipcRenderer.invoke('getAllFolders'),
-        deleteFolder: (folder: Folder) => ipcRenderer.invoke('deleteFolder', folder),
-
+        getAllFolders: (userId?: number): Promise<Folder[]> => ipcRenderer.invoke('getAllFolders', userId),
+        deleteFolder: (folder: any) => ipcRenderer.invoke('deleteFolder', folder),
     }
 });

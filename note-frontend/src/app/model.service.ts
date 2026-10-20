@@ -34,6 +34,7 @@ export class ModelService {
   private currentFolderSubject: BehaviorSubject<Folder | null> = new BehaviorSubject<Folder | null>(null);
   public currentFolder$ = this.currentFolderSubject.asObservable();
   currentFolderIds = new BehaviorSubject<number[]>([]);
+  public currentFolderIds$ = this.currentFolderIds.asObservable();
 
 
 
@@ -102,12 +103,19 @@ export class ModelService {
     return this.currentFolderSubject.value;
   }
 
-  setCurrentFolder(folder: Folder | null) {
+  setCurrentFolder(folder: Folder | null, descendantIds: number[] = []) {
     this.currentFolderSubject.next(folder);
+    if (folder) {
+      this.currentFolderIds.next([folder.id, ...descendantIds]);
+      this.isAllNotesFolderOpen.next(false);
+    } else {
+      this.currentFolderIds.next([]);
+      this.isAllNotesFolderOpen.next(true);
+    }
   }
 
-
   closeFolderAdder() {
+    this.folderAdderParent = null;
     this.isFolderAdderOpen.next(false);
   }
   // ModelService

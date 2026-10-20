@@ -2,7 +2,9 @@
   <div class="modal-overlay">
     <div class="modal" role="dialog" aria-modal="true" aria-labelledby="add-notebook-title">
       <div class="modal-header">
-        <h2 id="add-notebook-title" class="modal-title">Add New Notebook</h2>
+        <h2 id="add-notebook-title" class="modal-title">
+          {{ modelService.folderAdderParent ? 'Add Subfolder' : 'Add New Notebook' }}
+        </h2>
         <button class="close-btn" type="button" (click)="closeFolder()" aria-label="Close">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="18" y1="6" x2="6" y2="18"></line>
@@ -13,8 +15,10 @@
 
       <div class="modal-body">
         <div class="form-group">
-          <label class="form-label" for="notebook-name">Notebook Name</label>
-          <input id="notebook-name" [(ngModel)]="name" type="text" class="form-input" placeholder="Enter notebook name..." autofocus>
+          <label class="form-label" for="notebook-name">
+            {{ modelService.folderAdderParent ? 'Subfolder Name' : 'Notebook Name' }}
+          </label>
+          <input id="notebook-name" [(ngModel)]="name" (keydown.enter)="addNoteFolder()" type="text" class="form-input" [placeholder]="modelService.folderAdderParent ? 'Enter subfolder name...' : 'Enter notebook name...'" autofocus>
         </div>
         <div class="form-group">
           <label class="form-label">Folder Color</label>

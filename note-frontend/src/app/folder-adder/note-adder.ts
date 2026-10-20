@@ -31,20 +31,22 @@ export class FolderAdder {
   }
 
   async addNoteFolder(): Promise<void> {
-    const folder: Partial<Folder> = {
-      name: this.name?.trim() ?? "",
-      userID: this.noteService.getUserId(),
-      colour: this.colour,
-    };
-
-    if (!folder.name) {
+    const name = this.name?.trim() ?? "";
+    if (!name) {
       return;
     }
 
+    const folder: Partial<Folder> = {
+      name,
+      userID: this.noteService.getUserId(),
+      colour: this.colour,
+      parentID: this.modelService.folderAdderParent ?? null,
+    };
+
     await this.noteService.addFolder(folder);
     this.noteService.notifyFolderChanged();
-    this.modelService.closeFolderAdder();
     this.name = '';
+    this.modelService.closeFolderAdder();
   }
 
   closeFolder(): void {

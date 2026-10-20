@@ -48,7 +48,13 @@ export class Adder implements OnInit {
         this.title = '';
         this.content = '';
         this.categoryID = 0;
-        this.currentNote = { title: '', content: '', categoryID: 0, folderID: 0 };
+        const currentFolder = this.modelService.getCurrentFolder();
+        this.currentNote = {
+          title: '',
+          content: '',
+          categoryID: 0,
+          folderID: currentFolder ? currentFolder.id : 0
+        };
       }
     });
   }
@@ -74,5 +80,14 @@ export class Adder implements OnInit {
   onFolderChange(value: any) {
     this.currentNote.folderID = Number(value) || 0;
     this.noteService.triggerAutoSave(this.currentNote);
+  }
+
+  getWordCount(): number {
+    const text = this.content || '';
+    return text.trim().split(/\s+/).filter(word => word.length > 0).length;
+  }
+
+  getCharCount(): number {
+    return (this.content || '').length;
   }
 }

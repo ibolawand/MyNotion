@@ -40,6 +40,17 @@
   padding: 18px 20px 12px;
 }
 
+.folder-header-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.folder-header-title svg {
+  flex-shrink: 0;
+}
+
 .section-title {
   margin: 0;
   font-size: 12px;
@@ -185,6 +196,17 @@
   text-overflow: ellipsis;
 }
 
+.category-count {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+  background: rgba(255, 255, 255, 0.06);
+  padding: 1px 6px;
+  border-radius: 8px;
+  margin-left: 6px;
+  flex-shrink: 0;
+}
+
 .chevron {
   flex-shrink: 0;
   color: #6b7280;
@@ -239,6 +261,16 @@
   background: rgba(74, 222, 128, 0.08);
   border-color: rgba(74, 222, 128, 0.25);
   transform: translateX(4px);
+}
+
+.subcategory-item.active {
+  background: rgba(74, 222, 128, 0.12);
+  border-color: rgba(74, 222, 128, 0.4);
+}
+
+.subcategory-item.active .subcategory-name {
+  color: #4ade80;
+  font-weight: 600;
 }
 
 .subcategory-name {

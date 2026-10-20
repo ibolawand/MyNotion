@@ -7,25 +7,48 @@
         [(ngModel)]="title"
         (ngModelChange)="onTitleChange($event)">
       <div class="content-actions">
-        <button class="icon-btn">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path>
-          </svg>
-        </button>
-        <button class="icon-btn">
+        <button class="icon-btn" title="Star note">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
           </svg>
         </button>
-        <button class="icon-btn">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="1"></circle>
-            <circle cx="12" cy="5" r="1"></circle>
-            <circle cx="12" cy="19" r="1"></circle>
-          </svg>
-        </button>
       </div>
     </div>
-      <text-editor></text-editor>
+
+    <!-- Metadata Bar for Folder and Category -->
+    <div class="note-meta-bar">
+      <div class="meta-item">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+        </svg>
+        <label for="editorFolderSelect" class="meta-label">Folder:</label>
+        <select id="editorFolderSelect" class="meta-select" [(ngModel)]="folderID" (ngModelChange)="onFolderChange($event)">
+          <option [value]="0">No folder</option>
+          @for (folder of folders; track folder.id) {
+            <option [value]="folder.id">{{ folder.name }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="meta-item">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path>
+          <line x1="7" y1="7" x2="7.01" y2="7"></line>
+        </svg>
+        <label for="editorCategorySelect" class="meta-label">Category:</label>
+        <select id="editorCategorySelect" class="meta-select" [(ngModel)]="categoryID" (ngModelChange)="onCategoryChange($event)">
+          <option [value]="0">Uncategorized</option>
+          @for (cat of categories; track cat.id) {
+            <option [value]="cat.id">{{ cat.name }}</option>
+          }
+        </select>
+      </div>
+
+      <div class="meta-status">
+        <span>🔄 <small>{{ noteService.saveStatus$ | async }}</small></span>
+      </div>
+    </div>
+
+    <text-editor></text-editor>
   </div>
 }

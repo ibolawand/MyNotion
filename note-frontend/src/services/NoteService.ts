@@ -31,8 +31,8 @@ declare global {
       };
       folder: {
         addFolder: (folder: any) => Promise<any>,
-        getAllFolders: () => Promise<Folder[]>,
-        deleteFolder: (folder: Folder) => Promise<void>,
+        getAllFolders: (userId?: number) => Promise<Folder[]>,
+        deleteFolder: (folder: Folder | number) => Promise<any>,
       },
       window: {
         minimizeWindow: () => Promise<void>,
@@ -277,12 +277,12 @@ export class NoteService {
     return res;
   }
   async loadFolders(): Promise<Folder[]> {
-    return await window.electronAPI.folder.getAllFolders();
+    return await window.electronAPI.folder.getAllFolders(this.getUserId());
   }
-  async addFolder(folder: Partial<Folder>): Promise<void> {
+  async addFolder(folder: Partial<Folder>): Promise<any> {
     return await window.electronAPI.folder.addFolder(folder);
   }
-  async deleteFolder(folder: Folder): Promise<void> {
+  async deleteFolder(folder: Folder | number): Promise<any> {
     return await window.electronAPI.folder.deleteFolder(folder);
   }
   notifyFolderChanged(): void {
