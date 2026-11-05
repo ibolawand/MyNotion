@@ -57,6 +57,16 @@ export class Editor implements OnInit, OnDestroy {
       }),
       this.noteService.categories$.subscribe(cats => {
         this.categories = cats || [];
+      }),
+      // The open note was changed outside the app (e.g. Aria added to a list): show the new
+      // version, unless you're typing in it right now.
+      this.noteService.externalChange$.subscribe(() => {
+        const id = this.currentNote?.id;
+        if (!id || this.noteService.isEditingLocally()) return;
+        const fresh = this.noteService.getNotesCache().find(n => n.id === id);
+        if (fresh && (fresh.content !== this.currentNote!.content || fresh.title !== this.currentNote!.title)) {
+          this.modelService.updateCurrentNote({ ...this.currentNote!, title: fresh.title, content: fresh.content });
+        }
       })
     );
   }

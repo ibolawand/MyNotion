@@ -1,13 +1,40 @@
 import sqlite3 from 'sqlite3'
 import { Database, open } from 'sqlite';
+import { app } from 'electron';
+import fs from 'fs';
+import path from 'path';
 
 export class DB {
-    private static DB_NAME = 'noted';
+    private static DB_NAME = 'noted.db';
     private static dbInstance: Database | null = null;
+
+    /**
+     * One fixed place for the data, no matter how the app is started (menu, Aria, `npm start`):
+     * $MYNOTION_DB if set, otherwise ~/.config/MyNotion/noted.db. (It used to be ./noted.db, which
+     * depends on the folder the app happens to start in, so an installed app would see an empty DB.)
+     */
+    public static get filePath(): string {
+        return process.env.MYNOTION_DB || path.join(app.getPath('userData'), this.DB_NAME);
+    }
+
+    /** First run with the fixed location: bring over the database from the old ./noted.db. */
+    private static migrateOldLocation(target: string) {
+        if (fs.existsSync(target)) return;
+        const legacy = path.resolve(this.DB_NAME);
+        if (legacy !== target && fs.existsSync(legacy)) {
+            fs.mkdirSync(path.dirname(target), { recursive: true });
+            fs.copyFileSync(legacy, target);
+            console.log(`Copied database from ${legacy} to ${target}`);
+        }
+    }
+
     public static async createConnection() {
         try {
+            const file = this.filePath;
+            this.migrateOldLocation(file);
+            fs.mkdirSync(path.dirname(file), { recursive: true });
             this.dbInstance = await open({
-                filename: `./${this.DB_NAME}`,
+                filename: file,
                 driver: sqlite3.Database,
             });
             await this.dbInstance.exec('PRAGMA foreign_keys = ON;');
@@ -124,7 +151,7 @@ export class DB {
             DROP TABLE IF EXISTS USERS;
             DROP TABLE IF EXISTS EVENTS;
         `);
-    }   
+    }
 
     public static async getConnection() {
         if (!this.dbInstance) await this.createConnection();

@@ -87,16 +87,21 @@ export class Calendar implements OnInit, OnDestroy {
     this.cdr.detectChanges();
   }
  
+  private externalSub?: { unsubscribe(): void };
+
   ngOnInit(): void {
     this.updateWeekData();
     this.loadEvents();
     this.timeIndicatorInterval = setInterval(() => this.updateCurrentTimeIndicator(), 60000);
+    // events added/moved from outside the app (e.g. by Aria) appear right away
+    this.externalSub = this.noteService.externalChange$.subscribe(() => this.loadEvents());
   }
- 
+
   ngOnDestroy(): void {
     if (this.timeIndicatorInterval) {
       clearInterval(this.timeIndicatorInterval);
     }
+    this.externalSub?.unsubscribe();
   }
  
   // ==================== HELPERS ====================

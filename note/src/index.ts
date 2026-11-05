@@ -1,4 +1,5 @@
-import { app, BrowserWindow } from 'electron';
+import { app, BrowserWindow, ipcMain } from 'electron';
+import fs from 'fs';
 import path from 'path';
 import { DB } from "./database/database";
 import { setUpHandlers } from "./requestHandler";
@@ -12,11 +13,37 @@ if (require('electron-squirrel-startup')) {
     app.quit();
 }
 
+// ── Single instance + "open X" commands ──────────────────────────────────────
+// `MyNotion --open=calendar` / `--open=note:12` / `--open=home` shows that page. Aria uses this.
+// Starting MyNotion while it's already running focuses the existing window instead of opening a
+// second one (two copies would both write the same database).
+const openArg = (argv: string[]): string | null => {
+    const a = argv.find(x => x.startsWith('--open='));
+    return a ? a.slice('--open='.length) : null;
+};
+let pendingOpen: string | null = openArg(process.argv);
+let mainWindow: BrowserWindow | null = null;
+
+if (!app.requestSingleInstanceLock()) {
+    app.quit();
+} else {
+    app.on('second-instance', (_event, argv) => {
+        if (mainWindow) {
+            if (mainWindow.isMinimized()) mainWindow.restore();
+            mainWindow.show();
+            mainWindow.focus();
+            const target = openArg(argv);
+            if (target) mainWindow.webContents.send('open-target', target);
+        }
+    });
+}
+
 const createWindow = (): void => {
     // Create the browser window.
-    const mainWindow = new BrowserWindow({
+    mainWindow = new BrowserWindow({
         height: 800,
         width: 800,
+        title: 'MyNotion',
         //frame: false,
         webPreferences: {
             preload: MAIN_WINDOW_PRELOAD_WEBPACK_ENTRY,
@@ -37,6 +64,29 @@ const createWindow = (): void => {
     mainWindow.setAutoHideMenuBar(false);
 };
 
+// Other programs (e.g. the Aria assistant) write to the same SQLite file. Watch it and
+// tell the renderer, so new notes and events show up without restarting the app.
+const watchDatabase = (): void => {
+    const dbFile = DB.filePath;
+    const dir = path.dirname(dbFile);
+    const base = path.basename(dbFile);
+    let timer: NodeJS.Timeout | null = null;
+    try {
+        fs.watch(dir, (_event, filename) => {
+            // noted.db, noted.db-journal, noted.db-wal all mean "data changed"
+            if (!filename || !filename.toString().startsWith(base)) return;
+            if (timer) clearTimeout(timer);
+            timer = setTimeout(() => {
+                for (const win of BrowserWindow.getAllWindows()) {
+                    win.webContents.send('db-changed');
+                }
+            }, 400);
+        });
+    } catch (err) {
+        console.error('Could not watch the database for outside changes:', err);
+    }
+};
+
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
@@ -44,7 +94,14 @@ app.whenReady().then(async () => {
     await DB.getConnection();
     await DB.initializeTables();
     setUpHandlers();
+    // the page asks once it has loaded and logged in, so an --open from startup isn't lost
+    ipcMain.handle('take-open-target', () => {
+        const t = pendingOpen;
+        pendingOpen = null;
+        return t;
+    });
     createWindow();
+    watchDatabase();
 })
 
 // Quit when all windows are closed, except on macOS. There, it's common

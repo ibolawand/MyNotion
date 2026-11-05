@@ -60,6 +60,15 @@ export class ModelService {
     this.openCalendar.next(false);
     this.isExistingNoteOpen.next(false);
   }
+
+  /** Always shows the calendar (toggleCalendar flips it, which is wrong for "open the calendar"). */
+  showCalendar() {
+    this.isStartingPageOpen.next(false);
+    this.openOverview.next(false);
+    this.isOpen.next(false);
+    this.isExistingNoteOpen.next(false);
+    this.openCalendar.next(true);
+  }
   openSublist() {
     this.isSublistOpen.next(true);
   }

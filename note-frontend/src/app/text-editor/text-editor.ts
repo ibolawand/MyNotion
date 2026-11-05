@@ -94,8 +94,11 @@ export class TextEditor implements OnInit, OnDestroy {
         this.title = note.title ?? '';
         this.content = note.content ?? '';
 
-        // Load content into TipTap editor
-        this.editor.commands.setContent(note.content ?? '');
+        // Load content into TipTap editor, but only when it actually differs: this subscription
+        // also fires on every keystroke, and resetting identical content can move the cursor.
+        if ((note.content ?? '') !== this.editor.getHTML()) {
+          this.editor.commands.setContent(note.content ?? '');
+        }
       } else {
         this.currentNote = null;
         this.title = '';

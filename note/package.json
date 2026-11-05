@@ -1,6 +1,6 @@
 {
   "name": "note",
-  "productName": "note",
+  "productName": "MyNotion",
   "version": "1.0.0",
   "description": "My Electron application description",
   "main": ".webpack/main",

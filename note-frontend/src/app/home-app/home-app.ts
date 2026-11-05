@@ -1,4 +1,4 @@
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, NgZone, OnDestroy, OnInit } from '@angular/core';
 import { ModelService } from '../model.service';
 import { Adder } from '../adder/adder';
 import { NoteService } from '../../services/NoteService';
@@ -35,11 +35,14 @@ export class HomeApp implements OnDestroy, OnInit {
   private categoriesSub?: Subscription;
 
 
-  constructor(public modelService: ModelService, private noteService: NoteService) {
+  private stopOpenListener?: () => void;
+
+  constructor(public modelService: ModelService, private noteService: NoteService, private zone: NgZone) {
   }
 
   ngOnDestroy(): void {
     this.notesSub?.unsubscribe();
+    this.stopOpenListener?.();
   }
   async ngOnInit() {
     await this.noteService.loadNotes();
@@ -48,6 +51,30 @@ export class HomeApp implements OnDestroy, OnInit {
 
     if (this.modelService.isLoggedIn.value) {
       this.modelService.openDashboard();
+    }
+
+    // "open calendar" / "open note 12" sent by Aria (or `MyNotion --open=...`)
+    const api = window.electronAPI;
+    this.stopOpenListener = api?.onOpenTarget?.(t => this.zone.run(() => this.openTarget(t)));
+    const startTarget = await api?.takeOpenTarget?.();
+    if (startTarget) this.openTarget(startTarget);
+  }
+
+  private async openTarget(target: string) {
+    if (!this.modelService.isLoggedIn.value) return;   // the login screen comes first
+    this.modelService.openDashboard();
+    if (target === 'calendar') {
+      this.modelService.showCalendar();
+    } else if (target.startsWith('note:')) {
+      const id = Number(target.slice('note:'.length));
+      await this.noteService.loadNotes();
+      const note = this.noteService.getNotesCache().find(n => n.id === id);
+      if (note) {
+        this.modelService.openHome();
+        this.modelService.onNoteClicked(note);
+      }
+    } else {
+      this.modelService.openHome();
     }
   }
   protected readonly console = console;

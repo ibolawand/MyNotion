@@ -1,5 +1,5 @@
 import { ApplicationConfig, inject, provideAppInitializer, provideBrowserGlobalErrorListeners, provideZoneChangeDetection } from '@angular/core';
-import { provideRouter } from '@angular/router';
+import { provideRouter, withHashLocation } from '@angular/router';
 
 import { routes } from './app.routes';
 import { provideHttpClient } from '@angular/common/http';
@@ -13,7 +13,9 @@ export const appConfig: ApplicationConfig = {
     }),
     provideBrowserGlobalErrorListeners(),
     provideZoneChangeDetection({ eventCoalescing: true }),
-    provideRouter(routes),
+    // Hash URLs (#/calendar) work when the packaged app loads index.html from disk;
+    // normal paths would point at file:///calendar.
+    provideRouter(routes, withHashLocation()),
     provideHttpClient(),
     AuthService,
   ]

@@ -35,5 +35,20 @@ contextBridge.exposeInMainWorld('electronAPI', {
         addFolder: (folder: any) => ipcRenderer.invoke('addFolder', folder),
         getAllFolders: (userId?: number): Promise<Folder[]> => ipcRenderer.invoke('getAllFolders', userId),
         deleteFolder: (folder: any) => ipcRenderer.invoke('deleteFolder', folder),
-    }
+    },
+    // "open calendar" / "open note 12" from Aria or a second launch. takeOpenTarget() returns the
+    // one given at startup (once); onOpenTarget fires for later ones.
+    takeOpenTarget: (): Promise<string | null> => ipcRenderer.invoke('take-open-target'),
+    onOpenTarget: (callback: (target: string) => void) => {
+        const listener = (_e: unknown, target: string) => callback(target);
+        ipcRenderer.on('open-target', listener);
+        return () => ipcRenderer.removeListener('open-target', listener);
+    },
+    // Fires when the database was changed from outside (e.g. Aria added a note or event).
+    // Returns an unsubscribe function.
+    onDbChanged: (callback: () => void) => {
+        const listener = () => callback();
+        ipcRenderer.on('db-changed', listener);
+        return () => ipcRenderer.removeListener('db-changed', listener);
+    },
 });

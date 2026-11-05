@@ -1,4 +1,4 @@
-import { Injectable } from '@angular/core';
+import { Injectable, NgZone } from '@angular/core';
 import { Category, Folder, Note, User } from '../model/models';
 import { Subject, Observable, BehaviorSubject, debounceTime, distinctUntilChanged, switchMap, tap, Subscription, of, from } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
@@ -45,6 +45,9 @@ declare global {
         updateEvent: (event: any) => Promise<any>,
         deleteEvent: (eventId: number) => Promise<any>,
       }
+      onDbChanged?: (callback: () => void) => () => void;
+      takeOpenTarget?: () => Promise<string | null>;
+      onOpenTarget?: (callback: (target: string) => void) => () => void;
     };
   }
 };
@@ -53,12 +56,35 @@ declare global {
 export class NoteService {
   private userIdSource = new BehaviorSubject<number>(0);
 
-  constructor(private http: HttpClient) {
+  constructor(private http: HttpClient, private zone: NgZone) {
     const storedId = localStorage.getItem('userId');
     if (storedId) {
       this.userIdSource.next(Number(storedId));
     }
+    // Another program (e.g. Aria) changed the database: reload everything that's cached.
+    // The IPC callback arrives outside Angular's zone, so re-enter it for change detection.
+    window.electronAPI?.onDbChanged?.(() => this.zone.run(() => this.reloadFromDatabase()));
   }
+
+  //#region Outside changes
+  private externalChangeSubject = new Subject<void>();
+  /** Emits after notes/categories/folders were reloaded because the database changed outside the app. */
+  public readonly externalChange$ = this.externalChangeSubject.asObservable();
+  private lastLocalEdit = 0;
+
+  /** True while the user is typing (or just stopped), so outside changes don't overwrite the editor. */
+  public isEditingLocally(): boolean {
+    return Date.now() - this.lastLocalEdit < 2500;
+  }
+
+  private async reloadFromDatabase(): Promise<void> {
+    if (!this.getUserId()) return;
+    await this.loadNotes();
+    await this.loadCategories();
+    this.notifyFolderChanged();
+    this.externalChangeSubject.next();
+  }
+  //#endregion
 
   //#region Auth
   public async getToken() {
@@ -188,6 +214,7 @@ export class NoteService {
   triggerAutoSave(note: Note) {
     // lazy init the autosave pipeline
     if (!this.saveSub) this.initAutoSave();
+    this.lastLocalEdit = Date.now();
 
     // Update cache immediately for real-time UI updates
     if (note.id !== undefined && note.id !== null) {
