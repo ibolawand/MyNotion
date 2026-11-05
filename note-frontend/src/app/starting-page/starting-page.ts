@@ -1,11 +1,10 @@
 import { Component } from '@angular/core';
 import { ModelService } from '../model.service';
-import { ChatBot } from '../chat-bot/chat-bot';
 import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-starting-page',
-  imports: [ChatBot],
+  imports: [],
   templateUrl: './starting-page.html',
   styleUrl: './starting-page.css'
 })
