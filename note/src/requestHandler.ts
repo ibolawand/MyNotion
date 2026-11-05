@@ -3,6 +3,23 @@ import { DB } from './database/database';
 import Store from 'electron-store';
 import crypto from 'crypto';
 
+// Passwords are stored as "scrypt$<salt>$<hash>". Accounts created before this
+// still hold the plain password; they are upgraded the next time that user logs in.
+const hashPassword = (password: string): string => {
+    const salt = crypto.randomBytes(16).toString('hex');
+    const hash = crypto.scryptSync(password, salt, 64).toString('hex');
+    return `scrypt$${salt}$${hash}`;
+};
+
+const verifyPassword = (password: string, stored: string): boolean => {
+    if (!stored || typeof password !== 'string') return false;
+    if (!stored.startsWith('scrypt$')) return password === stored;   // legacy plain text
+    const [, salt, hash] = stored.split('$');
+    const candidate = crypto.scryptSync(password, salt, 64);
+    const expected = Buffer.from(hash, 'hex');
+    return candidate.length === expected.length && crypto.timingSafeEqual(candidate, expected);
+};
+
 type Storetype = {
     auth_token: string;
 }
@@ -91,7 +108,7 @@ export function setUpHandlers() {
             }
 
             const insert = await db.prepare(`INSERT INTO users (username, email, password) VALUES (?, ?, ?)`);
-            await insert.run(user.username, user.email, user.password);
+            await insert.run(user.username, user.email, hashPassword(user.password));
             await insert.finalize();
 
             const select = await db.prepare(`SELECT * FROM users WHERE username = ? AND email = ?`);
@@ -109,11 +126,15 @@ export function setUpHandlers() {
     ipcMain.handle('login', async (event, user: User) => {
         try {
             const db = await DB.getConnection();
-            const stmt = await db.prepare(`SELECT * FROM users WHERE username = ? AND password = ?`);
-            const result = await stmt.get(user.username, user.password);
+            const stmt = await db.prepare(`SELECT * FROM users WHERE username = ?`);
+            const result = await stmt.get(user.username);
             await stmt.finalize();
 
-            if (result) {
+            if (result && verifyPassword(user.password, result.password)) {
+                if (!String(result.password).startsWith('scrypt$')) {
+                    // upgrade a legacy plain-text password to a hash
+                    await db.run(`UPDATE users SET password = ? WHERE id = ?`, [hashPassword(user.password), result.id]);
+                }
                 saveToken(crypto.randomBytes(32).toString('hex'));
                 const update = await db.prepare(`UPDATE users SET logged_in = 1 WHERE id = ?`);
                 await update.run(result.id);
@@ -252,7 +273,8 @@ export function setUpHandlers() {
             const db = await DB.getConnection();
             await db.exec('BEGIN');
             try {
-                let stmt = await db.prepare(`DELETE FROM notes WHERE categoryID = ?;`);
+                // Keep the notes; they just become uncategorised (categoryID 0)
+                let stmt = await db.prepare(`UPDATE notes SET categoryID = 0 WHERE categoryID = ?;`);
                 await stmt.run(categoryID);
                 await stmt.finalize();
                 stmt = await db.prepare(`DELETE FROM categories WHERE id = ?;`);
@@ -401,7 +423,8 @@ export function setUpHandlers() {
             const stmt = await db.prepare(`UPDATE EVENTS
                                            SET date = ?, startHour = ?, duration = ?, title = ?, color = ?, allDay = ?
                                            WHERE id = ?`);
-            await stmt.run(eventData.date, eventData.startHour || null, eventData.duration || null, eventData.title, eventData.color, eventData.id);
+            // allDay was missing here, which shifted the id into the wrong placeholder (no row ever matched)
+            await stmt.run(eventData.date, eventData.startHour || null, eventData.duration || null, eventData.title, eventData.color, eventData.allDay ? 1 : 0, eventData.id);
             await stmt.finalize();
             return { ok: true };
         } catch (err) {
