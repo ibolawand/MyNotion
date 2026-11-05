@@ -11,6 +11,7 @@ import { Color } from '@tiptap/extension-color';
 import { TextStyle } from '@tiptap/extension-text-style';
 import Highlight from '@tiptap/extension-highlight';
 import Underline from '@tiptap/extension-underline';
+import { TaskItem, TaskList } from '@tiptap/extension-list';
 import { TiptapEditorDirective } from 'ngx-tiptap';
 
 @Component({
@@ -48,7 +49,8 @@ export class TextEditor implements OnInit, OnDestroy {
 
   lists: ToolbarList[] = [
     { command: 'toggleBulletList', icon: '• List', title: 'Bullet List', checkActive: 'bulletList' },
-    { command: 'toggleOrderedList', icon: '1. List', title: 'Numbered List', checkActive: 'orderedList' }
+    { command: 'toggleOrderedList', icon: '1. List', title: 'Numbered List', checkActive: 'orderedList' },
+    { command: 'toggleTaskList', icon: '☑ To-do', title: 'Checklist', checkActive: 'taskList' }
   ];
 
   highlights: ToolbarHighlight[] = [
@@ -70,7 +72,10 @@ export class TextEditor implements OnInit, OnDestroy {
         TextStyle,
         Color,
         Underline,
-        Highlight.configure({ multicolor: true })
+        Highlight.configure({ multicolor: true }),
+        // checklists: ticking a box updates the note (and Aria can tick items too)
+        TaskList,
+        TaskItem.configure({ nested: true })
       ],
       content: '',
       editorProps: {

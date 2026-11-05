@@ -24,8 +24,11 @@ const openArg = (argv: string[]): string | null => {
 let pendingOpen: string | null = openArg(process.argv);
 let mainWindow: BrowserWindow | null = null;
 
-if (!app.requestSingleInstanceLock()) {
-    app.quit();
+const gotLock = app.requestSingleInstanceLock();
+if (!gotLock) {
+    // Another MyNotion already got our arguments via 'second-instance'. Exit right now:
+    // app.quit() only schedules quitting, so startup (DB, window) would still run and crash.
+    app.exit(0);
 } else {
     app.on('second-instance', (_event, argv) => {
         if (mainWindow) {
@@ -91,10 +94,11 @@ const watchDatabase = (): void => {
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.whenReady().then(async () => {
+    if (!gotLock) return;   // this copy is exiting; the running one handles the request
     await DB.getConnection();
     await DB.initializeTables();
     setUpHandlers();
-    // the page asks once it has loaded and logged in, so an --open from startup isn't lost
+    // the page asks once it has loaded, so an --open from startup isn't lost
     ipcMain.handle('take-open-target', () => {
         const t = pendingOpen;
         pendingOpen = null;
@@ -102,6 +106,9 @@ app.whenReady().then(async () => {
     });
     createWindow();
     watchDatabase();
+    // a backup per day: now, and hourly checks in case the app stays open past midnight
+    DB.backupDaily();
+    setInterval(() => DB.backupDaily(), 60 * 60 * 1000);
 })
 
 // Quit when all windows are closed, except on macOS. There, it's common

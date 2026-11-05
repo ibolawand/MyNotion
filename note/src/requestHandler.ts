@@ -97,6 +97,24 @@ export function setUpHandlers() {
         removeToken();
     });
     //#region users
+    // MyNotion runs locally for one person, so there is no login: the app always uses the
+    // first profile in USERS and creates one on a fresh database. (Real protection is the
+    // Linux account / screen lock; a password inside the app can't guard the SQLite file.)
+    ipcMain.handle('getLocalUser', async () => {
+        try {
+            const db = await DB.getConnection();
+            let row = await db.get(`SELECT id, username FROM users ORDER BY id ASC LIMIT 1`);
+            if (!row) {
+                const res = await db.run(`INSERT INTO users (username, email, password, logged_in) VALUES ('me', '', '', 1)`);
+                row = { id: res.lastID, username: 'me' };
+            }
+            return row;
+        } catch (err) {
+            console.error('getLocalUser error:', err);
+            return null;
+        }
+    });
+
     ipcMain.handle('createUser', async (event, user: User) => {
         try {
             const db = await DB.getConnection();
@@ -406,9 +424,9 @@ export function setUpHandlers() {
     ipcMain.handle('createEvent', async (event, eventData: CalendarEvent ) => {
         try {
             const db = await DB.getConnection();
-            const stmt = await db.prepare(`INSERT INTO EVENTS (date, startHour, duration, title, color, allDay, userID)
-                                           VALUES (?, ?, ?, ?, ?, ?, ?)`);
-            const res = await stmt.run(eventData.date, eventData.startHour || null, eventData.duration || null, eventData.title, eventData.color, eventData.allDay, eventData.userID);
+            const stmt = await db.prepare(`INSERT INTO EVENTS (date, startHour, duration, title, color, allDay, userID, repeat)
+                                           VALUES (?, ?, ?, ?, ?, ?, ?, ?)`);
+            const res = await stmt.run(eventData.date, eventData.startHour || null, eventData.duration || null, eventData.title, eventData.color, eventData.allDay, eventData.userID, eventData.repeat || null);
             await stmt.finalize();
             return { ok: true, id: res?.lastID };
         } catch (err) {
@@ -421,10 +439,10 @@ export function setUpHandlers() {
         try {
             const db = await DB.getConnection();
             const stmt = await db.prepare(`UPDATE EVENTS
-                                           SET date = ?, startHour = ?, duration = ?, title = ?, color = ?, allDay = ?
+                                           SET date = ?, startHour = ?, duration = ?, title = ?, color = ?, allDay = ?, repeat = ?
                                            WHERE id = ?`);
             // allDay was missing here, which shifted the id into the wrong placeholder (no row ever matched)
-            await stmt.run(eventData.date, eventData.startHour || null, eventData.duration || null, eventData.title, eventData.color, eventData.allDay ? 1 : 0, eventData.id);
+            await stmt.run(eventData.date, eventData.startHour || null, eventData.duration || null, eventData.title, eventData.color, eventData.allDay ? 1 : 0, eventData.repeat || null, eventData.id);
             await stmt.finalize();
             return { ok: true };
         } catch (err) {

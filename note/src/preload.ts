@@ -9,6 +9,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
         closeWindow: () => ipcRenderer.invoke('close-window'),
     },
     notes: {
+        getLocalUser: () => ipcRenderer.invoke('getLocalUser'),
         createUser: (user: User) => ipcRenderer.invoke('createUser', user),
         login: (user: User) => ipcRenderer.invoke('login', user),
         logout: (user: User) => ipcRenderer.invoke('logout', user),

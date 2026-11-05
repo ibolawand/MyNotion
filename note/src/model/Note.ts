@@ -34,4 +34,5 @@ interface CalendarEvent {
   duration: number;   // in hours; 0 for all-day
   color: string;
   userID: number;     // '' for all-day
+  repeat?: 'daily' | 'weekly' | 'monthly' | 'yearly' | null;
 }

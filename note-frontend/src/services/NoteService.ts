@@ -22,6 +22,7 @@ declare global {
         getCategories: (userId: number) => Promise<Category[]>;
         createCategory: (category: Partial<Category>) => Promise<Category>;
         deleteCategory: (categoryID: number) => Promise<void>;
+        getLocalUser: () => Promise<{ id: number; username: string } | null>;
         createUser: (user: User) => Promise<User>;
         login: (user: User) => Promise<User>;
         logout: (user: User) => Promise<void>;

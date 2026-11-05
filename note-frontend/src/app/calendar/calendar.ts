@@ -2,7 +2,7 @@ import { ChangeDetectorRef, Component, HostListener, OnDestroy, OnInit } from '@
 import { AsyncPipe, NgClass } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ModelService } from '../model.service';
-import { CalendarEvent, EventRow, WeekDay, EventForm } from '../../model/models';
+import { CalendarEvent, EventRow, WeekDay, EventForm, Repeat } from '../../model/models';
 import { NoteService } from '../../services/NoteService';
 
 
@@ -79,7 +79,8 @@ export class Calendar implements OnInit, OnDestroy {
         allDay: !!r.allDay,
         startHour: r.startHour ?? 0,
         duration: r.duration ?? 0,
-        color: r.color ?? ''
+        color: r.color ?? '',
+        repeat: r.repeat ?? null
       }));
     } catch (err) {
       console.error('Could not load events:', err);
@@ -114,7 +115,7 @@ export class Calendar implements OnInit, OnDestroy {
   }
  
   private emptyForm(): EventForm {
-    return { title: '', date: this.toIso(new Date()), start: '09:00', duration: 1, color: 'blue', allDay: false };
+    return { title: '', date: this.toIso(new Date()), start: '09:00', duration: 1, color: 'blue', allDay: false, repeat: null };
   }
  
   getWeekStart(date: Date): Date {
@@ -168,14 +169,38 @@ export class Calendar implements OnInit, OnDestroy {
     }
   }
  
+  repeats: { value: Repeat | null; label: string }[] = [
+    { value: null, label: 'Does not repeat' },
+    { value: 'daily', label: 'Every day' },
+    { value: 'weekly', label: 'Every week' },
+    { value: 'monthly', label: 'Every month' },
+    { value: 'yearly', label: 'Every year' },
+  ];
+
+  /** Does the event happen on this day? Repeating events show on every matching day from their start date. */
+  occursOn(e: CalendarEvent, iso: string): boolean {
+    if (!iso) return false;
+    if (!e.repeat) return e.date === iso;
+    if (iso < e.date) return false;
+    const [, m0, d0] = e.date.split('-').map(Number);
+    const day = new Date(iso + 'T00:00:00');
+    switch (e.repeat) {
+      case 'daily': return true;
+      case 'weekly': return day.getDay() === new Date(e.date + 'T00:00:00').getDay();
+      case 'monthly': return day.getDate() === d0;
+      case 'yearly': return day.getDate() === d0 && day.getMonth() + 1 === m0;
+      default: return false;
+    }
+  }
+
   getEventsForDay(dayIndex: number): CalendarEvent[] {
     const iso = this.weekDates[dayIndex]?.iso;
-    return this.events.filter(e => e.date === iso && !e.allDay);
+    return this.events.filter(e => this.occursOn(e, iso) && !e.allDay);
   }
  
   getAllDayEventsForDay(dayIndex: number): CalendarEvent[] {
     const iso = this.weekDates[dayIndex]?.iso;
-    return this.events.filter(e => e.date === iso && e.allDay);
+    return this.events.filter(e => this.occursOn(e, iso) && e.allDay);
   }
  
   private formatHour(hour: number): string {
@@ -202,7 +227,8 @@ export class Calendar implements OnInit, OnDestroy {
       start: `${this.pad(startHour)}:00`,
       duration: 1,
       color: 'blue',
-      allDay: false
+      allDay: false,
+      repeat: null
     };
     this.formError = '';
     this.showAddEvent = true;
@@ -253,7 +279,8 @@ export class Calendar implements OnInit, OnDestroy {
       allDay: f.allDay,
       startHour,
       duration,
-      color: f.allDay ? '' : f.color
+      color: f.allDay ? '' : f.color,
+      repeat: f.repeat ?? null
     };
  
     this.saving = true;

@@ -56,7 +56,10 @@ export interface CalendarEvent {
   duration: number;   // in hours; 0 for all-day
   color: string;      // '' for all-day
   userID: number;     // '' for all-day
+  repeat?: Repeat | null;   // repeating event: shown on every matching day from `date` on
 }
+
+export type Repeat = 'daily' | 'weekly' | 'monthly' | 'yearly';
 
 
 /** One row of the `events` table as returned by getAllEvents */
@@ -69,6 +72,7 @@ export interface EventRow {
   color: string | null;
   allDay: number;     // 0 / 1
   userID: number;
+  repeat: Repeat | null;
 }
 
 export interface WeekDay {
@@ -85,4 +89,5 @@ export interface EventForm {
   duration: number;
   color: string;
   allDay: boolean;
+  repeat: Repeat | null;
 }

@@ -30,7 +30,7 @@
         <div class="all-day-cell">
           @for (event of getAllDayEventsForDay(i); track event.id) {
           <div class="all-day-event">
-            <span class="all-day-title">{{ event.title }}</span>
+            <span class="all-day-title">@if (event.repeat) {<span class="repeat-mark" [title]="'Repeats ' + event.repeat">↻ </span>}{{ event.title }}</span>
             <button class="all-day-delete" title="Delete" (click)="deleteEvent(event.id)">×</button>
           </div>
           }
@@ -57,7 +57,7 @@
           [style.top.px]="(event.startHour - 8) * 100"
           [style.height.px]="event.duration * 100">
           <button class="event-delete" title="Delete" (click)="deleteEvent(event.id)">×</button>
-          <div class="event-title">{{ event.title }}</div>
+          <div class="event-title">@if (event.repeat) {<span class="repeat-mark" [title]="'Repeats ' + event.repeat">↻ </span>}{{ event.title }}</div>
           <div class="event-time">{{ formatEventTime(event.startHour, event.duration) }}</div>
         </div>
         }
@@ -109,6 +109,15 @@
         <input type="checkbox" [(ngModel)]="form.allDay">
         <span>All-day event</span>
       </label>
+
+      <div class="field">
+        <label class="field-label">Repeat</label>
+        <select class="field-input" [(ngModel)]="form.repeat">
+          @for (r of repeats; track r.value) {
+          <option [ngValue]="r.value">{{ r.label }}</option>
+          }
+        </select>
+      </div>
 
       @if (!form.allDay) {
       <div class="field">

@@ -563,3 +563,7 @@
 .btn-create:active {
   transform: translateY(-1px);
 }
+.repeat-mark {
+  opacity: 0.75;
+  font-size: 0.9em;
+}

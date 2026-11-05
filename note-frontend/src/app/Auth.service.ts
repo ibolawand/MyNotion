@@ -9,13 +9,17 @@ export class AuthService {
 
     constructor(private http: HttpClient, private modelService: ModelService, private noteService: NoteService) {
     }
+    /** No login: MyNotion is a local single-person app, so open the local profile straight away. */
     async checkAuthState() {
-        const token = await this.noteService.getToken();
-        const loggedIn = !!token;
+        const user = await window.electronAPI?.notes.getLocalUser?.();
+        const loggedIn = !!user;
+        if (user) {
+            this.noteService.checkUser(user as any, user.id);
+        }
         this.loggedIn.next(loggedIn);
 
         // Keep ModelService in sync so the shell shows the dashboard
-        // (instead of the create-account form) when a token is present.
+        // (the create-account form only appears if the database couldn't be opened).
         this.modelService.isLoggedIn.next(loggedIn);
         if (loggedIn) {
             this.modelService.openDashboard();

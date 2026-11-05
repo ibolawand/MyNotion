@@ -91,12 +91,27 @@ export class DB {
                 title TEXT NOT NULL,
                 color TEXT,
                 allDay BOOLEAN DEFAULT 0,
-                userID INTEGER NOT NULL
+                userID INTEGER NOT NULL,
+                repeat TEXT DEFAULT NULL
             );
-         
+
         `);
 
         await this.migrateLegacySchema();
+        await this.addColumnIfMissing('EVENTS', 'repeat', 'TEXT DEFAULT NULL');  // daily|weekly|monthly|yearly
+    }
+
+    private static async addColumnIfMissing(table: string, column: string, type: string) {
+        const db = this.dbInstance;
+        if (!db) return;
+        try {
+            const cols = await db.all(`PRAGMA table_info(${table})`);
+            if (cols.length && !cols.some((c: any) => c.name === column)) {
+                await db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type};`);
+            }
+        } catch (err) {
+            console.error(`addColumnIfMissing ${table}.${column} error:`, err);
+        }
     }
 
     // Ensure FOLDERS table has all required columns (parentID, userID, colour)
@@ -151,6 +166,43 @@ export class DB {
             DROP TABLE IF EXISTS USERS;
             DROP TABLE IF EXISTS EVENTS;
         `);
+    }
+
+    /**
+     * Daily backup: ~/.config/MyNotion/backups/noted-YYYY-MM-DD.db, keeping the newest BACKUPS_KEPT.
+     * VACUUM INTO writes a consistent copy even while the app (or Aria) is using the database.
+     * Safe to call often: it only does work when today's backup doesn't exist yet.
+     */
+    public static readonly BACKUPS_KEPT = 14;
+
+    public static get backupDir(): string {
+        return path.join(path.dirname(this.filePath), 'backups');
+    }
+
+    public static async backupDaily(): Promise<string | null> {
+        try {
+            const db = await this.getConnection();
+            const dir = this.backupDir;
+            fs.mkdirSync(dir, { recursive: true });
+            const d = new Date();
+            const day = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            const target = path.join(dir, `noted-${day}.db`);
+            if (fs.existsSync(target)) return null;
+
+            await db.run('VACUUM INTO ?', [target]);
+
+            const old = fs.readdirSync(dir)
+                .filter(f => /^noted-\d{4}-\d{2}-\d{2}\.db$/.test(f))
+                .sort()
+                .reverse()
+                .slice(this.BACKUPS_KEPT);
+            for (const f of old) fs.unlinkSync(path.join(dir, f));
+            console.log(`Backup written: ${target}`);
+            return target;
+        } catch (err) {
+            console.error('Backup failed:', err);
+            return null;
+        }
     }
 
     public static async getConnection() {
