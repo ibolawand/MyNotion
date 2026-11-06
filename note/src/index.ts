@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import fs from 'fs';
 import path from 'path';
 import { DB } from "./database/database";
@@ -53,6 +53,12 @@ const createWindow = (): void => {
         },
 
 
+    });
+
+    // Links in notes open in the normal browser, never inside the app window.
+    mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+        if (/^(https?|mailto):/i.test(url)) shell.openExternal(url);
+        return { action: 'deny' };
     });
 
     // In development the Angular app is served on its own dev server.

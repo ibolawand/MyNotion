@@ -1,0 +1,229 @@
+/* How the note itself looks (headings, lists, to-dos, quotes, code). Tokens come from text-editor.css :host. */
+::ng-deep .tiptap-editor-content {
+  outline: none;
+  overflow: visible;
+  color: var(--ink);
+  font-family: var(--serif);
+  font-size: 17px;
+  line-height: 1.75;
+  caret-color: var(--accent);
+  word-wrap: break-word;
+  font-variant-numeric: oldstyle-nums;
+}
+
+.sans ::ng-deep .tiptap-editor-content {
+  font-family: var(--sans);
+  font-size: 16px;
+  line-height: 1.65;
+  font-variant-numeric: normal;
+}
+
+::ng-deep .tiptap-editor-content * {
+  overflow: visible;           /* the app sets overflow: hidden on everything */
+}
+
+::ng-deep .tiptap-editor-content ::selection {
+  background: rgba(74, 222, 128, 0.28);
+}
+
+::ng-deep .tiptap-editor-content p {
+  margin: 0 0 0.85em;
+}
+
+::ng-deep .tiptap-editor-content h1,
+::ng-deep .tiptap-editor-content h2,
+::ng-deep .tiptap-editor-content h3 {
+  font-family: var(--sans);
+  color: var(--ink-strong);
+  line-height: 1.25;
+  letter-spacing: -0.012em;
+}
+
+::ng-deep .tiptap-editor-content h1 {
+  font-size: 1.75em;
+  font-weight: 750;
+  margin: 1.4em 0 0.45em;
+}
+
+::ng-deep .tiptap-editor-content h2 {
+  font-size: 1.35em;
+  font-weight: 700;
+  margin: 1.35em 0 0.4em;
+}
+
+::ng-deep .tiptap-editor-content h3 {
+  font-size: 1.1em;
+  font-weight: 700;
+  margin: 1.2em 0 0.3em;
+}
+
+::ng-deep .tiptap-editor-content > :first-child {
+  margin-top: 0;
+}
+
+::ng-deep .tiptap-editor-content ul,
+::ng-deep .tiptap-editor-content ol {
+  padding-left: 1.4em;
+  margin: 0 0 0.85em;
+}
+
+::ng-deep .tiptap-editor-content li {
+  margin: 0.15em 0;
+}
+
+::ng-deep .tiptap-editor-content li p {
+  margin: 0;
+}
+
+::ng-deep .tiptap-editor-content li::marker {
+  color: var(--muted);
+}
+
+::ng-deep .tiptap-editor-content blockquote {
+  margin: 1em 0;
+  padding: 0.1em 0 0.1em 1.1em;
+  border-left: 3px solid var(--accent);
+  color: #c9ced8;
+  font-style: italic;
+}
+
+::ng-deep .tiptap-editor-content blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+::ng-deep .tiptap-editor-content code {
+  font-family: var(--mono);
+  font-size: 0.84em;
+  padding: 0.12em 0.36em;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.07);
+  color: #f0abfc;
+}
+
+::ng-deep .tiptap-editor-content pre {
+  margin: 1em 0;
+  padding: 14px 16px;
+  border-radius: 8px;
+  background: #171a28;
+  border: 1px solid var(--line);
+  overflow-x: auto;
+  line-height: 1.55;
+}
+
+::ng-deep .tiptap-editor-content pre code {
+  padding: 0;
+  background: none;
+  color: #d6dbe4;
+  font-size: 13.5px;
+}
+
+::ng-deep .tiptap-editor-content hr {
+  border: none;
+  margin: 2em auto;
+  width: 40%;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+::ng-deep .tiptap-editor-content hr.ProseMirror-selectednode {
+  background: var(--accent);
+}
+
+::ng-deep .tiptap-editor-content a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-color: rgba(74, 222, 128, 0.4);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+::ng-deep .tiptap-editor-content mark {
+  padding: 0.05em 0.15em;
+  border-radius: 3px;
+  color: #1f2233 !important;     /* TipTap writes color: inherit inline, which would be light text on a light mark */
+  background-color: #fde68a;
+}
+
+::ng-deep .tiptap-editor-content strong {
+  font-weight: 700;
+  color: var(--ink-strong);
+}
+
+::ng-deep .tiptap-editor-content u,
+::ng-deep .tiptap-editor-content s {
+  text-decoration-color: rgba(255, 255, 255, 0.5);
+}
+
+/* placeholders */
+::ng-deep .tiptap-editor-content .is-empty::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  color: var(--faint);
+}
+
+::ng-deep .tiptap-editor-content p.is-empty:not(.is-editor-empty)::before {
+  opacity: 0;
+}
+
+::ng-deep .tiptap-editor-content p.is-empty.has-focus:not(.is-editor-empty)::before,
+::ng-deep .tiptap-editor-content .ProseMirror-focused p.is-empty:not(.is-editor-empty)::before {
+  opacity: 1;
+}
+
+/* Checklists (TipTap task list) */
+::ng-deep .tiptap-editor-content ul[data-type="taskList"] {
+  list-style: none;
+  padding-left: 0.1em;
+}
+
+::ng-deep .tiptap-editor-content ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6em;
+}
+
+::ng-deep .tiptap-editor-content ul[data-type="taskList"] li > label {
+  flex: 0 0 auto;
+  margin-top: 0.32em;
+  user-select: none;
+}
+
+::ng-deep .tiptap-editor-content ul[data-type="taskList"] li > label input {
+  appearance: none;
+  width: 1.05em;
+  height: 1.05em;
+  border: 1.5px solid var(--muted);
+  border-radius: 4px;
+  cursor: pointer;
+  display: grid;
+  place-content: center;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+::ng-deep .tiptap-editor-content ul[data-type="taskList"] li > label input:checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+::ng-deep .tiptap-editor-content ul[data-type="taskList"] li > label input:checked::after {
+  content: "";
+  width: 0.28em;
+  height: 0.55em;
+  margin-top: -0.12em;
+  border: solid #10331f;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+::ng-deep .tiptap-editor-content ul[data-type="taskList"] li > div {
+  flex: 1 1 auto;
+}
+
+::ng-deep .tiptap-editor-content ul[data-type="taskList"] li[data-checked="true"] > div {
+  color: rgba(228, 231, 235, 0.42);
+  text-decoration: line-through;
+  text-decoration-color: rgba(228, 231, 235, 0.3);
+}
+
