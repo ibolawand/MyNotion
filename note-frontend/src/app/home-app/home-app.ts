@@ -8,6 +8,7 @@ import { OverviewPanel } from '../overview-panel/overview-panel';
 import { AsyncPipe } from '@angular/common';
 import { Editor } from '../editor/editor';
 import { SideBar } from '../side-bar/side-bar';
+import { QuickSearch } from '../quick-search/quick-search';
 import { Calendar } from '../calendar/calendar';
 import { CreateAccount } from '../creat-account/creat-account';
 import { WindowBar } from '../window-bar/window-bar';
@@ -16,6 +17,7 @@ import { WindowBar } from '../window-bar/window-bar';
   selector: 'app-home-app',
   standalone: true,
   imports: [
+    QuickSearch,
     Adder,
     OverviewPanel,
     Editor,

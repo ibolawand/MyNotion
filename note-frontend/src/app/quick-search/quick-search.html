@@ -1,0 +1,58 @@
+@if (open) {
+  <div class="qs-backdrop" (mousedown)="close()">
+    <div class="qs" role="dialog" aria-label="Search notes" (mousedown)="$event.stopPropagation()">
+      <div class="qs-field">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.6-3.6"/></svg>
+        <input #input [(ngModel)]="query" (ngModelChange)="search()" (keydown)="onInputKey($event)"
+          placeholder="Search titles and text" aria-label="Search notes" autocomplete="off" spellcheck="false">
+        <kbd>Esc</kbd>
+      </div>
+
+      <div class="qs-list" #list role="listbox">
+        @if (showToday) {
+          <button class="row today" role="option" [class.selected]="index === 0" [attr.aria-selected]="index === 0"
+            (mouseenter)="index = 0" (click)="choose(0)">
+            <span class="row-icon">
+              <svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>
+            </span>
+            <span class="row-text">
+              <span class="row-title">Today's note</span>
+              <span class="row-snippet">{{ today }}</span>
+            </span>
+            <kbd>Ctrl D</kbd>
+          </button>
+        }
+
+        @if (!query.trim() && hits.length) {
+          <div class="qs-group">Recent</div>
+        }
+
+        @for (hit of hits; track hit.note.id; let i = $index) {
+          <button class="row" role="option" [class.selected]="index === i + (showToday ? 1 : 0)"
+            [attr.aria-selected]="index === i + (showToday ? 1 : 0)"
+            (mouseenter)="index = i + (showToday ? 1 : 0)" (click)="choose(i + (showToday ? 1 : 0))">
+            <span class="row-icon">
+              <svg viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h4"/></svg>
+            </span>
+            <span class="row-text">
+              <span class="row-title">{{ hit.title }}</span>
+              @if (hit.before || hit.match || hit.after) {
+                <span class="row-snippet">{{ hit.before }}@if (hit.match) {<mark>{{ hit.match }}</mark>}{{ hit.after }}</span>
+              }
+            </span>
+          </button>
+        }
+
+        @if (query.trim() && !hits.length) {
+          <p class="qs-empty">No note mentions "{{ query.trim() }}".</p>
+        }
+      </div>
+
+      <div class="qs-foot">
+        <span><kbd>↑</kbd><kbd>↓</kbd> to move</span>
+        <span><kbd>Enter</kbd> to open</span>
+        <span><kbd>Ctrl P</kbd> search from anywhere</span>
+      </div>
+    </div>
+  </div>
+}

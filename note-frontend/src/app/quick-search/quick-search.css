@@ -1,0 +1,176 @@
+/* Ctrl+P search over all notes. Same tokens as the editor: navy surfaces, the app's green as the only accent. */
+.qs-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 12vh;
+  background: rgba(10, 12, 24, 0.55);
+  backdrop-filter: blur(2px);
+}
+
+.qs {
+  width: min(620px, calc(100vw - 32px));
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  border-radius: 14px;
+  background: #262a3d;
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow: 0 24px 60px rgba(5, 7, 18, 0.6);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Ubuntu, Cantarell, 'Noto Sans', sans-serif;
+  color: #e4e7eb;
+  animation: qs-in 0.12s ease-out;
+}
+
+@keyframes qs-in {
+  from { opacity: 0; transform: translateY(-6px) scale(0.99); }
+  to { opacity: 1; transform: none; }
+}
+
+.qs-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.qs-field svg,
+.row-icon svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  flex: none;
+}
+
+.qs-field svg { color: #8b93a3; }
+
+.qs-field input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #f5f6f8;
+  font: 16px/1.4 inherit;
+  font-family: inherit;
+}
+
+.qs-field input::placeholder { color: #5c6476; }
+
+kbd {
+  padding: 1px 6px;
+  border-radius: 5px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: #1f2233;
+  color: #8b93a3;
+  font: 11px/1.5 'JetBrains Mono', 'Ubuntu Mono', 'DejaVu Sans Mono', monospace;
+  white-space: nowrap;
+}
+
+.qs-list {
+  overflow-y: auto;
+  padding: 6px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+}
+
+.qs-group {
+  padding: 10px 10px 4px;
+  font-size: 12px;
+  color: #8b93a3;
+}
+
+.row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 10px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.row.selected { background: rgba(255, 255, 255, 0.07); }
+
+.row:focus-visible { outline: 2px solid #4ade80; outline-offset: -2px; }
+
+.row-icon {
+  width: 32px;
+  height: 32px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  background: #1f2233;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  color: #8b93a3;
+}
+
+.row.selected .row-icon { color: #4ade80; border-color: rgba(74, 222, 128, 0.35); }
+
+.row-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.row-title {
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.row-snippet {
+  font-size: 12.5px;
+  color: #8b93a3;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.row-snippet mark {
+  background: rgba(74, 222, 128, 0.18);
+  color: #bbf7d0;
+  border-radius: 3px;
+  padding: 0 1px;
+}
+
+.qs-empty {
+  padding: 18px 12px;
+  color: #8b93a3;
+  font-size: 13.5px;
+}
+
+.qs-foot {
+  display: flex;
+  gap: 16px;
+  padding: 9px 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  color: #5c6476;
+  font-size: 12px;
+}
+
+.qs-foot kbd { margin-right: 3px; }
+
+@media (max-width: 560px) {
+  .qs-foot span:last-child { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qs { animation: none; }
+}
