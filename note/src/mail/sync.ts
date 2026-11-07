@@ -10,6 +10,7 @@ import { alwaysShow, getState, setState, upsertMessage } from './store';
 
 export const PRIMARY_QUERY = 'category:primary newer_than:90d';
 const PREVIEW_CHARS = 200;
+const INLINE_MAX = 512 * 1024;
 const BATCH = 25;
 
 export interface FetchedMessage {
@@ -42,7 +43,17 @@ export async function parseMessage(f: FetchedMessage, keep: Set<string>) {
   const from = p.from?.value[0] ?? { name: '', address: '' };
   const headers: Record<string, string> = {};
   for (const h of p.headerLines) headers[h.key] = h.line.slice(h.line.indexOf(':') + 1).trim();
-  const text = (p.text ?? '').trim() || htmlToText(typeof p.html === 'string' ? p.html : '').trim();
+  // inline pictures (logos, signatures) belong in the mail, not in the attachment list: they're put into the HTML
+  // as data: URLs (cid: can't be resolved inside the sandboxed view). Big ones are dropped.
+  const inline = (a: { related?: boolean; contentDisposition?: string; cid?: string }) =>
+    !!a.cid && (a.related || a.contentDisposition === 'inline');
+  let html = typeof p.html === 'string' ? p.html : '';
+  for (const a of p.attachments.filter(inline)) {
+    const url = a.size <= INLINE_MAX ? `data:${a.contentType};base64,${a.content.toString('base64')}` : '';
+    html = html.split(`cid:${a.cid}`).join(url);
+  }
+  const files = p.attachments.filter(a => !inline(a));
+  const text = (p.text ?? '').trim() || htmlToText(html).trim();
   const reason = filterReason(headers, from.address ?? '', { alwaysShow: keep });
   return {
     gm_msgid: f.emailId ?? `uid:${f.uid}:${p.messageId ?? ''}`, gm_thrid: f.threadId, uid: f.uid,
@@ -52,12 +63,14 @@ export async function parseMessage(f: FetchedMessage, keep: Set<string>) {
     subject: (p.subject ?? '').trim() || '(no subject)',
     date: (p.date ?? new Date()).toISOString(),
     preview: text.replace(/\s+/g, ' ').trim().slice(0, PREVIEW_CHARS),
-    body_text: text, body_html: typeof p.html === 'string' ? p.html : '',
-    has_attachments: p.attachments.length ? 1 : 0,
+    body_text: text, body_html: html,
+    reply_to: (p.replyTo?.value[0]?.address ?? '').toLowerCase() || null,
+    has_attachments: files.length ? 1 : 0,
     unread: f.flags?.has('\\Seen') ? 0 : 1,
     filtered: reason ? 1 : 0, filter_reason: reason,
-    attachments: p.attachments.map((a, i) => ({ filename: a.filename ?? `attachment ${i + 1}`, mime: a.contentType,
-                                                size: a.size, part_id: String(i) })),
+    // part_id = position in mailparser's full attachment list (what mail:attachment looks up)
+    attachments: p.attachments.map((a, i) => ({ a, i })).filter(({ a }) => !inline(a))
+      .map(({ a, i }) => ({ filename: a.filename ?? `attachment ${i + 1}`, mime: a.contentType, size: a.size, part_id: String(i) })),
   };
 }
 
@@ -138,6 +151,8 @@ export async function syncInbox(db: Database, client: MailClient, now = new Date
       updated++;
     }
   }
+  // after a renumbering, mail that wasn't found again isn't in the inbox any more
+  await db.run('UPDATE mail_message SET archived = 1 WHERE uid IS NULL AND archived = 0');
   if (current.length) await setState(db, 'last_uid', String(Math.max(...current)));
   await setState(db, 'last_sync', now.toISOString());
   return { added, updated };

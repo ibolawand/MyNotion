@@ -105,4 +105,44 @@ describe('MailService', () => {
     await s.tick();
     expect((await s.status()).error).toBe('Turn on IMAP in Gmail settings (Forwarding and POP/IMAP).');
   });
+
+  it('mail stuck in "sending" after a crash is shown, not lost', async () => {
+    const old = new Date(Date.now() - 10 * 60_000).toISOString();
+    await db.run(`INSERT INTO mail_outbox (client_id, to_addrs, subject, body, state, created_by, created_at, send_after)
+                  VALUES ('c1', 'a@b.c', 's', 'b', 'sending', 'mynotion', ?, ?)`, old, old);
+    await service().tick();
+    const row = await db.get("SELECT state, error FROM mail_outbox WHERE client_id = 'c1'");
+    expect(row.state).toBe('failed');
+    expect(row.error).toMatch(/check Gmail's Sent folder/);
+  });
+
+  it('archiving offline is done later instead of coming back', async () => {
+    await db.run("INSERT INTO mail_message (id, gm_msgid, uid, subject, date) VALUES (1, '777', 5, 's', '2026-11-07T09:00:00.000Z')");
+    const removed: unknown[] = [];
+    let online = false;
+    const imap = () => ({ ...imapThat(), connect: async () => { if (!online) throw Object.assign(new Error('x'), { code: 'ENOTFOUND' }); },
+      search: async (q: { emailId?: string }) => (q.emailId ? [5] : [5]),
+      messageFlagsRemove: async (...a: unknown[]) => { removed.push(a); return true; } });
+    const s = new MailService({ db: async () => db, loadAccount: () => ({ address: 'lala@gmail.com', password: 'pw' }),
+      saveAccount: () => {}, forgetAccount: () => {}, makeImap: () => imap() as unknown as ImapLike,
+      makeTransport: () => ({ sendMail: async () => ({}) }), notify: () => {} });
+    await s.archive(1);
+    expect(removed).toEqual([]);
+    online = true;
+    await s.tick();
+    expect(removed).toHaveLength(1);
+    expect((await db.get('SELECT archived FROM mail_message WHERE id = 1')).archived).toBe(1);
+  });
+
+  it('opening several mails quickly uses one connection to mark them read', async () => {
+    let connects = 0;
+    await db.run("INSERT INTO mail_message (id, gm_msgid, uid, subject, date) VALUES (1, '1', 1, 'a', 'x'), (2, '2', 2, 'b', 'x'), (3, '3', 3, 'c', 'x')");
+    const s = new MailService({ db: async () => db, loadAccount: () => ({ address: 'lala@gmail.com', password: 'pw' }),
+      saveAccount: () => {}, forgetAccount: () => {},
+      makeImap: () => ({ ...imapThat(), connect: async () => { connects++; }, search: async (q: { emailId: string }) => [Number(q.emailId)] }) as unknown as ImapLike,
+      makeTransport: () => ({ sendMail: async () => ({}) }), notify: () => {} });
+    await Promise.all([s.markRead(1, true), s.markRead(2, true), s.markRead(3, true)]);
+    await s.flushReads();
+    expect(connects).toBe(1);
+  });
 });

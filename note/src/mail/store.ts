@@ -3,7 +3,7 @@ import type { Database } from 'sqlite';
 
 export interface StoredMessage {
   gm_msgid: string; gm_thrid?: string; uid: number | null; message_id?: string;
-  from_name: string; from_addr: string; to_addrs: string; cc: string; subject: string; date: string;
+  from_name: string; from_addr: string; to_addrs: string; cc: string; reply_to?: string | null; subject: string; date: string;
   preview: string; body_text: string; body_html: string; has_attachments: number;
   unread: number; filtered: number; filter_reason: string | null;
   attachments?: { filename: string; mime: string; size: number; part_id: string }[];
@@ -14,11 +14,11 @@ export interface MessageRow extends Omit<StoredMessage, 'attachments'> { id: num
 /** Insert, or (same Gmail id) refresh uid/flags. Returns the row id. */
 export async function upsertMessage(db: Database, m: StoredMessage): Promise<number> {
   await db.run(
-    `INSERT INTO mail_message (gm_msgid, gm_thrid, uid, message_id, from_name, from_addr, to_addrs, cc, subject, date,
-       preview, body_text, body_html, has_attachments, unread, archived, filtered, filter_reason)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,?,?)
+    `INSERT INTO mail_message (gm_msgid, gm_thrid, uid, message_id, from_name, from_addr, to_addrs, cc, reply_to, subject,
+       date, preview, body_text, body_html, has_attachments, unread, archived, filtered, filter_reason)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,0,?,?)
      ON CONFLICT(gm_msgid) DO UPDATE SET uid = excluded.uid, unread = excluded.unread, archived = 0`,
-    m.gm_msgid, m.gm_thrid ?? null, m.uid, m.message_id ?? null, m.from_name, m.from_addr, m.to_addrs, m.cc, m.subject,
+    m.gm_msgid, m.gm_thrid ?? null, m.uid, m.message_id ?? null, m.from_name, m.from_addr, m.to_addrs, m.cc, m.reply_to ?? null, m.subject,
     m.date, m.preview, m.body_text, m.body_html, m.has_attachments, m.unread, m.filtered, m.filter_reason);
   const row = await db.get<{ id: number }>('SELECT id FROM mail_message WHERE gm_msgid = ?', m.gm_msgid);
   if (m.attachments?.length) {
@@ -41,7 +41,7 @@ export async function listMessages(db: Database, opts: { view: 'inbox' | 'filter
     args.push(q, q, q, q);
   }
   return db.all<MessageRow[]>(
-    `SELECT id, gm_msgid, gm_thrid, uid, message_id, from_name, from_addr, to_addrs, cc, subject, date, preview,
+    `SELECT id, gm_msgid, gm_thrid, uid, message_id, from_name, from_addr, to_addrs, cc, reply_to, subject, date, preview,
             '' AS body_text, '' AS body_html, has_attachments, unread, archived, filtered, filter_reason
      FROM mail_message WHERE ${where.join(' AND ')} ORDER BY date DESC LIMIT ?`, ...args, opts.limit ?? 100);
 }

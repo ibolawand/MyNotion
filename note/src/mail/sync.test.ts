@@ -133,6 +133,36 @@ describe('syncInbox', () => {
     expect(await getState(db, 'last_sync')).not.toBeNull();
   });
 
+  it('inline logos are shown in the mail, not listed as attachments', async () => {
+    const src = Buffer.from([
+      'From: Shop <hi@shop.example>', 'To: lala@gmail.com', 'Subject: order', 'Message-ID: <inl@x>', 'MIME-Version: 1.0',
+      'Content-Type: multipart/related; boundary="r"', '', '--r', 'Content-Type: text/html', '',
+      '<p>Thanks</p><img src="cid:logo1">', '--r', 'Content-Type: image/png', 'Content-ID: <logo1>',
+      'Content-Disposition: inline; filename="logo.png"', 'Content-Transfer-Encoding: base64', '', 'iVBORw0KGgo=', '--r--', ''].join('\r\n'));
+    gmail.add(1, src);
+    await syncInbox(db, gmail);
+    const row = await db.get('SELECT has_attachments, body_html FROM mail_message');
+    expect(row.has_attachments).toBe(0);
+    expect(row.body_html).toContain('src="data:image/png;base64,');
+    expect(await db.all('SELECT * FROM mail_attachment')).toEqual([]);
+  });
+
+  it('keeps Reply-To', async () => {
+    gmail.add(1, raw({ id: 'r', headers: ['Reply-To: Class list <class@school.example>'] }));
+    await syncInbox(db, gmail);
+    expect((await db.get('SELECT reply_to FROM mail_message')).reply_to).toBe('class@school.example');
+  });
+
+  it('mail not found again after a renumbering leaves the inbox', async () => {
+    gmail.add(5, raw({ id: 'a' }));
+    gmail.add(6, raw({ id: 'b' }));
+    await syncInbox(db, gmail);
+    gmail.uidValidity = 2n;
+    gmail.msgs = new Map([[1, { source: raw({ id: 'a' }), seen: false, emailId: 'gm5' }]]);
+    await syncInbox(db, gmail);
+    expect((await listMessages(db, { view: 'inbox' })).map(r => r.message_id)).toEqual(['<a@mail.example>']);
+  });
+
   it('attachments of mail Aria stored first are filled in', async () => {
     const withFile = Buffer.from([
       'From: Mr Huber <huber@school.example>', 'To: lala@gmail.com', 'Subject: brief', 'Message-ID: <att@x>',

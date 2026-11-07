@@ -11,6 +11,8 @@ import { getState, setState } from './store';
 
 export const SYNC_EVERY_MS = 2 * 60 * 1000;
 export const OUTBOX_EVERY_MS = 5 * 1000;
+export const STUCK_SENDING_MS = 5 * 60 * 1000;
+export const READ_BATCH_MS = 1500;      // opening several mails in a row: one connection marks them all read
 
 export const ERR_PASSWORD = "Gmail didn't accept the password. Make a new app password at myaccount.google.com/apppasswords.";
 export const ERR_IMAP_OFF = 'Turn on IMAP in Gmail settings (Forwarding and POP/IMAP).';
@@ -61,6 +63,8 @@ export class MailService {
   private syncTimer: NodeJS.Timeout | null = null;
   private outboxTimer: NodeJS.Timeout | null = null;
   private inFlight: Promise<void> | null = null;
+  private pendingReads = new Map<string, boolean>();   // Gmail id -> read
+  private readTimer: NodeJS.Timeout | null = null;
 
   constructor(private deps: MailDeps) {}
 
@@ -120,12 +124,35 @@ export class MailService {
     if (!this.inFlight) {
       this.inFlight = (async () => {
         const db = await this.deps.db();
-        const r = await this.withImap(c => syncInbox(db, c));
+        await this.recoverStuck(db);
+        const r = await this.withImap(async c => {
+          await this.archivePending(db, c);
+          return syncInbox(db, c);
+        });
         await this.flush();
         if (r && (r.added || r.updated)) this.deps.notify();
       })().finally(() => { this.inFlight = null; });
     }
     return this.inFlight;
+  }
+
+  /** A crash between "sending" and "sent" would hide the mail forever: show it as a problem instead. */
+  private async recoverStuck(db: Database) {
+    const before = new Date(Date.now() - STUCK_SENDING_MS).toISOString();
+    await db.run(`UPDATE mail_outbox SET state = 'failed', error = ? WHERE state = 'sending' AND send_after < ?`,
+      "It was interrupted while sending, so check Gmail's Sent folder before you retry.", before);
+  }
+
+  /** Archives that couldn't reach Gmail (offline): done now, so the next sync doesn't bring them back. */
+  private async archivePending(db: Database, c: ImapLike) {
+    const pending: string[] = JSON.parse((await getState(db, 'pending_archive')) || '[]');
+    if (!pending.length) return;
+    await c.mailboxOpen('INBOX');
+    for (const gm of pending) {
+      const uid = await uidFor(c, gm);
+      if (uid != null) await c.messageFlagsRemove([uid], ['\\Inbox'], { uid: true, useLabels: true });
+    }
+    await setState(db, 'pending_archive', '[]');
   }
 
   private async flushIfQueued() {
@@ -193,20 +220,32 @@ export class MailService {
     };
   }
 
-  /** Read on Gmail too (and locally right away). */
+  /** Read on Gmail too: locally right away, on Gmail together with the others opened in the next moment. */
   async markRead(id: number, read: boolean) {
     const db = await this.deps.db();
     await db.run('UPDATE mail_message SET unread = ? WHERE id = ?', read ? 0 : 1, id);
     const row = await db.get<{ gm_msgid: string }>('SELECT gm_msgid FROM mail_message WHERE id = ?', id);
-    if (row) {
-      await this.withImap(async c => {
-        await c.mailboxOpen('INBOX');
-        const uid = await uidFor(c, row.gm_msgid);
-        if (uid == null) return false;
-        return read ? c.messageFlagsAdd([uid], ['\\Seen'], { uid: true })
-                    : c.messageFlagsRemove([uid], ['\\Seen'], { uid: true });
-      });
-    }
+    if (!row) return;
+    this.pendingReads.set(row.gm_msgid, read);
+    if (!this.readTimer) this.readTimer = setTimeout(() => void this.flushReads(), READ_BATCH_MS);
+  }
+
+  async flushReads() {
+    if (this.readTimer) clearTimeout(this.readTimer);
+    this.readTimer = null;
+    const batch = [...this.pendingReads];
+    this.pendingReads.clear();
+    if (!batch.length) return;
+    await this.withImap(async c => {
+      await c.mailboxOpen('INBOX');
+      for (const [gm, read] of batch) {
+        const uid = await uidFor(c, gm);
+        if (uid == null) continue;
+        if (read) await c.messageFlagsAdd([uid], ['\\Seen'], { uid: true });
+        else await c.messageFlagsRemove([uid], ['\\Seen'], { uid: true });
+      }
+      return true;
+    });
   }
 
   /** Archive = take away the Inbox label; the mail stays in All Mail. Never deletes. */
@@ -215,11 +254,15 @@ export class MailService {
     await db.run('UPDATE mail_message SET archived = 1 WHERE id = ?', id);
     const row = await db.get<{ gm_msgid: string }>('SELECT gm_msgid FROM mail_message WHERE id = ?', id);
     if (row) {
-      await this.withImap(async c => {
+      const done = await this.withImap(async c => {
         await c.mailboxOpen('INBOX');
         const uid = await uidFor(c, row.gm_msgid);
         return uid == null ? false : c.messageFlagsRemove([uid], ['\\Inbox'], { uid: true, useLabels: true });
       });
+      if (done === null) {          // Gmail not reachable: remember it for the next sync
+        const pending: string[] = JSON.parse((await getState(db, 'pending_archive')) || '[]');
+        await setState(db, 'pending_archive', JSON.stringify([...new Set([...pending, row.gm_msgid])]));
+      }
     }
     this.deps.notify();
   }

@@ -100,7 +100,7 @@ export interface MailSummary {
 }
 export interface MailAttachment { id: number; filename: string; mime: string; size: number; }
 export interface MailMessage extends MailSummary {
-  body_text: string; body_html: string; cc: string; message_id: string | null; attachments: MailAttachment[];
+  body_text: string; body_html: string; cc: string; reply_to?: string | null; message_id: string | null; attachments: MailAttachment[];
 }
 export interface MailDraft { to: string; cc?: string; subject: string; body: string; inReplyToId?: number; attachments?: string[]; }
 export interface MailProblem { client_id: string; to_addrs: string; subject: string; error: string; }

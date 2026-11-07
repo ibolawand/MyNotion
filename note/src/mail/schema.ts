@@ -1,4 +1,7 @@
 /** Mail tables in noted.db. BetterAI/Engines/MailEngine.py creates the same ones (a test there compares them). */
+/** Columns added after the first version: [table, column, type]. Added to existing databases at startup. */
+export const MAIL_COLUMNS: [string, string, string][] = [['mail_message', 'reply_to', 'TEXT']];
+
 export const MAIL_SCHEMA = `
 CREATE TABLE IF NOT EXISTS mail_message (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -10,6 +13,7 @@ CREATE TABLE IF NOT EXISTS mail_message (
   from_addr TEXT,
   to_addrs TEXT,
   cc TEXT,
+  reply_to TEXT,
   subject TEXT,
   date TEXT,
   preview TEXT,

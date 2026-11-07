@@ -60,7 +60,8 @@ export class Inbox implements OnInit, OnDestroy {
     const text = m.body_text || htmlToPlain(m.body_html);
     const quoted = text.trim().split('\n').map(l => '> ' + l).join('\n');
     const when = new Date(m.date).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' });
-    this.draft = { to: m.from_addr, subject: /^re:/i.test(m.subject) ? m.subject : `Re: ${m.subject}`,
+    this.draft = { to: m.reply_to || m.from_addr,   // "Reply-To" wins (class lists, ticket systems)
+                   subject: /^re:/i.test(m.subject) ? m.subject : `Re: ${m.subject}`,
                    body: `\n\nOn ${when}, ${m.from_name} wrote:\n${quoted}`, inReplyToId: m.id };
   }
 
