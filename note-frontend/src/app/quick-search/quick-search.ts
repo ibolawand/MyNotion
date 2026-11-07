@@ -85,6 +85,10 @@ export class QuickSearch implements OnInit, OnDestroy {
     if (mod && !e.shiftKey && e.key.toLowerCase() === 'p') {
       e.preventDefault();
       this.open ? this.close() : this.show();
+    } else if (mod && !e.shiftKey && e.key.toLowerCase() === 'n') {
+      e.preventDefault();
+      this.close();
+      this.modelService.toggleOpenNewNote();
     } else if (mod && !e.shiftKey && e.key.toLowerCase() === 'd') {
       e.preventDefault();
       this.close();

@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, ElementRef, OnInit, OnDestroy, ViewChild } from '@angular/core';
 import { NoteService } from '../../services/NoteService';
 import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { AsyncPipe, CommonModule } from '@angular/common';
@@ -29,6 +29,8 @@ export class Editor implements OnInit, OnDestroy {
   categories: Category[] = [];
 
   private subscriptions: Subscription[] = [];
+  @ViewChild('titleInput') titleInput?: ElementRef<HTMLInputElement>;
+  @ViewChild('textEditor') textEditor?: TextEditor;
 
   constructor(protected modelService: ModelService, protected noteService: NoteService) {}
 
@@ -39,7 +41,9 @@ export class Editor implements OnInit, OnDestroy {
     this.subscriptions.push(
       this.modelService.currentNote$.subscribe((note: Note | null) => {
         if (note) {
+          const fresh = note !== this.currentNote && note.id == null && !note.title;
           this.currentNote = note;
+          if (fresh) setTimeout(() => this.titleInput?.nativeElement.focus(), 0);   // new note: type the title
           this.title = note.title ?? '';
           this.content = note.content ?? '';
           this.folderID = note.folderID ?? 0;
@@ -119,6 +123,14 @@ export class Editor implements OnInit, OnDestroy {
       this.modelService.updateCurrentNote(this.currentNote);
       this.noteService.triggerAutoSave(this.currentNote);
     }
+  }
+
+  /** Enter in the title: straight to the start of the text (at once, so the next keystroke lands there). */
+  toText() {
+    const ed = this.textEditor?.editor;
+    if (!ed) return;
+    ed.view.dom.focus();
+    ed.commands.setTextSelection(1);
   }
 
   async togglePin() {

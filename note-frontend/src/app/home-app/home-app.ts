@@ -1,6 +1,5 @@
 import { Component, NgZone, OnDestroy, OnInit } from '@angular/core';
 import { ModelService } from '../model.service';
-import { Adder } from '../adder/adder';
 import { NoteService } from '../../services/NoteService';
 import { Category, Folder, Note } from '../../model/models';
 import { BehaviorSubject, Subscription } from 'rxjs';
@@ -20,7 +19,6 @@ import { WindowBar } from '../window-bar/window-bar';
   imports: [
     QuickSearch,
     UndoBar,
-    Adder,
     OverviewPanel,
     Editor,
     AsyncPipe,

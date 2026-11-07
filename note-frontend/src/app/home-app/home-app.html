@@ -16,9 +16,7 @@
   <app-overview-panel></app-overview-panel>
   }
 
-  @if (modelService.isOpen$ | async) {
-  <app-adder></app-adder>
-  } @else if (modelService.isExistingNoteOpen$ | async) {
+  @if (modelService.isExistingNoteOpen$ | async) {
   <app-editor></app-editor>
   } @else if (modelService.openCalendar$ | async) {
   <app-calendar></app-calendar>
@@ -26,7 +24,7 @@
   <div class="empty-workspace">
     <div class="empty-workspace-icon">📝</div>
     <h2>No note open</h2>
-    <p>Click “New Note” to start writing, or pick a note from the list.</p>
+    <p>Click “New Note” (Ctrl+N) to start writing, pick a note from the list, or press Ctrl+P to find one.</p>
   </div>
   }
   }

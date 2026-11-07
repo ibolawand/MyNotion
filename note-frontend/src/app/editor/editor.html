@@ -1,8 +1,8 @@
 @if (modelService.noteClicked$ && modelService.isExistingNoteOpen$ | async) {
   <div class="main-content">
     <div class="content-header">
-      <input
-        placeholder="Write your title here"
+      <input #titleInput (keydown.enter)="$event.preventDefault(); toText()"
+        placeholder="Untitled"
         type="text"
         [(ngModel)]="title"
         (ngModelChange)="onTitleChange($event)">
@@ -59,6 +59,6 @@
       </div>
     </div>
 
-    <text-editor></text-editor>
+    <text-editor #textEditor></text-editor>
   </div>
 }

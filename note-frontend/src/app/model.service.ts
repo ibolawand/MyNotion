@@ -77,17 +77,18 @@ export class ModelService {
     this.isSublistOpen.next(false);
   }
 
+  /** "New Note": a blank note straight in the real editor (the old new-note screen was a plain textarea whose
+   *  formatting buttons did nothing). It's only saved once something is typed, so no empty notes pile up. */
   toggleOpenNewNote() {
-    this.isOpen.next(!this.isOpen.value);
-    this.isExistingNoteOpen.next(false);
+    const folder = this.currentFolderSubject.value;
+    this.openCalendar.next(false);
+    this.onNoteClicked({ title: '', content: '', categoryID: 0, folderID: folder?.id ?? 0 });
   }
 
   onNoteClicked(note: Note) {
     this.noteClicked.next(note);
     this.isExistingNoteOpen.next(true);
     this.currentNoteSubject.next(note);
-    console.log(this.isOpen$);
-    console.log(this.isOpen.value);
     this.isOpen.next(false);
   }
 
