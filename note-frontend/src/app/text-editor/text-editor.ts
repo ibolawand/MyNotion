@@ -13,6 +13,7 @@ import { TaskItem, TaskList } from '@tiptap/extension-list';
 import { Placeholder } from '@tiptap/extensions';
 import { BlockMath, InlineMath } from '@tiptap/extension-mathematics';
 import katex from 'katex';
+import { DueDates } from './due-dates';
 import { TiptapEditorDirective, TiptapBubbleMenuDirective } from 'ngx-tiptap';
 
 /** One entry of the "/" menu. `hint` is the Markdown shortcut that does the same while typing. */
@@ -137,6 +138,7 @@ export class TextEditor implements OnInit, OnDestroy {
         // checklists: ticking a box updates the note (and Aria can tick items too)
         TaskList,
         TaskItem.configure({ nested: true }),
+        DueDates,   // "· due Fri 13 Nov" chips, and "due friday " -> a date
         // formulas: $$x^2$$ inline, $$$…$$$ as a block; click one to edit it in the formula box
         // (configured one by one: the combined Mathematics extension gives blocks the inline options, so a block
         // formula came out small instead of in display size)

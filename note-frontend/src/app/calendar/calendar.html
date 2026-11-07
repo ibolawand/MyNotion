@@ -28,6 +28,11 @@
         <div class="all-day-label">All-day</div>
         @for (day of weekDates; track day.iso; let i = $index) {
         <div class="all-day-cell">
+          @for (task of getDueTasksForDay(i); track task.noteId + task.text) {
+          <button class="due-task" [ngClass]="dueClass(task)" [title]="dueTitle(task)" (click)="openTask(task)">
+            <span class="due-box" aria-hidden="true"></span><span class="due-text">{{ task.text }}</span>
+          </button>
+          }
           @for (event of getAllDayEventsForDay(i); track event.id) {
           <div class="all-day-event">
             <span class="all-day-title">@if (event.repeat) {<span class="repeat-mark" [title]="'Repeats ' + event.repeat">↻ </span>}{{ event.title }}</span>

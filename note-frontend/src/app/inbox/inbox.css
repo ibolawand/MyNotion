@@ -1,0 +1,44 @@
+:host { flex: 1; display: flex; min-width: 0; height: 100%; background: #1f2233; color: #e4e7eb; }
+button { font: inherit; color: inherit; cursor: pointer; }
+.list { flex: 0 0 360px; display: flex; flex-direction: column; min-height: 0; border-right: 1px solid rgba(255, 255, 255, 0.06); background: #1b1e2e; }
+.list-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 14px 14px 10px; }
+.tabs { display: flex; gap: 4px; }
+.tabs button, .actions button, .buttons button, .attachments button, .event-form button {
+  padding: 6px 12px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.05); font-size: 13px; color: #cbd5e1;
+}
+.tabs button.active { background: rgba(74, 222, 128, 0.15); border-color: rgba(74, 222, 128, 0.4); color: #4ade80; }
+button:hover { border-color: rgba(74, 222, 128, 0.4); }
+button.primary, .buttons button.primary, .event-form button.primary, .actions button.primary { background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%); color: #052e16; border-color: transparent; font-weight: 600; }
+.actions { display: flex; gap: 6px; }
+.icon { width: 32px; padding: 6px 0 !important; }
+.badge { margin-left: 4px; padding: 0 6px; border-radius: 9px; background: #4ade80; color: #052e16; font-size: 11px; font-weight: 700; }
+.search { margin: 0 14px 10px; padding: 8px 10px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.1); background: #171a29; color: #e4e7eb; font: inherit; font-size: 13px; outline: none; }
+.search:focus { border-color: rgba(74, 222, 128, 0.5); }
+.banner { margin: 0 14px 10px; padding: 8px 10px; border-radius: 6px; background: rgba(255, 255, 255, 0.05); font-size: 12px; color: #9ca3af; }
+.banner.error { background: rgba(239, 68, 68, 0.15); color: #fca5a5; }
+.rows { list-style: none; overflow-y: auto; flex: 1; min-height: 0; scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.15) transparent; }
+.row { width: 100%; display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; padding: 10px 14px; border: none; border-bottom: 1px solid rgba(255, 255, 255, 0.04); background: none; text-align: left; position: relative; }
+.row:hover { background: rgba(255, 255, 255, 0.03); }
+.row.selected { background: rgba(74, 222, 128, 0.08); }
+.row.unread::before { content: ''; position: absolute; left: 4px; top: 16px; width: 6px; height: 6px; border-radius: 50%; background: #4ade80; }
+.from, .subject, .preview { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.from { font-size: 14px; color: #cbd5e1; }
+.row.unread .from, .row.unread .subject { color: #f5f6f8; font-weight: 600; }
+.when { font-size: 12px; color: #6b7280; }
+.subject { grid-column: 1 / -1; font-size: 13px; color: #cbd5e1; }
+.preview { grid-column: 1 / -1; font-size: 12px; color: #6b7280; }
+.clip { margin-right: 4px; font-size: 11px; }
+.empty { padding: 24px 14px; color: #6b7280; font-size: 13px; }
+.pane { flex: 1; display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+.notice { margin: 12px 20px 0; padding: 8px 12px; border-radius: 6px; background: rgba(74, 222, 128, 0.1); color: #86efac; font-size: 13px; }
+.mail-head { padding: 18px 20px 12px; border-bottom: 1px solid rgba(255, 255, 255, 0.06); }
+.mail-head h2 { font-size: 20px; font-weight: 600; color: #f5f6f8; margin-bottom: 6px; }
+.meta { font-size: 13px; color: #9ca3af; }
+.meta strong { color: #e4e7eb; }
+.buttons, .attachments, .event-form { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.attachments span { color: #6b7280; margin-left: 4px; }
+.event-form input { padding: 6px 8px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.1); background: #171a29; color: #e4e7eb; font: inherit; font-size: 13px; color-scheme: dark; }
+.link { border: none; background: none; color: #4ade80; text-decoration: underline; padding: 0; }
+.body { flex: 1; width: 100%; border: none; background: #fff; }
+.placeholder { flex: 1; display: grid; place-items: center; color: #6b7280; }
+.mail-head .banner { margin: 12px 0 0; }

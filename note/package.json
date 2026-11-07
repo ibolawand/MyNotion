@@ -9,7 +9,8 @@
     "package": "electron-forge package",
     "make": "electron-forge make",
     "publish": "electron-forge publish",
-    "lint": "eslint --ext .ts,.tsx ."
+    "lint": "eslint --ext .ts,.tsx .",
+    "test": "vitest run"
   },
   "keywords": [],
   "author": {
@@ -29,6 +30,8 @@
     "@electron/fuses": "^1.8.0",
     "@electron/rebuild": "^4.0.3",
     "@types/bcrypt": "^6.0.0",
+    "@types/mailparser": "^3.9.0",
+    "@types/nodemailer": "^8.0.2",
     "@typescript-eslint/eslint-plugin": "^5.62.0",
     "@typescript-eslint/parser": "^5.62.0",
     "@vercel/webpack-asset-relocator-loader": "^1.7.3",
@@ -40,11 +43,16 @@
     "node-loader": "^2.1.0",
     "style-loader": "^3.3.4",
     "ts-loader": "^9.5.4",
-    "typescript": "~4.5.4"
+    "typescript": "~4.5.4",
+    "vitest": "^5.1.0"
   },
   "dependencies": {
+    "@napi-rs/keyring": "^2.1.2",
     "electron-squirrel-startup": "^1.0.1",
     "electron-store": "^8.2.0",
+    "imapflow": "^2.11.0",
+    "mailparser": "^3.14.2",
+    "nodemailer": "^10.3.1",
     "sqlite": "^5.1.1",
     "sqlite3": "^5.1.7"
   }

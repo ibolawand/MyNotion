@@ -1,5 +1,5 @@
 import { Injectable, NgZone } from '@angular/core';
-import { Category, Folder, Note, User } from '../model/models';
+import { Category, Folder, MailDraft, MailMessage, MailSendResult, MailStatus, MailSummary, Note, User } from '../model/models';
 import { Subject, Observable, BehaviorSubject, debounceTime, distinctUntilChanged, switchMap, tap, Subscription, of, from } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
@@ -47,6 +47,22 @@ declare global {
         updateEvent: (event: any) => Promise<any>,
         deleteEvent: (eventId: number) => Promise<any>,
       }
+      mail?: {
+        setup: (address: string, password: string) => Promise<{ ok: boolean; error?: string }>;
+        status: () => Promise<MailStatus>;
+        forget: () => Promise<void>;
+        refresh: () => Promise<void>;
+        list: (opts: { view: 'inbox' | 'filtered'; query?: string }) => Promise<MailSummary[]>;
+        get: (id: number) => Promise<MailMessage | null>;
+        markRead: (id: number, read: boolean) => Promise<void>;
+        archive: (id: number) => Promise<void>;
+        notJunk: (id: number) => Promise<void>;
+        send: (draft: MailDraft) => Promise<MailSendResult>;
+        retry: (clientId: string) => Promise<MailStatus>;
+        discard: (clientId: string) => Promise<MailStatus>;
+        pickAttachments: () => Promise<string[]>;
+        openAttachment: (attachmentId: number) => Promise<{ ok: boolean; error?: string }>;
+      };
       onDbChanged?: (callback: () => void) => () => void;
       takeOpenTarget?: () => Promise<string | null>;
       onOpenTarget?: (callback: (target: string) => void) => () => void;

@@ -10,6 +10,9 @@ Gebaut mit **Electron**, **Angular 20** und dem Editor **TipTap**.
 - **Notizen** mit Rich-Text-Editor, Ordnern (auch verschachtelt) und Kategorien
 - **Checklisten** mit Häkchen direkt im Editor („☑ To-do")
 - **Kalender** mit Wochenansicht, ganztägigen Terminen und Wiederholung (täglich, wöchentlich, monatlich, jährlich)
+- **Posteingang (Gmail)** ohne Google-Cloud-Projekt: mit einem App-Passwort (im System-Schlüsselbund gespeichert),
+  nur der Tab „Allgemein" (keine Werbung, Newsletter oder Spam), Lesen, Antworten, Anhänge, Archivieren, Suche,
+  „Erinnere mich" (To-do mit Fälligkeit) und „Termin daraus machen". Aria kann Mails vorlesen und beantworten.
 - **Tägliches Backup** nach `~/.config/MyNotion/backups/` (die letzten 14 bleiben)
 - **Kein Login**: eine App für eine Person auf dem eigenen Rechner
 - **Zusammenarbeit mit [Aria](https://github.com/ibolawand/personal-ai)**, meiner Desktop-Assistentin: Aria liest und

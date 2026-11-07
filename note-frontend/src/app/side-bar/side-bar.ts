@@ -4,6 +4,7 @@ import { Folder } from '../../model/models';
 import {FolderRow} from '../../model/models';
 import { ModelService } from '../model.service';
 import { NoteService } from '../../services/NoteService';
+import { MailService } from '../../services/MailService';
 import { Subscription } from 'rxjs';
 
 import { CommonModule } from '@angular/common';
@@ -26,7 +27,7 @@ export class SideBar implements OnInit, OnDestroy {
 
 
 
-  constructor(public modelService: ModelService, private noteService: NoteService) {
+  constructor(public modelService: ModelService, private noteService: NoteService, public mail: MailService) {
   }
 
   async ngOnInit(): Promise<void> {

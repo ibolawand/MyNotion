@@ -1,0 +1,19 @@
+<form class="compose" (ngSubmit)="send()">
+  <label>To <input name="to" [(ngModel)]="draft.to" placeholder="name@example.com" autocomplete="off"></label>
+  <label>Cc <input name="cc" [(ngModel)]="draft.cc" autocomplete="off"></label>
+  <label>Subject <input name="subject" [(ngModel)]="draft.subject"></label>
+  <textarea name="body" [(ngModel)]="draft.body" placeholder="Write your email…"></textarea>
+  @if (draft.attachments?.length) {
+  <ul class="files">
+    @for (f of draft.attachments; track f; let i = $index) {
+    <li>📎 {{ name(f) }} <button type="button" (click)="removeFile(i)" title="Remove">×</button></li>
+    }
+  </ul>
+  }
+  @if (error) {<p class="error">{{ error }}</p>}
+  <div class="buttons">
+    <button type="submit" class="primary" [disabled]="sending">{{ sending ? 'Sending…' : 'Send' }}</button>
+    <button type="button" (click)="addFiles()">Attach files</button>
+    <button type="button" (click)="cancel.emit()">Discard</button>
+  </div>
+</form>

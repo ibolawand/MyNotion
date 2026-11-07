@@ -3,6 +3,7 @@ import { Database, open } from 'sqlite';
 import { app } from 'electron';
 import fs from 'fs';
 import path from 'path';
+import { MAIL_SCHEMA } from '../mail/schema';
 
 export class DB {
     private static DB_NAME = 'noted.db';
@@ -96,6 +97,7 @@ export class DB {
             );
 
         `);
+        await this.dbInstance.exec(MAIL_SCHEMA);   // the Inbox (src/mail)
 
         await this.migrateLegacySchema();
         await this.addColumnIfMissing('EVENTS', 'repeat', 'TEXT DEFAULT NULL');  // daily|weekly|monthly|yearly

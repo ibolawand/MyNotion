@@ -29,6 +29,7 @@ app-overview-panel {
 
 app-adder,
 app-editor,
+app-inbox,
 app-calendar {
   flex: 1;
   display: flex;

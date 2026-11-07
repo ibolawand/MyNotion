@@ -1,0 +1,89 @@
+@let status = mail.status$ | async;
+@if (status && !status.configured) {
+<app-mail-setup class="pane"></app-mail-setup>
+} @else {
+<aside class="list">
+  <header class="list-head">
+    <div class="tabs">
+      <button type="button" [class.active]="mail.view === 'inbox'" (click)="mail.setView('inbox')">
+        Inbox @if (status?.unread) {<span class="badge">{{ status?.unread }}</span>}
+      </button>
+      <button type="button" [class.active]="mail.view === 'filtered'" (click)="mail.setView('filtered')"
+        title="Newsletters and ads that were kept out of the Inbox">Filtered</button>
+    </div>
+    <div class="actions">
+      <button type="button" class="icon" title="Check for new mail" (click)="mail.refresh()">↻</button>
+      <button type="button" class="primary" (click)="compose()">New email</button>
+    </div>
+  </header>
+  <input #search class="search" type="search" placeholder="Search mail…" [(ngModel)]="query"
+    (ngModelChange)="mail.search($event)">
+  @for (p of status?.problems ?? []; track p.client_id) {
+  <p class="banner error">Not sent: "{{ p.subject }}" to {{ p.to_addrs }}. {{ p.error }}
+    <button type="button" class="link" (click)="mail.retry(p.client_id)">Retry</button>
+    <button type="button" class="link" (click)="mail.discard(p.client_id)">Discard</button></p>
+  }
+  @if (status?.error) {
+  <p class="banner error">{{ status?.error }}</p>
+  } @else if (status && !status.online) {
+  <p class="banner">Offline · last checked {{ status.lastSync ? (status.lastSync | date:'HH:mm') : 'never' }}</p>
+  }
+  <ul class="rows">
+    @for (m of mail.messages$ | async; track m.id) {
+    <li>
+      <button type="button" class="row" [class.unread]="m.unread" [class.selected]="open?.id === m.id" (click)="select(m.id)">
+        <span class="from">{{ m.from_name }}</span>
+        <span class="when">{{ isToday(m.date) ? (m.date | date:'HH:mm') : (m.date | date:'d MMM') }}</span>
+        <span class="subject">@if (m.has_attachments) {<span class="clip" title="Attachment">📎</span>}{{ m.subject }}</span>
+        <span class="preview">{{ m.filtered ? 'Hidden: ' + m.filter_reason : m.preview }}</span>
+      </button>
+    </li>
+    } @empty {
+    <li class="empty">{{ mail.view === 'filtered' ? 'Nothing was filtered.' : query ? 'No mail matches.' : 'No mail in the last 3 months.' }}</li>
+    }
+  </ul>
+</aside>
+
+<section class="pane">
+  @if (notice) {<p class="notice">{{ notice }}</p>}
+  @if (draft) {
+  <app-compose [draft]="draft" (done)="sent($event)" (cancel)="draft = null"></app-compose>
+  } @else if (open) {
+  <header class="mail-head">
+    <h2>{{ open.subject }}</h2>
+    <p class="meta"><strong>{{ open.from_name }}</strong> &lt;{{ open.from_addr }}&gt; · {{ open.date | date:'EEE d MMM y, HH:mm' }}</p>
+    <p class="meta">To {{ open.to_addrs }}@if (open.cc) { · Cc {{ open.cc }}}</p>
+    <div class="buttons">
+      <button type="button" class="primary" (click)="reply()">Reply</button>
+      <button type="button" (click)="archive()">Archive</button>
+      <button type="button" (click)="remindMe()" title="Adds 'Answer …' to your To-do list, due tomorrow">Remind me</button>
+      <button type="button" (click)="startEvent()">Make event</button>
+      <button type="button" (click)="mail.markUnread(open.id)">Mark unread</button>
+      @if (open.filtered) {<button type="button" (click)="notJunk()">Not junk</button>}
+    </div>
+    @if (eventForm) {
+    <form class="event-form" (ngSubmit)="saveEvent()">
+      <input name="t" [(ngModel)]="eventForm.title" required>
+      <input name="d" type="date" [(ngModel)]="eventForm.date" required>
+      <input name="h" type="time" [(ngModel)]="eventForm.time" title="Leave empty for all day">
+      <button type="submit" class="primary">Add to calendar</button>
+      <button type="button" (click)="eventForm = null">Cancel</button>
+    </form>
+    }
+    @if (open.attachments.length) {
+    <div class="attachments">
+      @for (a of open.attachments; track a.id) {
+      <button type="button" (click)="openAttachment(a.id)">📎 {{ a.filename }} <span>{{ size(a.size) }}</span></button>
+      }
+    </div>
+    }
+    @if (hasRemoteImages && !showImages) {
+    <p class="banner">Images are off, so the sender can't see that you opened this. <button type="button" class="link" (click)="showImagesNow()">Show images</button></p>
+    }
+  </header>
+  <iframe class="body" title="Email" sandbox="allow-popups allow-popups-to-escape-sandbox" [srcdoc]="html"></iframe>
+  } @else {
+  <div class="placeholder"><p>Pick an email, or write a new one.</p></div>
+  }
+</section>
+}

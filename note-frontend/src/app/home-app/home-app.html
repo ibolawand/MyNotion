@@ -12,11 +12,14 @@
   @let calendarShown = (modelService.openCalendar$ | async) && !(modelService.isOpen$ | async)
     && !(modelService.isExistingNoteOpen$ | async);
   <!-- the notes list makes room when the calendar is open (it squeezed event names to "C# e…") -->
-  @if (!calendarShown) {
+  @let inboxShown = modelService.openInbox$ | async;
+  @if (!calendarShown && !inboxShown) {
   <app-overview-panel></app-overview-panel>
   }
 
-  @if (modelService.isExistingNoteOpen$ | async) {
+  @if (inboxShown) {
+  <app-inbox></app-inbox>
+  } @else if (modelService.isExistingNoteOpen$ | async) {
   <app-editor></app-editor>
   } @else if (modelService.openCalendar$ | async) {
   <app-calendar></app-calendar>

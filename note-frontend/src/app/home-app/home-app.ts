@@ -10,6 +10,7 @@ import { SideBar } from '../side-bar/side-bar';
 import { QuickSearch } from '../quick-search/quick-search';
 import { UndoBar } from '../undo-bar/undo-bar';
 import { Calendar } from '../calendar/calendar';
+import { Inbox } from '../inbox/inbox';
 import { CreateAccount } from '../creat-account/creat-account';
 import { WindowBar } from '../window-bar/window-bar';
 
@@ -17,6 +18,7 @@ import { WindowBar } from '../window-bar/window-bar';
   selector: 'app-home-app',
   standalone: true,
   imports: [
+    Inbox,
     QuickSearch,
     UndoBar,
     OverviewPanel,
@@ -67,6 +69,8 @@ export class HomeApp implements OnDestroy, OnInit {
     this.modelService.openDashboard();
     if (target === 'calendar') {
       this.modelService.showCalendar();
+    } else if (target === 'inbox' || target.startsWith('mail:')) {
+      this.modelService.showInbox(target.startsWith('mail:') ? Number(target.slice('mail:'.length)) : null);
     } else if (target.startsWith('note:')) {
       const id = Number(target.slice('note:'.length));
       await this.noteService.loadNotes();

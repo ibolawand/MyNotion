@@ -38,6 +38,22 @@ contextBridge.exposeInMainWorld('electronAPI', {
         getAllFolders: (userId?: number): Promise<Folder[]> => ipcRenderer.invoke('getAllFolders', userId),
         deleteFolder: (folder: any) => ipcRenderer.invoke('deleteFolder', folder),
     },
+    mail: {
+        setup: (address: string, password: string) => ipcRenderer.invoke('mail:setup', address, password),
+        status: () => ipcRenderer.invoke('mail:status'),
+        forget: () => ipcRenderer.invoke('mail:forget'),
+        refresh: () => ipcRenderer.invoke('mail:refresh'),
+        list: (opts: { view: 'inbox' | 'filtered'; query?: string }) => ipcRenderer.invoke('mail:list', opts),
+        get: (id: number) => ipcRenderer.invoke('mail:get', id),
+        markRead: (id: number, read: boolean) => ipcRenderer.invoke('mail:mark-read', id, read),
+        archive: (id: number) => ipcRenderer.invoke('mail:archive', id),
+        notJunk: (id: number) => ipcRenderer.invoke('mail:not-junk', id),
+        send: (draft: any) => ipcRenderer.invoke('mail:send', draft),
+        retry: (clientId: string) => ipcRenderer.invoke('mail:retry', clientId),
+        discard: (clientId: string) => ipcRenderer.invoke('mail:discard', clientId),
+        pickAttachments: (): Promise<string[]> => ipcRenderer.invoke('mail:pick-attachments'),
+        openAttachment: (attachmentId: number) => ipcRenderer.invoke('mail:attachment', attachmentId),
+    },
     // "open calendar" / "open note 12" from Aria or a second launch. takeOpenTarget() returns the
     // one given at startup (once); onOpenTarget fires for later ones.
     takeOpenTarget: (): Promise<string | null> => ipcRenderer.invoke('take-open-target'),
