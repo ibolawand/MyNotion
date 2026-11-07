@@ -31,3 +31,16 @@ test('html to plain text keeps the lines (for quoting a reply)', async () => {
                'Hi Lala,\n\nthe deadline is Friday.\n\nBest,\nF. Huber');
   assert.equal(htmlToPlain('a &amp; b&nbsp;c'), 'a & b c');
 });
+
+test('plain text becomes safe html with clickable links', async () => {
+  const { textToHtml } = await import('../src/app/inbox/mail-html.ts');
+  assert.equal(textToHtml('see <b>https://school.example/a?x=1&y=2</b>\nbye'),
+    'see &lt;b&gt;<a href="https://school.example/a?x=1&amp;y=2" target="_blank" rel="noopener">https://school.example/a?x=1&amp;y=2</a>&lt;/b&gt;<br>bye');
+});
+
+test('initials and a steady colour for the sender', async () => {
+  const { initials, avatarHue } = await import('../src/app/inbox/mail-html.ts');
+  assert.equal(initials('Mr Huber'), 'MH');
+  assert.equal(initials('sara@gmail.com'), 'S');
+  assert.equal(avatarHue('Sara K'), avatarHue('Sara K'));
+});

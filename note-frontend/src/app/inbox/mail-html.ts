@@ -34,3 +34,27 @@ export function htmlToPlain(html: string): string {
     .replace(/&amp;/g, '&')
     .replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
 }
+
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+/** A plain-text mail as HTML for the dark reading view: escaped, line breaks kept, links clickable. */
+export function textToHtml(text: string): string {
+  return escapeHtml(text)
+    .replace(/(https?:\/\/[^\s<>"]+?)(?=[.,;:!?)]*(?:\s|&lt;|&gt;|$))/g,
+             '<a href="$1" target="_blank" rel="noopener">$1</a>')
+    .replace(/\r?\n/g, '<br>');
+}
+
+export function initials(name: string): string {
+  const words = (name || '?').replace(/@.*/, '').split(/[\s._-]+/).filter(Boolean);
+  return ((words[0]?.[0] ?? '?') + (words.length > 1 ? words[words.length - 1][0] : '')).toUpperCase();
+}
+
+/** The same hue for the same sender, so people are recognisable in the list and the header. */
+export function avatarHue(name: string): number {
+  let h = 0;
+  for (const c of name || '') h = (h * 31 + c.charCodeAt(0)) % 360;
+  return h;
+}

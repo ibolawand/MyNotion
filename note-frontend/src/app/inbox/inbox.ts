@@ -1,16 +1,16 @@
 import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { AsyncPipe, DatePipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { Subscription } from 'rxjs';
 import { MailService } from '../../services/MailService';
 import { NoteService } from '../../services/NoteService';
 import { ModelService } from '../model.service';
 import { MailDraft, MailMessage, MailSummary } from '../../model/models';
-import { htmlToPlain, mailDocument } from './mail-html';
+import { avatarHue, htmlToPlain, initials } from './mail-html';
 import { dueTag } from '../text-editor/due-dates';
 import { Compose } from './compose';
 import { MailSetup } from './mail-setup';
+import { MailReader } from './mail-reader';
 
 function escapeHtml(s: string) {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -20,14 +20,12 @@ function escapeHtml(s: string) {
 @Component({
   selector: 'app-inbox',
   standalone: true,
-  imports: [AsyncPipe, DatePipe, FormsModule, Compose, MailSetup],
+  imports: [AsyncPipe, DatePipe, FormsModule, Compose, MailSetup, MailReader],
   templateUrl: './inbox.html',
   styleUrl: './inbox.css',
 })
 export class Inbox implements OnInit, OnDestroy {
   open: MailMessage | null = null;
-  html: SafeHtml | null = null;
-  showImages = false;
   draft: MailDraft | null = null;
   notice = '';
   eventForm: { title: string; date: string; time: string } | null = null;
@@ -36,7 +34,7 @@ export class Inbox implements OnInit, OnDestroy {
   @ViewChild('search') searchBox?: ElementRef<HTMLInputElement>;
 
   constructor(public mail: MailService, private notes: NoteService, private model: ModelService,
-              private sanitizer: DomSanitizer) {}
+              ) {}
 
   ngOnInit() {
     void this.mail.reload();
@@ -51,22 +49,9 @@ export class Inbox implements OnInit, OnDestroy {
     this.draft = null;
     this.eventForm = null;
     this.notice = '';
-    this.showImages = false;
     this.open = await this.mail.get(id);
-    this.render();
     void this.mail.reload();          // the unread dot goes away
   }
-
-  render() {
-    const m = this.open;
-    if (!m) { this.html = null; return; }
-    const body = m.body_html || `<pre style="white-space:pre-wrap;font-family:inherit">${escapeHtml(m.body_text)}</pre>`;
-    this.html = this.sanitizer.bypassSecurityTrustHtml(mailDocument(body, this.showImages));
-  }
-
-  get hasRemoteImages() { return !!this.open?.body_html && /<img[^>]+src\s*=\s*["']?(?:https?:)?\/\//i.test(this.open.body_html); }
-
-  showImagesNow() { this.showImages = true; this.render(); }
 
   compose() { this.open = null; this.draft = { to: '', subject: '', body: '' }; }
 
@@ -88,7 +73,6 @@ export class Inbox implements OnInit, OnDestroy {
     if (!this.open) return;
     await this.mail.archive(this.open.id);
     this.open = null;
-    this.html = null;
     this.notice = 'Archived. It stays in Gmail under All Mail.';
   }
 
@@ -141,7 +125,8 @@ export class Inbox implements OnInit, OnDestroy {
     if (r && !r.ok) this.notice = r.error ?? "Couldn't open it.";
   }
 
-  size(bytes: number) { return bytes > 1e6 ? `${(bytes / 1e6).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1e3))} KB`; }
+  initials = initials;
+  hue = avatarHue;
 
   trackId(_: number, m: MailSummary) { return m.id; }
 }
