@@ -7,8 +7,12 @@
         [(ngModel)]="title"
         (ngModelChange)="onTitleChange($event)">
       <div class="content-actions">
-        <button class="icon-btn" title="Star note">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <button class="icon-btn star-btn" [class.on]="currentNote?.pinned"
+          [title]="currentNote?.pinned ? 'Unpin: stop showing it first' : 'Pin: show this note first in the list'"
+          [attr.aria-label]="currentNote?.pinned ? 'Unpin note' : 'Pin note'" [attr.aria-pressed]="!!currentNote?.pinned"
+          (click)="togglePin()">
+          <svg width="18" height="18" viewBox="0 0 24 24" [attr.fill]="currentNote?.pinned ? 'currentColor' : 'none'"
+            stroke="currentColor" stroke-width="2" stroke-linejoin="round">
             <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
           </svg>
         </button>

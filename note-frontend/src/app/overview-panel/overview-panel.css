@@ -458,3 +458,15 @@
   transform: translateY(-1px);
   box-shadow: 0 4px 16px rgba(74, 222, 128, 0.35);
 }
+.pin-mark {
+  width: 13px;
+  height: 13px;
+  flex: none;
+  margin-right: -2px;
+  fill: #fbbf24;
+}
+
+.pin-mark + .subcategory-name {
+  flex: 1;
+  min-width: 0;
+}

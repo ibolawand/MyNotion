@@ -15,6 +15,7 @@ declare global {
       notes: {
         createNote: (note: Note) => Promise<{ ok: boolean; id?: number; error?: string }>;
         updateNote: (note: Note) => Promise<{ ok: boolean; error?: string }>;
+        setPinned: (id: number, pinned: boolean) => Promise<{ ok: boolean; error?: string }>;
         getAllNotes: (userId:number) => Promise<Note[]>;
         getNoteWithCertainCategory: (categoryID: number,userID:number) => Promise<Note[]>;
         getNoteInFolder: (folderId:number, userId:number) => Promise<Note[]>;
@@ -132,7 +133,7 @@ export class NoteService {
       } else {
         this.notesCache.unshift(note);
       }
-      this.notesSubject.next([...this.notesCache]);
+      this.emitNotes();
       this.notesChangedSubject.next(note);
     }
     return res;
@@ -165,19 +166,37 @@ export class NoteService {
     const res = await window.electronAPI.notes.deleteNote(id);
     if (res && res.ok) {
       this.notesCache = this.notesCache.filter(n => n.id !== id);
-      this.notesSubject.next([...this.notesCache]);
+      this.emitNotes();
     }
     return res;
   }
 
 
 
+  /** Publishes the notes, pinned (starred) ones first, otherwise in the order they came. */
+  private emitNotes() {
+    const pinned = this.notesCache.filter(n => n.pinned);
+    this.notesSubject.next([...pinned, ...this.notesCache.filter(n => !n.pinned)]);
+  }
+
+  async setPinned(note: Note, pinned: boolean) {
+    if (note.id == null) return { ok: false };
+    const res = await window.electronAPI.notes.setPinned(note.id, pinned);
+    if (res && res.ok) {
+      note.pinned = pinned ? 1 : 0;
+      const cached = this.notesCache.find(n => n.id === note.id);
+      if (cached) cached.pinned = note.pinned;
+      this.emitNotes();
+    }
+    return res;
+  }
+
   // load notes from backend into shared cache
   async loadNotes(): Promise<void> {
     try {
       const rows = await window.electronAPI.notes.getAllNotes(this.userIdSource.value);
       this.notesCache = Array.isArray(rows) ? rows : [];
-      this.notesSubject.next([...this.notesCache]);
+      this.emitNotes();
     } catch (err) {
       console.error('Failed to load notes:', err);
     }
@@ -194,7 +213,7 @@ export class NoteService {
       } else {
         this.notesCache.unshift(note);
       }
-      this.notesSubject.next([...this.notesCache]);
+      this.emitNotes();
       this.notesChangedSubject.next(note);
     }
     return res;
@@ -228,7 +247,7 @@ export class NoteService {
       // We might want to avoid adding them to the cache multiple times.
       // Usually, the first auto-save will create it and set the ID.
     }
-    this.notesSubject.next([...this.notesCache]);
+    this.emitNotes();
 
     this.saveSubject.next(note);
   }

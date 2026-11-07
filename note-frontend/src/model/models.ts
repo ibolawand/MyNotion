@@ -5,6 +5,7 @@ export interface Note {
   categoryID: number,
   userID?: number,
   folderID?: number,
+  pinned?: number | boolean,   // the star: listed first
 }
 export interface Category {
   id: number,

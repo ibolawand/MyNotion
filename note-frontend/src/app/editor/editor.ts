@@ -121,6 +121,11 @@ export class Editor implements OnInit, OnDestroy {
     }
   }
 
+  async togglePin() {
+    if (!this.currentNote?.id) return;
+    await this.noteService.setPinned(this.currentNote, !this.currentNote.pinned);
+  }
+
   isTextSelected(): boolean {
     const selection = window.getSelection();
     return selection !== null && selection.toString().length > 0;

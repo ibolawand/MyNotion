@@ -99,6 +99,7 @@ export class DB {
 
         await this.migrateLegacySchema();
         await this.addColumnIfMissing('EVENTS', 'repeat', 'TEXT DEFAULT NULL');  // daily|weekly|monthly|yearly
+        await this.addColumnIfMissing('notes', 'pinned', 'INTEGER NOT NULL DEFAULT 0');  // the star: shown first
     }
 
     private static async addColumnIfMissing(table: string, column: string, type: string) {

@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
         getNoteInFolder: (folderId:number, userId:number) => ipcRenderer.invoke('getNoteInFolder',folderId,userId),
         createNote: (note: any) => ipcRenderer.invoke('create:note', note),
         updateNote: (note: any) => ipcRenderer.invoke('update:note', note),
+        setPinned: (id: number, pinned: boolean) => ipcRenderer.invoke('pin:note', { id, pinned }),
         deleteNote: (id: number): Promise<{ ok: boolean; error?: string }> => ipcRenderer.invoke('delete:note', id),
         saveToken: (token: string) => ipcRenderer.invoke('save-token', token),
         getToken: () => ipcRenderer.invoke('get-token'),

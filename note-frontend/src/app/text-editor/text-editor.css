@@ -353,8 +353,24 @@ tiptap-editor {
   font-variant-numeric: tabular-nums;
 }
 
+.editor-footer > span {
+  white-space: nowrap;
+}
+
 .footer-tip {
   margin-left: auto;
+}
+
+/* narrow editor pane: keep the counts, drop the tip (sized by the pane, not the window) */
+.content-body {
+  container-type: inline-size;
+}
+
+@container (max-width: 560px) {
+  .footer-tip { display: none; }
+  .font-toggle { margin-left: auto; }
+  .editor-toolbar, .editor-footer { padding-left: 16px; padding-right: 16px; }
+  .page { padding: 24px 16px 30vh; }
 }
 
 .font-toggle {

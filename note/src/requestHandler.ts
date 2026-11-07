@@ -218,12 +218,23 @@ export function setUpHandlers() {
             return { ok: false, error: String(err) };
         }
     });
+    // The star on a note: pinned notes are listed first. Doesn't touch updated_at (pinning isn't an edit).
+    ipcMain.handle('pin:note', async (event, data: { id: number; pinned: boolean }) => {
+        try {
+            const db = await DB.getConnection();
+            await db.run(`UPDATE notes SET pinned = ? WHERE id = ?`, [data.pinned ? 1 : 0, data.id]);
+            return { ok: true };
+        } catch (err) {
+            console.error('pin:note error:', err);
+            return { ok: false, error: String(err) };
+        }
+    });
     ipcMain.handle('getAllNotes', async (event,userId:number) => {
         try {
             const db = await DB.getConnection();
             const rows:Note[] = await db.all(`SELECT *
                                        FROM notes where userID=?
-                                       ORDER BY created_at DESC`,[userId]);
+                                       ORDER BY pinned DESC, created_at DESC`,[userId]);
             return rows;
         } catch (err) {
             console.error('getAllNotes error:', err);
