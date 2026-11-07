@@ -9,6 +9,7 @@ import { AsyncPipe } from '@angular/common';
 import { Editor } from '../editor/editor';
 import { SideBar } from '../side-bar/side-bar';
 import { QuickSearch } from '../quick-search/quick-search';
+import { UndoBar } from '../undo-bar/undo-bar';
 import { Calendar } from '../calendar/calendar';
 import { CreateAccount } from '../creat-account/creat-account';
 import { WindowBar } from '../window-bar/window-bar';
@@ -18,6 +19,7 @@ import { WindowBar } from '../window-bar/window-bar';
   standalone: true,
   imports: [
     QuickSearch,
+    UndoBar,
     Adder,
     OverviewPanel,
     Editor,

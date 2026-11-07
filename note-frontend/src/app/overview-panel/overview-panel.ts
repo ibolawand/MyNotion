@@ -115,7 +115,11 @@ export class OverviewPanel implements OnInit, OnDestroy {
     await this.getNotes();
   }
 
-  async deleteNote(id: number): Promise<void> {
-    await this.noteService.deleteNote(id);
+  /** The note disappears at once; an Undo bar shows for a few seconds before it's really deleted. */
+  deleteNote(note: Note): void {
+    let open: Note | null = null;
+    this.modelService.currentNote$.subscribe(n => open = n).unsubscribe();
+    if (open && (open as Note).id === note.id) this.modelService.openHome();
+    this.noteService.deleteWithUndo(note);
   }
 }

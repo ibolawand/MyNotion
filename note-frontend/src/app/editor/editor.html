@@ -48,8 +48,14 @@
         </select>
       </div>
 
-      <div class="meta-status">
-        <span>🔄 <small>{{ noteService.saveStatus$ | async }}</small></span>
+      @let status = noteService.saveStatus$ | async;
+      <div class="meta-status" [attr.data-status]="status" role="status">
+        <span class="save-dot"></span>
+        @switch (status) {
+          @case ('saving') { Saving… }
+          @case ('error') { Couldn't save. Keep typing to try again }
+          @default { Saved }
+        }
       </div>
     </div>
 

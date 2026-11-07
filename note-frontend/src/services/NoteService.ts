@@ -59,6 +59,7 @@ export class NoteService {
   private userIdSource = new BehaviorSubject<number>(0);
 
   constructor(private http: HttpClient, private zone: NgZone) {
+    window.addEventListener('beforeunload', () => this.flushDeletes());
     const storedId = localStorage.getItem('userId');
     if (storedId) {
       this.userIdSource.next(Number(storedId));
@@ -173,10 +174,51 @@ export class NoteService {
 
 
 
-  /** Publishes the notes, pinned (starred) ones first, otherwise in the order they came. */
+  /** Publishes the notes, pinned (starred) ones first, otherwise in the order they came.
+   *  Notes waiting to be deleted (the Undo bar is showing) are left out. */
   private emitNotes() {
-    const pinned = this.notesCache.filter(n => n.pinned);
-    this.notesSubject.next([...pinned, ...this.notesCache.filter(n => !n.pinned)]);
+    const shown = this.notesCache.filter(n => n.id == null || !this.pendingDeletes.has(n.id));
+    this.notesSubject.next([...shown.filter(n => n.pinned), ...shown.filter(n => !n.pinned)]);
+  }
+
+  // ── delete with Undo: the note disappears at once and is really deleted UNDO_MS later ──
+  private pendingDeletes = new Map<number, { note: Note; timer: any }>();
+  private undoSubject = new BehaviorSubject<Note | null>(null);
+  public readonly undoable$ = this.undoSubject.asObservable();
+  static readonly UNDO_MS = 6000;
+
+  deleteWithUndo(note: Note) {
+    if (note.id == null) return;
+    for (const id of [...this.pendingDeletes.keys()]) this.commitDelete(id);   // one Undo at a time
+    const id = note.id;
+    const timer = setTimeout(() => this.zone.run(() => this.commitDelete(id)), NoteService.UNDO_MS);
+    this.pendingDeletes.set(id, { note, timer });
+    this.emitNotes();
+    this.undoSubject.next(note);
+  }
+
+  undoDelete() {
+    const note = this.undoSubject.value;
+    const pending = note?.id != null ? this.pendingDeletes.get(note.id) : undefined;
+    if (!note || !pending) return;
+    clearTimeout(pending.timer);
+    this.pendingDeletes.delete(note.id!);
+    this.undoSubject.next(null);
+    this.emitNotes();
+  }
+
+  private async commitDelete(id: number) {
+    const pending = this.pendingDeletes.get(id);
+    if (!pending) return;
+    clearTimeout(pending.timer);
+    this.pendingDeletes.delete(id);
+    if (this.undoSubject.value?.id === id) this.undoSubject.next(null);
+    await this.deleteNote(id);
+  }
+
+  /** The window is closing: send the waiting deletes now (they'd otherwise come back next time). */
+  flushDeletes() {
+    for (const id of [...this.pendingDeletes.keys()]) this.commitDelete(id);
   }
 
   async setPinned(note: Note, pinned: boolean) {
@@ -253,7 +295,7 @@ export class NoteService {
   }
 
   public getNotesCache(): Note[] {
-    return this.notesCache;
+    return this.notesCache.filter(n => n.id == null || !this.pendingDeletes.has(n.id));
   }
 
   //#endregion
