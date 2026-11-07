@@ -9,7 +9,12 @@
   <app-quick-search></app-quick-search>
   <app-undo-bar></app-undo-bar>
   <app-side-bar></app-side-bar>
+  @let calendarShown = (modelService.openCalendar$ | async) && !(modelService.isOpen$ | async)
+    && !(modelService.isExistingNoteOpen$ | async);
+  <!-- the notes list makes room when the calendar is open (it squeezed event names to "C# e…") -->
+  @if (!calendarShown) {
   <app-overview-panel></app-overview-panel>
+  }
 
   @if (modelService.isOpen$ | async) {
   <app-adder></app-adder>

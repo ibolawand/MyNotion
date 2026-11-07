@@ -52,10 +52,14 @@
         <div class="hour-slot" title="Add event" (click)="createEvent(i, hIndex + 8)"></div>
         }
 
-        @for (event of getEventsForDay(i); track event.id) {
-        <div class="event" [ngClass]="'event-' + event.color"
+        @for (placed of getLaidOutEventsForDay(i); track placed.event.id) {
+        @let event = placed.event;
+        <div class="event" [ngClass]="'event-' + event.color" [class.narrow]="placed.cols > 1"
           [style.top.px]="(event.startHour - 8) * 100"
-          [style.height.px]="event.duration * 100">
+          [style.height.px]="event.duration * 100"
+          [style.left]="'calc(4px + (100% - 8px) * ' + placed.col / placed.cols + ')'"
+          [style.width]="'calc((100% - 8px) / ' + placed.cols + ' - ' + (placed.cols > 1 ? 2 : 0) + 'px)'"
+          [style.right]="'auto'">
           <button class="event-delete" title="Delete" (click)="deleteEvent(event.id)">×</button>
           <div class="event-title">@if (event.repeat) {<span class="repeat-mark" [title]="'Repeats ' + event.repeat">↻ </span>}{{ event.title }}</div>
           <div class="event-time">{{ formatEventTime(event.startHour, event.duration) }}</div>

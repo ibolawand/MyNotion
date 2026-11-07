@@ -198,6 +198,34 @@ export class Calendar implements OnInit, OnDestroy {
     return this.events.filter(e => this.occursOn(e, iso) && !e.allDay);
   }
  
+  /** Timed events of a day with their place side by side: events that overlap share the width of the column
+   *  (they used to be drawn on top of each other, hiding the clash). */
+  getLaidOutEventsForDay(dayIndex: number): { event: CalendarEvent; col: number; cols: number }[] {
+    const evs = [...this.getEventsForDay(dayIndex)].sort((a, b) => a.startHour - b.startHour || b.duration - a.duration);
+    const out: { event: CalendarEvent; col: number; cols: number }[] = [];
+    let cluster: { event: CalendarEvent; col: number; cols: number }[] = [];
+    let clusterEnd = -1;
+    const colEnds: number[] = [];
+    const close = () => {
+      const cols = Math.max(1, ...cluster.map(c => c.col + 1));
+      cluster.forEach(c => c.cols = cols);
+      out.push(...cluster);
+      cluster = [];
+      colEnds.length = 0;
+    };
+    for (const e of evs) {
+      const end = e.startHour + Math.max(e.duration, 0.25);
+      if (cluster.length && e.startHour >= clusterEnd) close();
+      let col = colEnds.findIndex(t => t <= e.startHour);      // first column that's free again
+      if (col < 0) col = colEnds.length;
+      colEnds[col] = end;
+      cluster.push({ event: e, col, cols: 1 });
+      clusterEnd = Math.max(clusterEnd, end);
+    }
+    if (cluster.length) close();
+    return out;
+  }
+
   getAllDayEventsForDay(dayIndex: number): CalendarEvent[] {
     const iso = this.weekDates[dayIndex]?.iso;
     return this.events.filter(e => this.occursOn(e, iso) && e.allDay);
