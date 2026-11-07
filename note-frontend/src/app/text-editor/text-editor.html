@@ -39,6 +39,7 @@
       <button class="tool" [class.active]="isActive('codeBlock')" (click)="run(codeBlock)" title="Code block (type ``` )" aria-label="Code block">
         <svg viewBox="0 0 24 24"><path d="m8 7-5 5 5 5M16 7l5 5-5 5"/></svg>
       </button>
+      <button class="tool math-tool" (click)="insertMath()" title="Formula (type $$x^2$$)" aria-label="Insert formula">∑</button>
       <button class="tool" (click)="run(divider)" title="Divider (type ---)" aria-label="Divider">
         <svg viewBox="0 0 24 24"><path d="M3 12h18"/></svg>
       </button>
@@ -50,7 +51,7 @@
         <span class="swatch" [style.background]="editor.getAttributes('textStyle')['color'] || '#e4e7eb'"></span>
         <input type="color" (input)="setColor($any($event.target).value)" aria-label="Text colour">
       </label>
-      @for (h of highlights; track h.color) {
+      @for (h of highlights.slice(0, 3); track h.color) {
         <button class="tool mark-tool" (click)="setHighlight(h.color)" [title]="h.label + ' highlight'" [attr.aria-label]="h.label + ' highlight'"
           [class.active]="isActive('highlight', { color: h.color })">
           <span [style.background]="h.color"></span>
@@ -113,6 +114,8 @@
               @case ('numbered') { 1. }
               @case ('quote') { <svg viewBox="0 0 24 24"><path d="M6 5v14"/><path d="M11 9h8M11 13h8"/></svg> }
               @case ('code') { <svg viewBox="0 0 24 24"><path d="m8 7-5 5 5 5M16 7l5 5-5 5"/></svg> }
+              @case ('math') { <span class="glyph-math">x²</span> }
+              @case ('mathblock') { <span class="glyph-math">∑</span> }
               @case ('divider') { <svg viewBox="0 0 24 24"><path d="M4 12h16"/></svg> }
               @case ('date') { <svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg> }
             }
@@ -126,6 +129,27 @@
           }
         </button>
       }
+    </div>
+  }
+
+  @if (math) {
+    <div class="math-box" role="dialog" aria-label="Edit formula" [style.top.px]="math.top" [style.left.px]="math.left"
+      (mousedown)="$event.stopPropagation()">
+      <div class="math-preview" #mathPreview aria-live="polite"></div>
+      <textarea #mathInput rows="2" [(ngModel)]="math.latex" (ngModelChange)="renderMathPreview()" (keydown)="onMathKey($event)"
+        placeholder="e.g. \frac{a}{b} or x^2 + y^2 = r^2" spellcheck="false" aria-label="Formula in LaTeX"></textarea>
+      @if (mathError) {
+        <p class="math-error">{{ mathError }}</p>
+      }
+      <div class="math-snippets" aria-label="Insert">
+        @for (sn of mathSnippets; track sn.label) {
+          <button type="button" (click)="addSnippet(sn)" [title]="sn.tex.trim()">{{ sn.label }}</button>
+        }
+      </div>
+      <div class="math-actions">
+        <span class="math-hint"><kbd>Enter</kbd> save <kbd>Esc</kbd> cancel</span>
+        <button type="button" class="math-save" (click)="saveMath()">Save formula</button>
+      </div>
     </div>
   }
 

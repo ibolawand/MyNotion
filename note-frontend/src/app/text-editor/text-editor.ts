@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ElementRef, ViewChild, NgZone } from '@angular/core';
+import { Component, OnInit, OnDestroy, ElementRef, HostListener, ViewChild, NgZone } from '@angular/core';
 import { NoteService } from '../../services/NoteService';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
@@ -11,6 +11,8 @@ import { TextStyle } from '@tiptap/extension-text-style';
 import Highlight from '@tiptap/extension-highlight';
 import { TaskItem, TaskList } from '@tiptap/extension-list';
 import { Placeholder } from '@tiptap/extensions';
+import { BlockMath, InlineMath } from '@tiptap/extension-mathematics';
+import katex from 'katex';
 import { TiptapEditorDirective, TiptapBubbleMenuDirective } from 'ngx-tiptap';
 
 /** One entry of the "/" menu. `hint` is the Markdown shortcut that does the same while typing. */
@@ -42,6 +44,11 @@ const SLASH_ITEMS: SlashItem[] = [
     run: e => e.chain().focus().toggleBlockquote().run() },
   { id: 'code', label: 'Code', description: 'Code that keeps its spacing', hint: '```', keywords: 'snippet pre program',
     run: e => e.chain().focus().toggleCodeBlock().run() },
+  // (the formula box opens for these; the formula is inserted when it's saved — see chooseSlash)
+  { id: 'math', label: 'Math', description: 'A formula inside the text, like x²', hint: '$$', keywords: 'math formula equation latex tex',
+    run: () => {} },
+  { id: 'mathblock', label: 'Math block', description: 'A formula on its own line', hint: '$$$', keywords: 'math formula equation latex tex block',
+    run: () => {} },
   { id: 'divider', label: 'Divider', description: 'A line between sections', hint: '---', keywords: 'hr rule separator line',
     run: e => e.chain().focus().setHorizontalRule().run() },
   { id: 'date', label: 'Today\'s date', description: 'Inserts the date', hint: '', keywords: 'date today time now',
@@ -51,16 +58,35 @@ const SLASH_ITEMS: SlashItem[] = [
 
 const FONT_KEY = 'mynotion.editorFont';
 
+/** One-click pieces for the formula box, so nobody has to remember LaTeX. `at`/`sel`: the placeholder that gets
+ *  selected, so typing replaces it (\frac{a}{b}: the "a"). */
+export const MATH_SNIPPETS: { label: string; tex: string; at?: number; sel?: number }[] = [
+  { label: 'x²', tex: '^{2}', at: 2, sel: 1 }, { label: 'xₙ', tex: '_{n}', at: 2, sel: 1 },
+  { label: 'a/b', tex: '\\frac{a}{b}', at: 6, sel: 1 }, { label: '√', tex: '\\sqrt{x}', at: 6, sel: 1 }, { label: 'Σ', tex: '\\sum_{i=1}^{n} ' }, { label: '∫', tex: '\\int_{a}^{b} ' },
+  { label: 'lim', tex: '\\lim_{x \\to \\infty} ' }, { label: '·', tex: '\\cdot ' }, { label: '≤', tex: '\\le ' },
+  { label: '≠', tex: '\\neq ' }, { label: '±', tex: '\\pm ' }, { label: '→', tex: '\\to ' }, { label: '∞', tex: '\\infty' },
+  { label: 'α', tex: '\\alpha' }, { label: 'β', tex: '\\beta' }, { label: 'π', tex: '\\pi' }, { label: 'θ', tex: '\\theta' },
+  { label: 'Δ', tex: '\\Delta ' }, { label: 'λ', tex: '\\lambda' }, { label: 'μ', tex: '\\mu' }, { label: 'Ω', tex: '\\Omega' },
+];
+
 @Component({
   selector: 'text-editor',
   standalone: true,
   imports: [FormsModule, TiptapEditorDirective, TiptapBubbleMenuDirective],
   templateUrl: './text-editor.html',
-  styleUrls: ['./text-editor.css', './note-content.css']
+  styleUrls: ['./text-editor.css', './note-content.css', './math.css']
 })
 export class TextEditor implements OnInit, OnDestroy {
   @ViewChild('linkInput') linkInput?: ElementRef<HTMLInputElement>;
   @ViewChild('slashMenu') slashMenuEl?: ElementRef<HTMLElement>;
+  @ViewChild('mathInput') mathInput?: ElementRef<HTMLTextAreaElement>;
+  @ViewChild('mathPreview') mathPreview?: ElementRef<HTMLElement>;
+
+  // the formula box: editing one inline or block formula
+  math: { type: 'inline' | 'block'; pos: number; latex: string; original: string; isNew: boolean;
+          top: number; left: number } | null = null;
+  mathError = '';
+  readonly mathSnippets = MATH_SNIPPETS;
 
   currentNote: Note | null = null;
   private noteSub?: Subscription;
@@ -111,6 +137,17 @@ export class TextEditor implements OnInit, OnDestroy {
         // checklists: ticking a box updates the note (and Aria can tick items too)
         TaskList,
         TaskItem.configure({ nested: true }),
+        // formulas: $$x^2$$ inline, $$$…$$$ as a block; click one to edit it in the formula box
+        // (configured one by one: the combined Mathematics extension gives blocks the inline options, so a block
+        // formula came out small instead of in display size)
+        InlineMath.configure({
+          katexOptions: { throwOnError: false },
+          onClick: (node, pos) => this.zone.run(() => this.openMath('inline', pos, node.attrs['latex'])),
+        }),
+        BlockMath.configure({
+          katexOptions: { throwOnError: false, displayMode: true },
+          onClick: (node, pos) => this.zone.run(() => this.openMath('block', pos, node.attrs['latex'])),
+        }),
         Placeholder.configure({
           includeChildren: false,
           placeholder: ({ node, editor }) => {
@@ -238,7 +275,7 @@ export class TextEditor implements OnInit, OnDestroy {
 
   showBubble = ({ editor, from, to }: { editor: Editor; from: number; to: number }) => {
     if (this.linkEditing) return true;
-    if (editor.isActive('codeBlock')) return false;
+    if (editor.isActive('codeBlock') || editor.isActive('blockMath') || editor.isActive('inlineMath')) return false;
     return from !== to || editor.isActive('link');
   };
 
@@ -253,8 +290,13 @@ export class TextEditor implements OnInit, OnDestroy {
     const m = /(?:^|\s)\/([\p{L}\d' ]{0,20})$/u.exec(before);
     if (!m || m[1].includes('  ')) return this.closeSlash();
     const query = m[1].toLowerCase().trim();
-    // match the start of a word ("to" -> To-do, Today's date; not "separator"); label matches first
-    const starts = (text: string) => text.toLowerCase().split(/[\s-']+/).some(w => w.startsWith(query));
+    // every typed word must start a word of the label or keywords ("to" -> To-do, Today's date, not "separator";
+    // "math b" -> Math block); label matches first
+    const qWords = query.split(/\s+/).filter(Boolean);
+    const starts = (text: string) => {
+      const words = text.toLowerCase().split(/[\s-']+/);
+      return qWords.every(q => words.some(w => w.startsWith(q)));
+    };
     const items = SLASH_ITEMS
       .filter(i => !query || starts(i.label) || starts(i.keywords))
       .sort((a, b) => (query && !starts(a.label) ? 1 : 0) - (query && !starts(b.label) ? 1 : 0));
@@ -288,6 +330,130 @@ export class TextEditor implements OnInit, OnDestroy {
     this.editor.chain().focus().deleteRange({ from: this.slashFrom, to }).run();
     item.run(this.editor);
     this.closeSlash();
+    if (item.id === 'math' || item.id === 'mathblock') this.openNewMath(item.id === 'math' ? 'inline' : 'block');
+  }
+
+  // ── formulas ──
+
+  /** Toolbar ∑: the formula box at the cursor; the formula goes in when it's saved. */
+  insertMath() {
+    this.openNewMath('inline');
+  }
+
+  /** A new formula at the cursor (TipTap won't insert an empty one, so it's inserted on save). */
+  private openNewMath(type: 'inline' | 'block') {
+    this.openMath(type, this.editor.state.selection.from, '', true);
+  }
+
+  openMath(type: 'inline' | 'block', pos: number, latex: string, isNew = false) {
+    const box = this.host.nativeElement.getBoundingClientRect();
+    const dom = isNew ? null : this.editor.view.nodeDOM(pos) as HTMLElement | null;
+    const r = dom?.getBoundingClientRect() ?? this.editor.view.coordsAtPos(pos);
+    this.math = {
+      type, pos, latex: latex ?? '', original: latex ?? '', isNew,
+      top: r.bottom - box.top + 8,
+      left: Math.max(8, Math.min(r.left - box.left, box.width - 380)),
+    };
+    setTimeout(() => {
+      this.renderMathPreview();
+      const input = this.mathInput?.nativeElement;
+      input?.focus();
+      input?.setSelectionRange(input.value.length, input.value.length);
+    }, 0);
+  }
+
+  renderMathPreview() {
+    const el = this.mathPreview?.nativeElement;
+    if (!el || !this.math) return;
+    this.mathError = '';
+    if (!this.math.latex.trim()) {
+      el.textContent = 'Your formula shows here';
+      el.classList.add('empty');
+      return;
+    }
+    el.classList.remove('empty');
+    try {
+      katex.render(this.math.latex, el, { throwOnError: true, displayMode: this.math.type === 'block' });
+    } catch (e: any) {
+      this.mathError = String(e?.message || e).replace(/^KaTeX parse error: /, '');
+      katex.render(this.math.latex, el, { throwOnError: false, displayMode: this.math.type === 'block' });
+    }
+  }
+
+  addSnippet(sn: { tex: string; at?: number; sel?: number }) {
+    const input = this.mathInput?.nativeElement;
+    if (!input || !this.math) return;
+    const start = input.selectionStart ?? this.math.latex.length;
+    const end = input.selectionEnd ?? start;
+    this.math.latex = this.math.latex.slice(0, start) + sn.tex + this.math.latex.slice(end);
+    const cursor = start + (sn.at ?? sn.tex.length);
+    setTimeout(() => {
+      input.focus();
+      input.setSelectionRange(cursor, cursor + (sn.sel ?? 0));
+      this.renderMathPreview();
+    }, 0);
+  }
+
+  saveMath() {
+    const m = this.math;
+    if (!m) return;
+    this.math = null;
+    const chain = this.editor.chain().focus();
+    const latex = m.latex.trim();
+    if (m.isNew) {
+      if (latex) {
+        (m.type === 'inline' ? chain.insertInlineMath({ latex, pos: m.pos }) : chain.insertBlockMath({ latex, pos: m.pos })).run();
+        if (m.type === 'inline') this.editor.commands.insertContent(' ');      // keep typing after it
+        else this.cursorBelowBlock(m.pos);
+      } else {
+        chain.run();
+      }
+    } else if (!latex) {
+      (m.type === 'inline' ? chain.deleteInlineMath({ pos: m.pos }) : chain.deleteBlockMath({ pos: m.pos })).run();
+    } else {
+      (m.type === 'inline' ? chain.updateInlineMath({ latex: m.latex.trim(), pos: m.pos })
+        : chain.updateBlockMath({ latex: m.latex.trim(), pos: m.pos })).run();
+    }
+  }
+
+  /** After a new block formula the cursor goes to the line below it; left selected, the next key would replace it. */
+  private cursorBelowBlock(near: number) {
+    const { doc } = this.editor.state;
+    let end = -1;
+    doc.descendants((node, pos) => {
+      if (node.type.name === 'blockMath' && (end < 0 || Math.abs(pos - near) < Math.abs(end - near))) end = pos + node.nodeSize;
+      return node.type.name !== 'blockMath';
+    });
+    if (end < 0) return;
+    const next = doc.resolve(end).nodeAfter;
+    if (next?.isTextblock) {
+      this.editor.chain().focus().setTextSelection(end + 1).run();
+    } else {
+      this.editor.chain().focus().insertContentAt(end, { type: 'paragraph' }).setTextSelection(end + 1).run();
+    }
+  }
+
+  cancelMath() {
+    const m = this.math;
+    if (!m) return;
+    this.math = null;
+    this.editor.commands.focus();          // nothing was inserted for a new one, nothing changes for an old one
+  }
+
+  /** A click anywhere outside the formula box saves it (an empty one is removed). */
+  @HostListener('document:mousedown', ['$event'])
+  onDocMouseDown(e: MouseEvent) {
+    if (this.math && !(e.target as HTMLElement)?.closest?.('.math-box')) this.saveMath();
+  }
+
+  onMathKey(e: KeyboardEvent) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      this.saveMath();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      this.cancelMath();
+    }
   }
 
   private menuHasFocus(): boolean {
