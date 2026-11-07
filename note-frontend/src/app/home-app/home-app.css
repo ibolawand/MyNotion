@@ -8,7 +8,7 @@
   display: flex;
   height: 100vh;
   padding-top: 40px;
-  background: linear-gradient(135deg, #1a1d2e 0%, #252837 100%);
+  background: #171a29;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   color: #e4e7eb;
 }
@@ -42,26 +42,16 @@ app-calendar {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  text-align: center;
+  gap: 22px;
   padding: 32px;
-  color: #6b7280;
-}
-
-.empty-workspace-icon {
-  font-size: 48px;
+  background: #1f2233;
+  color: #8b93a3;
 }
 
 .empty-workspace h2 {
-  font-size: 18px;
-  font-weight: 600;
-  color: #cbd5e1;
-}
-
-.empty-workspace p {
-  font-size: 14px;
-  max-width: 340px;
-  line-height: 1.5;
+  font: 600 22px/1.3 Charter, 'Bitstream Charter', 'Noto Serif', 'DejaVu Serif', Georgia, serif;
+  color: #d4d8e0;
+  text-align: center;
 }
 
 .chevron {
@@ -108,4 +98,34 @@ app-calendar {
 .delete-icon:hover {
   opacity: 1;
   stroke: #ef4444;
+}
+
+.shortcuts {
+  list-style: none;
+  display: grid;
+  gap: 10px;
+}
+
+.shortcuts li {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13.5px;
+}
+
+.shortcuts span {
+  margin-left: 10px;
+  color: #aab0bf;
+}
+
+.shortcuts kbd {
+  min-width: 26px;
+  padding: 3px 7px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom-width: 2px;
+  background: #262a3d;
+  color: #c9ced8;
+  font: 12px/1.3 'JetBrains Mono', 'Ubuntu Mono', 'DejaVu Sans Mono', monospace;
+  text-align: center;
 }

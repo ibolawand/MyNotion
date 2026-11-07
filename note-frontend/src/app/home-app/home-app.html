@@ -22,9 +22,12 @@
   <app-calendar></app-calendar>
   } @else {
   <div class="empty-workspace">
-    <div class="empty-workspace-icon">📝</div>
-    <h2>No note open</h2>
-    <p>Click “New Note” (Ctrl+N) to start writing, pick a note from the list, or press Ctrl+P to find one.</p>
+    <h2>Pick a note, or start a new one</h2>
+    <ul class="shortcuts">
+      <li><kbd>Ctrl</kbd><kbd>N</kbd><span>New note</span></li>
+      <li><kbd>Ctrl</kbd><kbd>P</kbd><span>Find a note</span></li>
+      <li><kbd>Ctrl</kbd><kbd>D</kbd><span>Today's note</span></li>
+    </ul>
   </div>
   }
   }

@@ -36,7 +36,7 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 2px 8px;
-  padding: 7px 24px;
+  padding: 7px max(24px, calc((100% - 720px) / 2 + 26px));    /* same left edge as the title and the text */
   border-bottom: 1px solid var(--line);
   background: var(--page);
 }
@@ -144,9 +144,9 @@
 }
 
 .page {
-  max-width: 70ch;
+  max-width: 720px;
   margin: 0 auto;
-  padding: 36px 32px 30vh;     /* room under the last line, so you never write at the bottom edge */
+  padding: 30px 32px 30vh;     /* room under the last line, so you never write at the bottom edge */
   min-height: 100%;
 }
 
@@ -346,7 +346,7 @@ tiptap-editor {
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 6px 32px;
+  padding: 6px max(24px, calc((100% - 720px) / 2 + 32px));
   border-top: 1px solid var(--line);
   color: var(--faint);
   font: 12px var(--sans);

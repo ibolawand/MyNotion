@@ -23,9 +23,8 @@
 }
 
 .calendar-title {
-  font-size: 18px;
-  font-weight: 700;
-  color: #e4e7eb;
+  font: 700 22px/1.2 Charter, 'Bitstream Charter', 'Noto Serif', 'DejaVu Serif', Georgia, serif;
+  color: #f5f6f8;
   margin: 0;
 }
 
