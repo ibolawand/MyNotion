@@ -70,6 +70,23 @@ export class OverviewPanel implements OnInit, OnDestroy {
     return this.allNotes.filter(n => n.folderID && this.currentFolderIds.includes(n.folderID));
   }
 
+  /** When a note was last edited: "14:02" today, "Yesterday", "Tue", or "3 Nov". long: full date and time.
+   *  SQLite's CURRENT_TIMESTAMP is UTC, written without a zone. */
+  edited(note: Note, long = false): string {
+    const raw = (note as any).updated_at || (note as any).created_at;
+    if (!raw) return '';
+    const d = new Date(String(raw).replace(' ', 'T') + (/[zZ]|[+-]\d\d:?\d\d$/.test(raw) ? '' : 'Z'));
+    if (isNaN(d.getTime())) return '';
+    if (long) return d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+    const now = new Date();
+    const day = (x: Date) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
+    const days = Math.round((day(now) - day(d)) / 86400000);
+    if (days <= 0) return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    if (days === 1) return 'Yesterday';
+    if (days < 7) return d.toLocaleDateString(undefined, { weekday: 'short' });
+    return d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+  }
+
   getNotesForCategory(categoryId: number): Note[] {
     return this.filteredNotes.filter(n => n.categoryID === categoryId);
   }

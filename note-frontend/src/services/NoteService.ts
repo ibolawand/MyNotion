@@ -129,10 +129,11 @@ export class NoteService {
       if (res.id) note.id = res.id;
       // Check if it's already in cache (e.g. from triggerAutoSave)
       const existingIdx = this.notesCache.findIndex(n => n.id === note.id);
+      const created = { updated_at: new Date().toISOString() } as any;
       if (existingIdx !== -1) {
-        this.notesCache[existingIdx] = { ...this.notesCache[existingIdx], ...note };
+        this.notesCache[existingIdx] = { ...this.notesCache[existingIdx], ...note, ...created };
       } else {
-        this.notesCache.unshift(note);
+        this.notesCache.unshift({ ...note, ...created });
       }
       this.emitNotes();
       this.notesChangedSubject.next(note);
@@ -250,10 +251,11 @@ export class NoteService {
     const res = await window.electronAPI.notes.updateNote(note);
     if (res && res.ok) {
       const idx = this.notesCache.findIndex(n => n.id === note.id);
+      const edited = { updated_at: new Date().toISOString() } as any;   // the list shows when it was last edited
       if (idx !== -1) {
-        this.notesCache[idx] = { ...this.notesCache[idx], ...note };
+        this.notesCache[idx] = { ...this.notesCache[idx], ...note, ...edited };
       } else {
-        this.notesCache.unshift(note);
+        this.notesCache.unshift({ ...note, ...edited });
       }
       this.emitNotes();
       this.notesChangedSubject.next(note);

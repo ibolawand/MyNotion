@@ -470,3 +470,10 @@
   flex: 1;
   min-width: 0;
 }
+
+.note-when {
+  flex: none;
+  font-size: 11px;
+  color: #6b7280;
+  font-variant-numeric: tabular-nums;
+}
