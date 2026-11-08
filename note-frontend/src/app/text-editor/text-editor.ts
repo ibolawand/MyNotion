@@ -11,9 +11,13 @@ import { TextStyle } from '@tiptap/extension-text-style';
 import Highlight from '@tiptap/extension-highlight';
 import { TaskItem, TaskList } from '@tiptap/extension-list';
 import { Placeholder } from '@tiptap/extensions';
-import { BlockMath, InlineMath } from '@tiptap/extension-mathematics';
+import { InlineMath } from '@tiptap/extension-mathematics';
+import { NodeSelection } from '@tiptap/pm/state';
+import { ALIGNED_TEXT, ALIGNS, Align, AlignedBlockMath } from './aligned-math';
+import { TabKey } from './tab-key';
 import katex from 'katex';
 import { DueDates } from './due-dates';
+import { KINDS, MAX_SIZE, Matrix, MatrixKind, OPS, blankMatrix, chainToLatex, findMatrices, fromChain, resize, trimmed } from './matrix';
 import { TiptapEditorDirective, TiptapBubbleMenuDirective } from 'ngx-tiptap';
 
 /** One entry of the "/" menu. `hint` is the Markdown shortcut that does the same while typing. */
@@ -50,6 +54,8 @@ const SLASH_ITEMS: SlashItem[] = [
     run: () => {} },
   { id: 'mathblock', label: 'Math block', description: 'A formula on its own line', hint: '$$$', keywords: 'math formula equation latex tex block',
     run: () => {} },
+  { id: 'matrix', label: 'Matrix', description: 'Numbers in a grid, filled in box by box', hint: '', keywords: 'matrix matrices grid determinant vector math',
+    run: () => {} },
   { id: 'divider', label: 'Divider', description: 'A line between sections', hint: '---', keywords: 'hr rule separator line',
     run: e => e.chain().focus().setHorizontalRule().run() },
   { id: 'date', label: 'Today\'s date', description: 'Inserts the date', hint: '', keywords: 'date today time now',
@@ -58,6 +64,12 @@ const SLASH_ITEMS: SlashItem[] = [
 ];
 
 const FONT_KEY = 'mynotion.editorFont';
+
+/** The formula box: editing one inline or block formula. */
+interface MathState { type: 'inline' | 'block'; pos: number; latex: string; original: string; isNew: boolean; top: number; left: number;
+                     align?: Align; }
+/** A matrix built from inside the formula box goes back into that formula, replacing at..end. */
+interface GridTarget { math: MathState; at: number; end: number; }
 
 /** One-click pieces for the formula box, so nobody has to remember LaTeX. `at`/`sel`: the placeholder that gets
  *  selected, so typing replaces it (\frac{a}{b}: the "a"). */
@@ -84,10 +96,21 @@ export class TextEditor implements OnInit, OnDestroy {
   @ViewChild('mathPreview') mathPreview?: ElementRef<HTMLElement>;
 
   // the formula box: editing one inline or block formula
-  math: { type: 'inline' | 'block'; pos: number; latex: string; original: string; isNew: boolean;
-          top: number; left: number } | null = null;
+  math: MathState | null = null;
   mathError = '';
   readonly mathSnippets = MATH_SNIPPETS;
+
+  // the matrix box: a grid of boxes for one matrix. `into`: opened from the formula box, so the matrix goes
+  // back into that formula (A = …) at `at` instead of becoming a formula of its own
+  @ViewChild('gridPreview') gridPreview?: ElementRef<HTMLElement>;
+  grid: { items: Matrix[]; ops: string[]; cur: number; type: 'inline' | 'block'; origType: 'inline' | 'block';
+          pos: number; isNew: boolean; top: number; left: number; into?: GridTarget; align: Align } | null = null;
+  readonly aligns = ALIGNS;
+  readonly matrixOps = OPS;
+  /** the matrices in the formula being edited, for the "Matrix 1, 2…" buttons */
+  mathMatrices: ReturnType<typeof findMatrices> = [];
+  readonly matrixKinds = KINDS;
+  readonly maxSize = MAX_SIZE;
 
   currentNote: Note | null = null;
   private noteSub?: Subscription;
@@ -139,6 +162,8 @@ export class TextEditor implements OnInit, OnDestroy {
         TaskList,
         TaskItem.configure({ nested: true }),
         DueDates,   // "· due Fri 13 Nov" chips, and "due friday " -> a date
+        ALIGNED_TEXT,   // left / centre / right per line (formulas on their own line: see aligned-math.ts)
+        TabKey,         // Tab: a tab space, or one level in inside a list; Shift+Tab undoes it
         // formulas: $$x^2$$ inline, $$$…$$$ as a block; click one to edit it in the formula box
         // (configured one by one: the combined Mathematics extension gives blocks the inline options, so a block
         // formula came out small instead of in display size)
@@ -146,7 +171,7 @@ export class TextEditor implements OnInit, OnDestroy {
           katexOptions: { throwOnError: false },
           onClick: (node, pos) => this.zone.run(() => this.openMath('inline', pos, node.attrs['latex'])),
         }),
-        BlockMath.configure({
+        AlignedBlockMath.configure({
           katexOptions: { throwOnError: false, displayMode: true },
           onClick: (node, pos) => this.zone.run(() => this.openMath('block', pos, node.attrs['latex'])),
         }),
@@ -333,6 +358,7 @@ export class TextEditor implements OnInit, OnDestroy {
     item.run(this.editor);
     this.closeSlash();
     if (item.id === 'math' || item.id === 'mathblock') this.openNewMath(item.id === 'math' ? 'inline' : 'block');
+    if (item.id === 'matrix') this.openGrid([blankMatrix(2, 2)], [], 'block', this.editor.state.selection.from, true);
   }
 
   // ── formulas ──
@@ -347,15 +373,18 @@ export class TextEditor implements OnInit, OnDestroy {
     this.openMath(type, this.editor.state.selection.from, '', true);
   }
 
-  openMath(type: 'inline' | 'block', pos: number, latex: string, isNew = false) {
+  /** Where a box opens: under the formula (or the cursor for a new one), kept inside the editor. */
+  private boxAt(pos: number, isNew: boolean, width: number) {
     const box = this.host.nativeElement.getBoundingClientRect();
     const dom = isNew ? null : this.editor.view.nodeDOM(pos) as HTMLElement | null;
     const r = dom?.getBoundingClientRect() ?? this.editor.view.coordsAtPos(pos);
-    this.math = {
-      type, pos, latex: latex ?? '', original: latex ?? '', isNew,
-      top: r.bottom - box.top + 8,
-      left: Math.max(8, Math.min(r.left - box.left, box.width - 380)),
-    };
+    return { top: r.bottom - box.top + 8, left: Math.max(8, Math.min(r.left - box.left, box.width - width - 10)) };
+  }
+
+  openMath(type: 'inline' | 'block', pos: number, latex: string, isNew = false) {
+    const chain = isNew ? null : fromChain(latex ?? '');
+    if (chain) return this.openGrid(chain.items, chain.ops, type, pos, false);   // only matrices: opens as the grid
+    this.math = { type, pos, latex: latex ?? '', original: latex ?? '', isNew, align: this.alignAt(pos, isNew), ...this.boxAt(pos, isNew, 370) };
     setTimeout(() => {
       this.renderMathPreview();
       const input = this.mathInput?.nativeElement;
@@ -368,6 +397,7 @@ export class TextEditor implements OnInit, OnDestroy {
     const el = this.mathPreview?.nativeElement;
     if (!el || !this.math) return;
     this.mathError = '';
+    this.mathMatrices = findMatrices(this.math.latex);
     if (!this.math.latex.trim()) {
       el.textContent = 'Your formula shows here';
       el.classList.add('empty');
@@ -416,23 +446,67 @@ export class TextEditor implements OnInit, OnDestroy {
       (m.type === 'inline' ? chain.updateInlineMath({ latex: m.latex.trim(), pos: m.pos })
         : chain.updateBlockMath({ latex: m.latex.trim(), pos: m.pos })).run();
     }
+    if (m.type === 'block' && latex) this.alignBlockNear(m.pos, m.align ?? 'left');
   }
 
   /** After a new block formula the cursor goes to the line below it; left selected, the next key would replace it. */
   private cursorBelowBlock(near: number) {
     const { doc } = this.editor.state;
-    let end = -1;
-    doc.descendants((node, pos) => {
-      if (node.type.name === 'blockMath' && (end < 0 || Math.abs(pos - near) < Math.abs(end - near))) end = pos + node.nodeSize;
-      return node.type.name !== 'blockMath';
-    });
-    if (end < 0) return;
+    const at = this.nearestBlockMath(near);
+    if (at < 0) return;
+    const end = at + doc.nodeAt(at)!.nodeSize;
     const next = doc.resolve(end).nodeAfter;
     if (next?.isTextblock) {
       this.editor.chain().focus().setTextSelection(end + 1).run();
     } else {
       this.editor.chain().focus().insertContentAt(end, { type: 'paragraph' }).setTextSelection(end + 1).run();
     }
+  }
+
+  /** Where the block formula closest to `near` starts (-1 if there is none). */
+  private nearestBlockMath(near: number): number {
+    let at = -1;
+    this.editor.state.doc.descendants((node, pos) => {
+      if (node.type.name === 'blockMath' && (at < 0 || Math.abs(pos - near) < Math.abs(at - near))) at = pos;
+      return node.type.name !== 'blockMath';
+    });
+    return at;
+  }
+
+  private alignBlockNear(near: number, align: Align) {
+    const at = this.nearestBlockMath(near);
+    if (at >= 0 && this.editor.state.doc.nodeAt(at)?.attrs['align'] !== align) {
+      this.editor.view.dispatch(this.editor.state.tr.setNodeAttribute(at, 'align', align));
+    }
+  }
+
+  /** The alignment of an existing block formula (a new one starts left). */
+  private alignAt(pos: number, isNew: boolean): Align {
+    const node = isNew ? null : this.editor.state.doc.nodeAt(pos);
+    return node?.type.name === 'blockMath' ? (node.attrs['align'] || 'left') : 'left';
+  }
+
+  /** Toolbar: left / centre / right for the line the cursor is in (or a selected formula on its own line). */
+  setAlign(align: Align) {
+    const sel = this.editor.state.selection;
+    if (sel instanceof NodeSelection && sel.node.type.name === 'blockMath') {
+      this.editor.view.dispatch(this.editor.state.tr.setNodeAttribute(sel.from, 'align', align));
+    } else {
+      this.editor.chain().focus().setTextAlign(align).run();
+    }
+  }
+
+  alignActive(align: Align): boolean {
+    const sel = this.editor?.state.selection;
+    if (sel instanceof NodeSelection && sel.node.type.name === 'blockMath') return (sel.node.attrs['align'] || 'left') === align;
+    const set = ['center', 'right'].find(a => this.editor?.isActive({ textAlign: a }));
+    return (set ?? 'left') === align;
+  }
+
+  /** The alignment buttons in the formula and matrix boxes (formulas on their own line). */
+  setBoxAlign(align: Align) {
+    if (this.grid) this.grid.align = align;
+    else if (this.math) this.math.align = align;
   }
 
   cancelMath() {
@@ -442,10 +516,190 @@ export class TextEditor implements OnInit, OnDestroy {
     this.editor.commands.focus();          // nothing was inserted for a new one, nothing changes for an old one
   }
 
-  /** A click anywhere outside the formula box saves it (an empty one is removed). */
+  /** A click anywhere outside the formula or matrix box saves it (an empty one is removed). */
   @HostListener('document:mousedown', ['$event'])
   onDocMouseDown(e: MouseEvent) {
-    if (this.math && !(e.target as HTMLElement)?.closest?.('.math-box')) this.saveMath();
+    const inside = (e.target as HTMLElement)?.closest?.('.math-box, .matrix-box');
+    if (this.grid && !inside) this.saveGrid();
+    else if (this.math && !inside) this.saveMath();
+  }
+
+  // ── matrices ──
+  // The grid box edits one matrix at a time; a formula can hold several joined by + − · × = (tabs at the top).
+  // `type`: in the text (inline) or on its own line (block); changing it moves an existing formula over.
+
+  openGrid(items: Matrix[], ops: string[], type: 'inline' | 'block', pos: number, isNew: boolean, into?: GridTarget) {
+    this.grid = { items, ops, cur: 0, type, origType: type, pos, isNew, into, align: into?.math.align ?? this.alignAt(pos, isNew),
+                  ...(into ? { top: into.math.top, left: into.math.left } : this.boxAt(pos, isNew, 400)) };
+    this.afterGridChange(0, 0);
+  }
+
+  /** The formula box's Matrix button: build one in the grid, then it goes into the formula at the cursor. */
+  matrixFromMathBox() {
+    const m = this.math, input = this.mathInput?.nativeElement;
+    if (!m) return;
+    const at = input?.selectionStart ?? m.latex.length;
+    this.math = null;
+    this.openGrid([blankMatrix(2, 2)], [], m.type, m.pos, m.isNew, { math: m, at, end: input?.selectionEnd ?? at });
+  }
+
+  /** "Matrix 2" in the formula box: that one matrix in the grid; the rest of the formula stays as it is. */
+  editMatrixInFormula(i: number) {
+    const m = this.math, found = this.mathMatrices[i];
+    if (!m || !found) return;
+    this.math = null;
+    this.openGrid([found.m], [], m.type, m.pos, m.isNew, { math: m, at: found.start, end: found.end });
+  }
+
+  get gm(): Matrix { return this.grid!.items[this.grid!.cur]; }
+  get gridRows() { return this.grid ? this.gm.cells.length : 0; }
+  get gridCols() { return this.grid ? this.gm.cells[0]?.length ?? 0 : 0; }
+
+  private setGm(m: Matrix) { this.grid!.items = this.grid!.items.map((x, i) => (i === this.grid!.cur ? m : x)); }
+
+  setKind(kind: MatrixKind) {
+    if (!this.grid) return;
+    this.setGm({ ...this.gm, kind });
+    this.renderGridPreview();
+  }
+
+  resizeGrid(rows: number, cols: number) {
+    if (!this.grid) return;
+    this.setGm(resize(this.gm, rows, cols));
+    this.afterGridChange(rows > this.gridRows ? Math.min(rows, MAX_SIZE) - 1 : 0, 0);
+  }
+
+  setCell(r: number, c: number, value: string) {
+    if (!this.grid) return;
+    this.gm.cells[r][c] = value;
+    this.renderGridPreview();
+  }
+
+  /** The tabs: which matrix of the formula is being filled in. */
+  pickMatrix(i: number) {
+    if (!this.grid) return;
+    this.grid.cur = i;
+    this.afterGridChange(0, 0);
+  }
+
+  /** "+ matrix": another one after the current, same size, joined with + (changeable). */
+  addMatrix() {
+    const g = this.grid;
+    if (!g) return;
+    const fresh = blankMatrix(this.gridRows, this.gridCols, this.gm.kind);
+    g.items = [...g.items.slice(0, g.cur + 1), fresh, ...g.items.slice(g.cur + 1)];
+    g.ops = [...g.ops.slice(0, g.cur), '+', ...g.ops.slice(g.cur)];
+    g.cur++;
+    this.afterGridChange(0, 0);
+  }
+
+  removeMatrix() {
+    const g = this.grid;
+    if (!g || g.items.length < 2) return;
+    g.items = g.items.filter((_, i) => i !== g.cur);
+    g.ops = g.ops.filter((_, i) => i !== Math.max(0, g.cur - 1));
+    g.cur = Math.max(0, g.cur - 1);
+    this.afterGridChange(0, 0);
+  }
+
+  setOp(i: number, op: string) {
+    if (!this.grid) return;
+    this.grid.ops = this.grid.ops.map((o, j) => (j === i ? op : o));
+    this.renderGridPreview();
+  }
+
+  setGridType(type: 'inline' | 'block') {
+    if (!this.grid) return;
+    this.grid.type = type;
+    this.renderGridPreview();
+  }
+
+  /** Re-render the preview and put the cursor in a box (the first box of a new row, or the top-left). */
+  private afterGridChange(r: number, c: number) {
+    setTimeout(() => {
+      this.renderGridPreview();
+      (this.host.nativeElement.querySelector(`.matrix-cell[data-r="${r}"][data-c="${c}"]`) as HTMLInputElement | null)?.focus();
+    }, 0);
+  }
+
+  private gridLatex(trim = false): string {
+    const g = this.grid!;
+    return chainToLatex(trim ? g.items.map(trimmed) : g.items, g.ops);
+  }
+
+  renderGridPreview() {
+    const el = this.gridPreview?.nativeElement;
+    if (el && this.grid) katex.render(this.gridLatex(), el, { throwOnError: false, displayMode: true });
+  }
+
+  onGridKey(e: KeyboardEvent, r: number, c: number) {
+    const move = (dr: number, dc: number) => {
+      const cell = this.host.nativeElement.querySelector(`.matrix-cell[data-r="${r + dr}"][data-c="${c + dc}"]`) as HTMLInputElement | null;
+      if (cell) { e.preventDefault(); cell.focus(); cell.select(); }
+    };
+    if (e.key === 'Enter') { e.preventDefault(); this.saveGrid(); }
+    else if (e.key === 'Escape') { e.preventDefault(); this.cancelGrid(); }
+    else if (e.key === 'ArrowUp') move(-1, 0);
+    else if (e.key === 'ArrowDown') move(1, 0);
+    else if (e.key === 'ArrowLeft' && (e.target as HTMLInputElement).selectionStart === 0) move(0, -1);
+    else if (e.key === 'ArrowRight' && (e.target as HTMLInputElement).selectionEnd === (e.target as HTMLInputElement).value.length) move(0, 1);
+  }
+
+  saveGrid() {
+    const g = this.grid;
+    if (!g) return;
+    const empty = g.items.every(m => m.cells.every(row => row.every(c => !c.trim())));
+    const latex = this.gridLatex(true);
+    this.grid = null;
+    if (g.into) {                                                // back into the formula it came from
+      const m = g.into.math;
+      if (!empty) m.latex = m.latex.slice(0, g.into.at) + latex + m.latex.slice(g.into.end);
+      this.math = m;
+      const cursor = empty ? g.into.at : g.into.at + latex.length;
+      setTimeout(() => {
+        this.renderMathPreview();
+        this.mathInput?.nativeElement.focus();
+        this.mathInput?.nativeElement.setSelectionRange(cursor, cursor);
+      }, 0);
+      return;
+    }
+    if (g.isNew && empty) return this.cancelGrid();
+    if (!g.isNew && g.type !== g.origType && !empty) return this.moveFormula(g.pos, g.type, latex, g.align);
+    this.math = { type: g.type, pos: g.pos, latex, original: '', isNew: g.isNew, top: g.top, left: g.left, align: g.align };
+    this.saveMath();
+  }
+
+  /** In the text <-> own line: the formula is replaced by one of the other kind in the same place. */
+  private moveFormula(pos: number, to: 'inline' | 'block', latex: string, align: Align) {
+    const node = this.editor.state.doc.nodeAt(pos);
+    if (!node) return;
+    const range = { from: pos, to: pos + node.nodeSize };
+    if (to === 'inline') {
+      this.editor.chain().focus().insertContentAt(range, { type: 'paragraph', content: [{ type: 'inlineMath', attrs: { latex } }] }).run();
+    } else {
+      this.editor.chain().focus().insertContentAt(range, { type: 'blockMath', attrs: { latex, align } }).run();
+    }
+  }
+
+  cancelGrid() {
+    const g = this.grid;
+    if (!g) return;
+    this.grid = null;
+    if (g.into) {
+      this.math = g.into.math;
+      setTimeout(() => { this.renderMathPreview(); this.mathInput?.nativeElement.focus(); }, 0);
+    } else {
+      this.editor.commands.focus();
+    }
+  }
+
+  /** "Edit as LaTeX": the same formula in the normal formula box. */
+  gridAsLatex() {
+    const g = this.grid;
+    if (!g || g.into) return;
+    this.grid = null;
+    this.math = { type: g.type, pos: g.pos, latex: this.gridLatex(true), original: '', isNew: g.isNew, top: g.top, left: g.left, align: g.align };
+    setTimeout(() => { this.renderMathPreview(); this.mathInput?.nativeElement.focus(); }, 0);
   }
 
   onMathKey(e: KeyboardEvent) {

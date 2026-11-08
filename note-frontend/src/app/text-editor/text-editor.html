@@ -45,6 +45,18 @@
       </button>
     </div>
 
+    <div class="tool-group" role="group" aria-label="Alignment">
+      <button type="button" class="tool" [class.active]="alignActive('left')" [class.on]="alignActive('left')" (click)="setAlign('left')" title="Align left" aria-label="Align left">
+        <svg viewBox="0 0 24 24"><path d="M4 6h16M4 10h10M4 14h16M4 18h10"/></svg>
+      </button>
+      <button type="button" class="tool" [class.active]="alignActive('center')" [class.on]="alignActive('center')" (click)="setAlign('center')" title="Centre" aria-label="Centre">
+        <svg viewBox="0 0 24 24"><path d="M4 6h16M7 10h10M4 14h16M7 18h10"/></svg>
+      </button>
+      <button type="button" class="tool" [class.active]="alignActive('right')" [class.on]="alignActive('right')" (click)="setAlign('right')" title="Align right" aria-label="Align right">
+        <svg viewBox="0 0 24 24"><path d="M4 6h16M10 10h10M4 14h16M10 18h10"/></svg>
+      </button>
+    </div>
+
     <div class="tool-group">
       <label class="tool color-tool" title="Text colour">
         <svg viewBox="0 0 24 24"><path d="m6 17 6-13 6 13M8.5 12h7"/></svg>
@@ -145,10 +157,115 @@
         @for (sn of mathSnippets; track sn.label) {
           <button type="button" (click)="addSnippet(sn)" [title]="sn.tex.trim()">{{ sn.label }}</button>
         }
+        <button type="button" class="matrix-snippet" (click)="matrixFromMathBox()" title="A new matrix, filled in box by box">+ Matrix</button>
       </div>
+      @if (mathMatrices.length) {
+        <div class="math-matrices" aria-label="Edit a matrix in this formula">
+          <span>Edit in grid:</span>
+          @for (mm of mathMatrices; track $index; let i = $index) {
+            <button type="button" (click)="editMatrixInFormula(i)">Matrix {{ i + 1 }}</button>
+          }
+        </div>
+      }
+      @if (math.type === 'block') {
+        <div class="box-align" role="radiogroup" aria-label="Where it sits on the line">
+          <button type="button" class="align-btn" [class.active]="math.align === 'left'" [class.on]="math.align === 'left'" (click)="setBoxAlign('left')" title="Align left" aria-label="Align left" role="radio">
+            <svg viewBox="0 0 24 24"><path d="M4 6h16M4 10h10M4 14h16M4 18h10"/></svg>
+          </button>
+          <button type="button" class="align-btn" [class.active]="math.align === 'center'" [class.on]="math.align === 'center'" (click)="setBoxAlign('center')" title="Centre" aria-label="Centre" role="radio">
+            <svg viewBox="0 0 24 24"><path d="M4 6h16M7 10h10M4 14h16M7 18h10"/></svg>
+          </button>
+          <button type="button" class="align-btn" [class.active]="math.align === 'right'" [class.on]="math.align === 'right'" (click)="setBoxAlign('right')" title="Align right" aria-label="Align right" role="radio">
+            <svg viewBox="0 0 24 24"><path d="M4 6h16M10 10h10M4 14h16M10 18h10"/></svg>
+          </button>
+        </div>
+      }
       <div class="math-actions">
         <span class="math-hint"><kbd>Enter</kbd> save <kbd>Esc</kbd> cancel</span>
         <button type="button" class="math-save" (click)="saveMath()">Save formula</button>
+      </div>
+    </div>
+  }
+
+  @if (grid) {
+    <div class="matrix-box" role="dialog" aria-label="Edit matrix" [style.top.px]="grid.top" [style.left.px]="grid.left"
+      (mousedown)="$event.stopPropagation()">
+      @if (!grid.into) {
+        <div class="matrix-chain" aria-label="Matrices in this formula">
+          @for (item of grid.items; track $index; let i = $index) {
+            @if (i > 0) {
+              <select class="matrix-op" [value]="grid.ops[i - 1]" (change)="setOp(i - 1, $any($event.target).value)"
+                [attr.aria-label]="'Symbol between matrix ' + i + ' and ' + (i + 1)">
+                @for (o of matrixOps; track o.tex) {
+                  <option [value]="o.tex" [selected]="grid.ops[i - 1] === o.tex">{{ o.label }}</option>
+                }
+              </select>
+            }
+            <button type="button" class="matrix-tab" [class.on]="grid.cur === i" (click)="pickMatrix(i)"
+              [attr.aria-pressed]="grid.cur === i">Matrix {{ i + 1 }}</button>
+          }
+          <button type="button" class="matrix-add" (click)="addMatrix()" title="Another matrix after this one (A + B = …)">+ matrix</button>
+        </div>
+      }
+      <div class="matrix-top">
+        <div class="matrix-kinds" role="radiogroup" aria-label="Brackets">
+          @for (k of matrixKinds; track k.kind) {
+            <button type="button" role="radio" [attr.aria-checked]="gm.kind === k.kind" [class.on]="gm.kind === k.kind"
+              (click)="setKind(k.kind)" [title]="k.title">{{ k.label }}</button>
+          }
+        </div>
+        <span class="matrix-size">{{ gridRows }} × {{ gridCols }}</span>
+        @if (grid.items.length > 1) {
+          <button type="button" class="matrix-remove" (click)="removeMatrix()" title="Remove this matrix">Remove</button>
+        }
+      </div>
+      <div class="matrix-body">
+        <div class="matrix-grid" [style.grid-template-columns]="'repeat(' + gridCols + ', 64px)'">
+          @for (row of gm.cells; track $index; let r = $index) {
+            @for (cell of row; track $index; let c = $index) {
+              <input class="matrix-cell" [attr.data-r]="r" [attr.data-c]="c" [value]="cell" spellcheck="false"
+                (input)="setCell(r, c, $any($event.target).value)" (keydown)="onGridKey($event, r, c)"
+                [attr.aria-label]="'Row ' + (r + 1) + ', column ' + (c + 1)">
+            }
+          }
+        </div>
+        <div class="matrix-steps" aria-label="Columns">
+          <button type="button" (click)="resizeGrid(gridRows, gridCols + 1)" [disabled]="gridCols >= maxSize" title="Add a column">+</button>
+          <button type="button" (click)="resizeGrid(gridRows, gridCols - 1)" [disabled]="gridCols <= 1" title="Remove the last column">−</button>
+        </div>
+      </div>
+      <div class="matrix-steps rows" aria-label="Rows">
+        <button type="button" (click)="resizeGrid(gridRows + 1, gridCols)" [disabled]="gridRows >= maxSize" title="Add a row">+ row</button>
+        <button type="button" (click)="resizeGrid(gridRows - 1, gridCols)" [disabled]="gridRows <= 1" title="Remove the last row">− row</button>
+        @if (!grid.into) {
+          <div class="matrix-place" role="radiogroup" aria-label="Where it goes">
+            <button type="button" role="radio" [class.on]="grid.type === 'inline'" [attr.aria-checked]="grid.type === 'inline'"
+              (click)="setGridType('inline')" title="Inside your sentence, so you can write text next to it">In the text</button>
+            <button type="button" role="radio" [class.on]="grid.type === 'block'" [attr.aria-checked]="grid.type === 'block'"
+              (click)="setGridType('block')" title="On its own line">Own line</button>
+          </div>
+          @if (grid.type === 'block') {
+            <div class="box-align" role="radiogroup" aria-label="Where it sits on the line">
+              <button type="button" class="align-btn" [class.active]="grid.align === 'left'" [class.on]="grid.align === 'left'" (click)="setBoxAlign('left')" title="Align left" aria-label="Align left" role="radio">
+                <svg viewBox="0 0 24 24"><path d="M4 6h16M4 10h10M4 14h16M4 18h10"/></svg>
+              </button>
+              <button type="button" class="align-btn" [class.active]="grid.align === 'center'" [class.on]="grid.align === 'center'" (click)="setBoxAlign('center')" title="Centre" aria-label="Centre" role="radio">
+                <svg viewBox="0 0 24 24"><path d="M4 6h16M7 10h10M4 14h16M7 18h10"/></svg>
+              </button>
+              <button type="button" class="align-btn" [class.active]="grid.align === 'right'" [class.on]="grid.align === 'right'" (click)="setBoxAlign('right')" title="Align right" aria-label="Align right" role="radio">
+                <svg viewBox="0 0 24 24"><path d="M4 6h16M10 10h10M4 14h16M10 18h10"/></svg>
+              </button>
+            </div>
+          }
+        }
+      </div>
+      <div class="math-preview matrix-preview" #gridPreview aria-live="polite"></div>
+      <div class="math-actions">
+        <span class="math-hint"><kbd>Tab</kbd> next <kbd>Enter</kbd> save <kbd>Esc</kbd> cancel</span>
+        @if (!grid.into) {
+          <button type="button" class="matrix-latex" (click)="gridAsLatex()">Edit as LaTeX</button>
+        }
+        <button type="button" class="math-save" (click)="saveGrid()">{{ grid.into ? 'Insert' : 'Save' }}</button>
       </div>
     </div>
   }

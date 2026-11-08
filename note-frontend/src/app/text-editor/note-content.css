@@ -1,6 +1,7 @@
 /* How the note itself looks (headings, lists, to-dos, quotes, code). Tokens come from text-editor.css :host. */
 ::ng-deep .tiptap-editor-content {
   outline: none;
+  tab-size: 4;          /* a Tab is four spaces wide, not the browser's eight */
   overflow: visible;
   color: var(--ink);
   font-family: var(--serif);

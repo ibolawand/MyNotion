@@ -1,8 +1,8 @@
-/* The open note: title, folder/category line and save status, aligned with the writing column of the text below
-   (the page is 720px wide and centred; --gutter puts the header on the same left edge). */
+/* The open note: title, folder/category line and save status, on the same left edge as the text below
+   (the page fills the width, left-aligned, like the original MyNotion). */
 
 .main-content {
-  --gutter: max(24px, calc((100% - 720px) / 2 + 32px));
+  --gutter: 32px;
   --serif: Charter, 'Bitstream Charter', 'Iowan Old Style', 'Noto Serif', 'DejaVu Serif', Georgia, serif;
   flex: 1;
   display: flex;

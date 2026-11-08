@@ -9,6 +9,13 @@ Gebaut mit **Electron**, **Angular 20** und dem Editor **TipTap**.
 
 - **Notizen** mit Rich-Text-Editor, Ordnern (auch verschachtelt) und Kategorien
 - **Checklisten** mit Häkchen direkt im Editor („☑ To-do")
+- **Formeln** (LaTeX, mit Vorschau und Knöpfen für ², Bruch, √ …) und **Matrizen**: `/matrix` öffnet ein Raster zum
+  Ausfüllen (runde/eckige Klammern oder Determinante, bis 10 × 10). „+ matrix" hängt weitere an (A + B = C, mit
+  + − · × =), „In the text" oder „Own line" bestimmt, ob Text daneben stehen kann. In der Formel-Box fügt „+ Matrix"
+  eine Matrix an der Cursorstelle ein, und „Matrix 1, 2 …" bearbeitet eine Matrix aus einer Formel wie A = … im Raster
+- **Ausrichtung** pro Zeile: links, zentriert oder rechts für Text, Überschriften und Formeln auf eigener Zeile
+  (Knöpfe in der Werkzeugleiste und in der Formel-/Matrix-Box); alles beginnt links
+- **Tab** wie in Word: rückt in Listen und To-dos eine Ebene ein, sonst ein Tabulator; Shift+Tab macht es rückgängig
 - **Kalender** mit Wochenansicht, ganztägigen Terminen und Wiederholung (täglich, wöchentlich, monatlich, jährlich)
 - **Posteingang (Gmail)** ohne Google-Cloud-Projekt: mit einem App-Passwort (im System-Schlüsselbund gespeichert),
   nur der Tab „Allgemein" (keine Werbung, Newsletter oder Spam), Lesen, Antworten, Anhänge, Archivieren, Suche,
