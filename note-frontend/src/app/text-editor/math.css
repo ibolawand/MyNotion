@@ -61,6 +61,8 @@
 .math-box {
   position: absolute;
   z-index: 60;
+  max-height: calc(100% - 16px);
+  overflow-y: auto;
   width: 370px;
   display: flex;
   flex-direction: column;
@@ -166,6 +168,8 @@
 .matrix-box {
   position: absolute;
   z-index: 60;
+  max-height: calc(100% - 16px);
+  overflow-y: auto;
   width: max-content;
   min-width: 330px;
   max-width: min(640px, calc(100% - 20px));
@@ -223,6 +227,10 @@
 .matrix-kinds button:focus-visible, .matrix-steps button:focus-visible, .matrix-latex:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .matrix-preview { min-height: 56px; }
 
+/* little room (a long matrix near the bottom of the window): the preview gives way first, the cells stay whole */
+.math-box > *, .matrix-box > * { flex-shrink: 0; }
+.math-box > .math-preview, .matrix-box > .matrix-preview { flex-shrink: 1; overflow-y: auto; }
+
 .matrix-chain { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
 .matrix-tab, .matrix-add, .matrix-remove, .matrix-place button, .math-matrices button {
   height: 26px; padding: 0 9px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.08);
@@ -250,3 +258,27 @@
 .box-align .align-btn.on { border-color: rgba(74, 222, 128, 0.45); background: rgba(74, 222, 128, 0.12); color: var(--accent); }
 .box-align .align-btn:hover { background: rgba(255, 255, 255, 0.1); }
 .box-align .align-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+/* ── moving the formula / matrix box: the grip at the top (or its empty edge) ── */
+
+.box-grip {
+  height: 12px;
+  margin: -6px -10px -4px;
+  display: grid;
+  place-items: center;
+  cursor: grab;
+  touch-action: none;
+}
+
+.box-grip span {
+  width: 36px;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.16);
+  transition: background 0.12s ease;
+}
+
+.box-grip:hover span { background: var(--accent); }
+.math-box.dragging, .matrix-box.dragging { cursor: grabbing; user-select: none; box-shadow: 0 24px 56px rgba(5, 7, 18, 0.7); }
+.dragging .box-grip { cursor: grabbing; }
+.dragging .box-grip span { background: var(--accent); }

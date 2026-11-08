@@ -21,6 +21,7 @@
       <button class="tool text" [class.active]="isActive('bold')" (click)="run(bold)" title="Bold (Ctrl+B)"><strong>B</strong></button>
       <button class="tool text" [class.active]="isActive('italic')" (click)="run(italic)" title="Italic (Ctrl+I)"><em>I</em></button>
       <button class="tool text" [class.active]="isActive('underline')" (click)="run(underline)" title="Underline (Ctrl+U)"><u>U</u></button>
+      <button class="tool text" [class.active]="isActive('strike')" (click)="run(strike)" title="Strikethrough (Ctrl+Shift+S)"><s>S</s></button>
     </div>
 
     <div class="tool-group">
@@ -63,8 +64,8 @@
         <span class="swatch" [style.background]="editor.getAttributes('textStyle')['color'] || '#e4e7eb'"></span>
         <input type="color" (input)="setColor($any($event.target).value)" aria-label="Text colour">
       </label>
-      @for (h of highlights.slice(0, 3); track h.color) {
-        <button class="tool mark-tool" (click)="setHighlight(h.color)" [title]="h.label + ' highlight'" [attr.aria-label]="h.label + ' highlight'"
+      @for (h of highlights; track h.color) {
+        <button class="tool mark-tool" (click)="setHighlight(h.color)" [title]="h.label + ' marker (click again to remove; Ctrl+Shift+H for yellow)'" [attr.aria-label]="h.label + ' highlight'"
           [class.active]="isActive('highlight', { color: h.color })">
           <span [style.background]="h.color"></span>
         </button>
@@ -103,11 +104,63 @@
     </div>
   </tiptap-bubble-menu>
 
-  <div class="content-text" (mousedown)="focusEnd($event)">
-    <div class="page" (mousedown)="focusEnd($event)">
-      <tiptap-editor [editor]="editor"></tiptap-editor>
+  <div class="editor-main">
+    <div class="content-text" (mousedown)="focusEnd($event)" (scroll)="onPageScroll()">
+      <div class="page" (mousedown)="focusEnd($event)">
+        <tiptap-editor [editor]="editor"></tiptap-editor>
+      </div>
     </div>
+
+    @if (outlineOn) {
+      <nav class="outline" aria-label="Outline of this note">
+        <div class="outline-title">Outline</div>
+        @for (h of outline; track h.pos; let i = $index) {
+          <button type="button" class="outline-item" [class.l2]="h.level === 2" [class.l3]="h.level >= 3"
+            [class.on]="i === outlineActive" (click)="jumpTo(h)" [title]="h.text">{{ h.text }}</button>
+        } @empty {
+          <p class="outline-empty">Headings (H1, H2, H3) show up here, so you can jump around a long note.</p>
+        }
+      </nav>
+    }
+
+    @if (findOpen) {
+      <div class="find-bar" role="search" aria-label="Find in this note" (mousedown)="$event.stopPropagation()">
+        <div class="find-row">
+          <button type="button" class="find-btn find-expand" [class.on]="findReplace" (click)="findReplace = !findReplace"
+            [title]="findReplace ? 'Hide replace' : 'Replace (Ctrl+H)'" [attr.aria-expanded]="findReplace" aria-label="Show replace">
+            <svg viewBox="0 0 24 24"><path [attr.d]="findReplace ? 'm6 9 6 6 6-6' : 'm9 6 6 6-6 6'"/></svg>
+          </button>
+          <input #findInput class="find-input" [(ngModel)]="findQuery" (ngModelChange)="runFind()" (keydown)="onFindKey($event)"
+            placeholder="Find in note" aria-label="Find" spellcheck="false">
+          <span class="find-count" aria-live="polite">
+            @if (findQuery) {
+              {{ findInfo.matches.length ? (findInfo.current + 1) + ' of ' + findInfo.matches.length : 'No results' }}
+            }
+          </span>
+          <button type="button" class="find-btn" [class.on]="findCase" (click)="toggleFindCase()" title="Match upper and lower case"
+            aria-label="Match case" [attr.aria-pressed]="findCase">Aa</button>
+          <button type="button" class="find-btn" (click)="findStep(-1)" [disabled]="!findInfo.matches.length" title="Previous (Shift+Enter)" aria-label="Previous match">
+            <svg viewBox="0 0 24 24"><path d="m6 15 6-6 6 6"/></svg>
+          </button>
+          <button type="button" class="find-btn" (click)="findStep(1)" [disabled]="!findInfo.matches.length" title="Next (Enter)" aria-label="Next match">
+            <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+          <button type="button" class="find-btn" (click)="closeFind()" title="Close (Esc)" aria-label="Close find">
+            <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>
+          </button>
+        </div>
+        @if (findReplace) {
+          <div class="find-row replace-row">
+            <input class="find-input" [(ngModel)]="replaceWith" (keydown)="onReplaceKey($event)" placeholder="Replace with"
+              aria-label="Replace with" spellcheck="false">
+            <button type="button" class="find-text-btn" (click)="replaceOne()" [disabled]="!findInfo.matches.length" title="Replace this one (Enter)">Replace</button>
+            <button type="button" class="find-text-btn" (click)="replaceEvery()" [disabled]="!findInfo.matches.length" title="Replace all (Ctrl+Enter)">All</button>
+          </div>
+        }
+      </div>
+    }
   </div>
+
 
   @if (slashOpen) {
     <div class="slash-menu" #slashMenu role="listbox" aria-label="Add a block"
@@ -145,8 +198,9 @@
   }
 
   @if (math) {
-    <div class="math-box" role="dialog" aria-label="Edit formula" [style.top.px]="math.top" [style.left.px]="math.left"
-      (mousedown)="$event.stopPropagation()">
+    <div class="math-box" role="dialog" aria-label="Edit formula" #floatBox
+      (mousedown)="$event.stopPropagation()" (pointerdown)="startDrag($event)">
+      <div class="box-grip" title="Drag to move" aria-hidden="true" (mousedown)="$event.preventDefault()"><span></span></div>
       <div class="math-preview" #mathPreview aria-live="polite"></div>
       <textarea #mathInput rows="2" [(ngModel)]="math.latex" (ngModelChange)="renderMathPreview()" (keydown)="onMathKey($event)"
         placeholder="e.g. \frac{a}{b} or x^2 + y^2 = r^2" spellcheck="false" aria-label="Formula in LaTeX"></textarea>
@@ -188,8 +242,9 @@
   }
 
   @if (grid) {
-    <div class="matrix-box" role="dialog" aria-label="Edit matrix" [style.top.px]="grid.top" [style.left.px]="grid.left"
-      (mousedown)="$event.stopPropagation()">
+    <div class="matrix-box" role="dialog" aria-label="Edit matrix" #floatBox
+      (mousedown)="$event.stopPropagation()" (pointerdown)="startDrag($event)">
+      <div class="box-grip" title="Drag to move" aria-hidden="true" (mousedown)="$event.preventDefault()"><span></span></div>
       @if (!grid.into) {
         <div class="matrix-chain" aria-label="Matrices in this formula">
           @for (item of grid.items; track $index; let i = $index) {
@@ -275,7 +330,11 @@
     @if (words > 0) {
       <span>{{ readingTime }}</span>
     }
-    <span class="footer-tip">Type / for blocks, Ctrl+K for a link</span>
+    <span class="footer-tip">Type / for blocks, Ctrl+F to find</span>
+    <button class="outline-toggle" [class.on]="outlineOn" (click)="toggleOutline()" [attr.aria-pressed]="outlineOn"
+      [title]="outlineOn ? 'Hide the outline' : 'Show the outline: the headings of this note'">
+      <svg viewBox="0 0 24 24"><path d="M4 6h10M7 12h13M7 18h13"/></svg>Outline
+    </button>
     <button class="font-toggle" (click)="toggleFont()" [title]="font === 'serif' ? 'Switch to a sans-serif font' : 'Switch to a serif font'">
       <span [class.on]="font === 'serif'" class="serif-a">Aa</span>
       <span [class.on]="font === 'sans'" class="sans-a">Aa</span>

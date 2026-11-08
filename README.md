@@ -13,9 +13,16 @@ Gebaut mit **Electron**, **Angular 20** und dem Editor **TipTap**.
   Ausfüllen (runde/eckige Klammern oder Determinante, bis 10 × 10). „+ matrix" hängt weitere an (A + B = C, mit
   + − · × =), „In the text" oder „Own line" bestimmt, ob Text daneben stehen kann. In der Formel-Box fügt „+ Matrix"
   eine Matrix an der Cursorstelle ein, und „Matrix 1, 2 …" bearbeitet eine Matrix aus einer Formel wie A = … im Raster
+  (die Formel- und die Matrix-Box lassen sich am Griff oben verschieben und bleiben dann dort)
 - **Ausrichtung** pro Zeile: links, zentriert oder rechts für Text, Überschriften und Formeln auf eigener Zeile
   (Knöpfe in der Werkzeugleiste und in der Formel-/Matrix-Box); alles beginnt links
 - **Tab** wie in Word: rückt in Listen und To-dos eine Ebene ein, sonst ein Tabulator; Shift+Tab macht es rückgängig
+- **Suchen & Ersetzen** in der offenen Notiz: Strg+F sucht (alle Treffer markiert, Enter/Shift+Enter springt),
+  Strg+H ersetzt einzeln oder alle auf einmal; ein Treffer in einer zugeklappten Aufklappliste klappt sie auf
+- **Hinweisboxen** (`/callout`): farbige Box für Notiz, Tipp, Wichtig oder Warnung; Klick aufs Symbol wechselt die Art
+- **Aufklapplisten** (`/toggle`): ein Titel, darunter Text zum Ein- und Ausklappen (z. B. Frage und Antwort zum Lernen)
+- **Gliederung**: „Outline“ unten rechts zeigt die Überschriften der Notiz; ein Klick springt hin
+- **Textmarker** in vier Farben und Durchstreichen direkt in der Werkzeugleiste (Strg+Shift+H, Strg+Shift+S)
 - **Kalender** mit Wochenansicht, ganztägigen Terminen und Wiederholung (täglich, wöchentlich, monatlich, jährlich)
 - **Posteingang (Gmail)** ohne Google-Cloud-Projekt: mit einem App-Passwort (im System-Schlüsselbund gespeichert),
   nur der Tab „Allgemein" (keine Werbung, Newsletter oder Spam), Lesen, Antworten, Anhänge, Archivieren, Suche,

@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, ElementRef, HostListener, ViewChild, NgZone } from '@angular/core';
+import { Component, OnInit, OnDestroy, ElementRef, HostListener, ViewChild, NgZone, ChangeDetectorRef } from '@angular/core';
 import { NoteService } from '../../services/NoteService';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
@@ -15,6 +15,10 @@ import { InlineMath } from '@tiptap/extension-mathematics';
 import { NodeSelection } from '@tiptap/pm/state';
 import { ALIGNED_TEXT, ALIGNS, Align, AlignedBlockMath } from './aligned-math';
 import { TabKey } from './tab-key';
+import { Details, DetailsContent, DetailsSummary } from '@tiptap/extension-details';
+import { Callout } from './callout';
+import { FindReplace, findState } from './find';
+import { OutlineItem, activeHeading, outlineOf } from './outline';
 import katex from 'katex';
 import { DueDates } from './due-dates';
 import { KINDS, MAX_SIZE, Matrix, MatrixKind, OPS, blankMatrix, chainToLatex, findMatrices, fromChain, resize, trimmed } from './matrix';
@@ -56,6 +60,12 @@ const SLASH_ITEMS: SlashItem[] = [
     run: () => {} },
   { id: 'matrix', label: 'Matrix', description: 'Numbers in a grid, filled in box by box', hint: '', keywords: 'matrix matrices grid determinant vector math',
     run: () => {} },
+  { id: 'callout', label: 'Callout', description: 'A coloured box to make something stand out (click its icon for another kind)',
+    hint: '', keywords: 'callout box note tip important warning info highlight remember',
+    run: e => e.chain().focus().setCallout('note').run() },
+  { id: 'toggle', label: 'Toggle', description: 'A title that folds the text under it away (good for practice questions)',
+    hint: '', keywords: 'toggle fold collapse details hide spoiler question answer',
+    run: e => { e.chain().focus().setDetails().run(); openToggleAtCursor(e); } },
   { id: 'divider', label: 'Divider', description: 'A line between sections', hint: '---', keywords: 'hr rule separator line',
     run: e => e.chain().focus().setHorizontalRule().run() },
   { id: 'date', label: 'Today\'s date', description: 'Inserts the date', hint: '', keywords: 'date today time now',
@@ -63,11 +73,23 @@ const SLASH_ITEMS: SlashItem[] = [
       { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) + ' ').run() },
 ];
 
+/** A new toggle starts open, so what you type next goes under its title (and Enter in the title goes there too). */
+function openToggleAtCursor(e: Editor) {
+  const { $from } = e.state.selection;
+  for (let d = $from.depth; d > 0; d--) {
+    if ($from.node(d).type.name === 'details') {
+      e.view.dispatch(e.state.tr.setNodeAttribute($from.before(d), 'open', true));
+      return;
+    }
+  }
+}
+
 const FONT_KEY = 'mynotion.editorFont';
+const OUTLINE_KEY = 'mynotion.outline';
 
 /** The formula box: editing one inline or block formula. */
 interface MathState { type: 'inline' | 'block'; pos: number; latex: string; original: string; isNew: boolean; top: number; left: number;
-                     align?: Align; }
+                     above: number; align?: Align; dragged?: boolean; }
 /** A matrix built from inside the formula box goes back into that formula, replacing at..end. */
 interface GridTarget { math: MathState; at: number; end: number; }
 
@@ -87,7 +109,7 @@ export const MATH_SNIPPETS: { label: string; tex: string; at?: number; sel?: num
   standalone: true,
   imports: [FormsModule, TiptapEditorDirective, TiptapBubbleMenuDirective],
   templateUrl: './text-editor.html',
-  styleUrls: ['./text-editor.css', './note-content.css', './math.css']
+  styleUrls: ['./text-editor.css', './note-content.css', './math.css', './blocks.css', './page-tools.css']
 })
 export class TextEditor implements OnInit, OnDestroy {
   @ViewChild('linkInput') linkInput?: ElementRef<HTMLInputElement>;
@@ -104,7 +126,8 @@ export class TextEditor implements OnInit, OnDestroy {
   // back into that formula (A = …) at `at` instead of becoming a formula of its own
   @ViewChild('gridPreview') gridPreview?: ElementRef<HTMLElement>;
   grid: { items: Matrix[]; ops: string[]; cur: number; type: 'inline' | 'block'; origType: 'inline' | 'block';
-          pos: number; isNew: boolean; top: number; left: number; into?: GridTarget; align: Align } | null = null;
+          pos: number; isNew: boolean; top: number; left: number; above: number; into?: GridTarget; align: Align;
+          dragged?: boolean } | null = null;
   readonly aligns = ALIGNS;
   readonly matrixOps = OPS;
   /** the matrices in the formula being edited, for the "Matrix 1, 2…" buttons */
@@ -138,16 +161,31 @@ export class TextEditor implements OnInit, OnDestroy {
   font: 'serif' | 'sans' = 'serif';
   words = 0;
 
+  // find & replace (Ctrl+F / Ctrl+H): the bar at the top right of the page; the marks are drawn by find.ts
+  @ViewChild('findInput') findInput?: ElementRef<HTMLInputElement>;
+  findOpen = false;
+  findReplace = false;           // the second row, "Replace with"
+  findQuery = '';
+  replaceWith = '';
+  findCase = false;
+
+  // the outline: the note's headings at the side, to jump around a long note
+  outline: OutlineItem[] = [];
+  outlineOn = false;
+  outlineActive = -1;
+
   constructor(
     protected modelService: ModelService,
     protected noteService: NoteService,
     private zone: NgZone,
-    private host: ElementRef<HTMLElement>
+    private host: ElementRef<HTMLElement>,
+    private cdr: ChangeDetectorRef
   ) { }
 
   ngOnInit(): void {
     try {
       this.font = localStorage.getItem(FONT_KEY) === 'sans' ? 'sans' : 'serif';
+      this.outlineOn = localStorage.getItem(OUTLINE_KEY) === 'on';
     } catch { /* storage unavailable: keep the default */ }
 
     this.editor = new Editor({
@@ -164,6 +202,12 @@ export class TextEditor implements OnInit, OnDestroy {
         DueDates,   // "· due Fri 13 Nov" chips, and "due friday " -> a date
         ALIGNED_TEXT,   // left / centre / right per line (formulas on their own line: see aligned-math.ts)
         TabKey,         // Tab: a tab space, or one level in inside a list; Shift+Tab undoes it
+        FindReplace,    // Ctrl+F / Ctrl+H (the bar is in this component)
+        Callout,        // coloured boxes: note, tip, important, warning
+        // toggles: a title that folds its text away; whether it's open is saved with the note
+        Details.configure({ persist: true, HTMLAttributes: { class: 'toggle' } }),
+        DetailsSummary,
+        DetailsContent,
         // formulas: $$x^2$$ inline, $$$…$$$ as a block; click one to edit it in the formula box
         // (configured one by one: the combined Mathematics extension gives blocks the inline options, so a block
         // formula came out small instead of in display size)
@@ -192,6 +236,7 @@ export class TextEditor implements OnInit, OnDestroy {
       onUpdate: ({ editor }) => {
         this.updateSlash();
         this.words = this.countWords();
+        this.refreshOutline();
         if (this.currentNote) {
           this.currentNote.content = editor.getHTML();
           this.modelService.updateCurrentNote(this.currentNote);
@@ -214,17 +259,20 @@ export class TextEditor implements OnInit, OnDestroy {
         if (switched) {
           this.closeSlash();
           this.linkEditing = false;
+          this.closeFind(false);
         }
       } else {
         this.currentNote = null;
         this.editor.commands.clearContent(false);
       }
       this.words = this.countWords();
+      this.refreshOutline();
     });
   }
 
   ngOnDestroy(): void {
     this.noteSub?.unsubscribe();
+    this.floatWatch.disconnect();
     this.editor?.destroy();
   }
 
@@ -378,7 +426,74 @@ export class TextEditor implements OnInit, OnDestroy {
     const box = this.host.nativeElement.getBoundingClientRect();
     const dom = isNew ? null : this.editor.view.nodeDOM(pos) as HTMLElement | null;
     const r = dom?.getBoundingClientRect() ?? this.editor.view.coordsAtPos(pos);
-    return { top: r.bottom - box.top + 8, left: Math.max(8, Math.min(r.left - box.left, box.width - width - 10)) };
+    return { top: r.bottom - box.top + 8, above: r.top - box.top - 8,
+             left: Math.max(8, Math.min(r.left - box.left, box.width - width - 10)) };
+  }
+
+  /** The open formula or matrix box, kept on screen: under its formula if it fits, else above it, else as low as it
+   *  fits (too tall for the window: it scrolls inside). Runs again whenever the box or the window changes size. */
+  private floatEl?: HTMLElement;
+  private floatWatch = new ResizeObserver(() => this.fitBox());
+  @ViewChild('floatBox') set floatBox(ref: ElementRef<HTMLElement> | undefined) {
+    if (ref?.nativeElement === this.floatEl) return;
+    if (this.floatEl) this.floatWatch.unobserve(this.floatEl);
+    this.floatEl = ref?.nativeElement;
+    if (this.floatEl) { this.floatWatch.observe(this.floatEl); this.floatWatch.observe(this.host.nativeElement); this.fitBox(); }
+  }
+
+  private fitBox() {
+    const el = this.floatEl, at = this.grid ?? this.math, gap = 8;
+    if (!el || !at) return;
+    const { clientHeight: H, clientWidth: W } = this.host.nativeElement, h = el.offsetHeight, w = el.offsetWidth;
+    if (at.dragged) {                                        // moved by hand: it stays there, just kept on screen
+      el.style.top = `${Math.max(gap, Math.min(at.top, H - h - gap))}px`;
+      el.style.left = `${Math.max(gap, Math.min(at.left, W - w - gap))}px`;
+      return;
+    }
+    const scroller = this.host.nativeElement.querySelector('.content-text') as HTMLElement | null;
+    if (scroller && at.top + h > H - gap && at.above - h < gap) {   // fits neither way: scroll the note up to make room
+      const pageTop = scroller.getBoundingClientRect().top - this.host.nativeElement.getBoundingClientRect().top;
+      const before = scroller.scrollTop;
+      scroller.scrollTop += Math.min(at.top + h - (H - gap), at.above - pageTop - 16);   // the line itself stays in sight
+      const moved = scroller.scrollTop - before;
+      at.top -= moved;
+      at.above -= moved;
+    }
+    let top = at.top;
+    if (top + h > H - gap) top = at.above - h >= gap ? at.above - h : Math.max(gap, H - h - gap);
+    el.style.top = `${top}px`;
+    el.style.left = `${Math.max(gap, Math.min(at.left, W - w - gap))}px`;
+  }
+
+  private spotOf(b: { top: number; left: number; above: number; dragged?: boolean }) {
+    return { top: b.top, left: b.left, above: b.above, dragged: b.dragged };
+  }
+
+  /** Drag the formula or matrix box by its grip (or its empty edge) to anywhere in the editor. */
+  startDrag(e: PointerEvent) {
+    const el = this.floatEl, at = this.grid ?? this.math, target = e.target as HTMLElement;
+    if (!el || !at || e.button !== 0 || !(target === el || target.closest('.box-grip'))) return;
+    e.preventDefault();                                      // the cell or text box being typed in keeps the cursor
+    const startX = e.clientX, startY = e.clientY, top = el.offsetTop, left = el.offsetLeft;
+    el.classList.add('dragging');
+    const move = (ev: PointerEvent) => {
+      at.top = top + ev.clientY - startY;
+      at.left = left + ev.clientX - startX;
+      at.dragged = true;
+      this.fitBox();
+    };
+    const stop = () => {
+      el.classList.remove('dragging');
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', stop);
+      window.removeEventListener('pointercancel', stop);
+      const { top: t, left: l } = el.style;                  // what's on screen (kept inside the editor)
+      at.top = parseFloat(t) || at.top;
+      at.left = parseFloat(l) || at.left;
+    };
+    window.addEventListener('pointermove', move);
+    window.addEventListener('pointerup', stop);
+    window.addEventListener('pointercancel', stop);
   }
 
   openMath(type: 'inline' | 'block', pos: number, latex: string, isNew = false) {
@@ -530,7 +645,7 @@ export class TextEditor implements OnInit, OnDestroy {
 
   openGrid(items: Matrix[], ops: string[], type: 'inline' | 'block', pos: number, isNew: boolean, into?: GridTarget) {
     this.grid = { items, ops, cur: 0, type, origType: type, pos, isNew, into, align: into?.math.align ?? this.alignAt(pos, isNew),
-                  ...(into ? { top: into.math.top, left: into.math.left } : this.boxAt(pos, isNew, 400)) };
+                  ...(into ? { top: into.math.top, left: into.math.left, above: into.math.above, dragged: into.math.dragged } : this.boxAt(pos, isNew, 400)) };
     this.afterGridChange(0, 0);
   }
 
@@ -654,7 +769,7 @@ export class TextEditor implements OnInit, OnDestroy {
     if (g.into) {                                                // back into the formula it came from
       const m = g.into.math;
       if (!empty) m.latex = m.latex.slice(0, g.into.at) + latex + m.latex.slice(g.into.end);
-      this.math = m;
+      this.math = { ...m, ...this.spotOf(g) };                   // the formula box comes back where the grid was
       const cursor = empty ? g.into.at : g.into.at + latex.length;
       setTimeout(() => {
         this.renderMathPreview();
@@ -665,7 +780,7 @@ export class TextEditor implements OnInit, OnDestroy {
     }
     if (g.isNew && empty) return this.cancelGrid();
     if (!g.isNew && g.type !== g.origType && !empty) return this.moveFormula(g.pos, g.type, latex, g.align);
-    this.math = { type: g.type, pos: g.pos, latex, original: '', isNew: g.isNew, top: g.top, left: g.left, align: g.align };
+    this.math = { type: g.type, pos: g.pos, latex, original: '', isNew: g.isNew, top: g.top, left: g.left, above: g.above, align: g.align, dragged: g.dragged };
     this.saveMath();
   }
 
@@ -686,7 +801,7 @@ export class TextEditor implements OnInit, OnDestroy {
     if (!g) return;
     this.grid = null;
     if (g.into) {
-      this.math = g.into.math;
+      this.math = { ...g.into.math, ...this.spotOf(g) };
       setTimeout(() => { this.renderMathPreview(); this.mathInput?.nativeElement.focus(); }, 0);
     } else {
       this.editor.commands.focus();
@@ -698,7 +813,7 @@ export class TextEditor implements OnInit, OnDestroy {
     const g = this.grid;
     if (!g || g.into) return;
     this.grid = null;
-    this.math = { type: g.type, pos: g.pos, latex: this.gridLatex(true), original: '', isNew: g.isNew, top: g.top, left: g.left, align: g.align };
+    this.math = { type: g.type, pos: g.pos, latex: this.gridLatex(true), original: '', isNew: g.isNew, top: g.top, left: g.left, above: g.above, align: g.align, dragged: g.dragged };
     setTimeout(() => { this.renderMathPreview(); this.mathInput?.nativeElement.focus(); }, 0);
   }
 
@@ -748,6 +863,133 @@ export class TextEditor implements OnInit, OnDestroy {
   private scrollSlashIntoView() {
     setTimeout(() => this.slashMenuEl?.nativeElement
       .querySelector('.slash-item.selected')?.scrollIntoView({ block: 'nearest' }), 0);
+  }
+
+  // ── find & replace ──
+
+  get findInfo() { return findState(this.editor.state); }
+
+  @HostListener('document:keydown', ['$event'])
+  onFindKeys(e: KeyboardEvent) {
+    if (!(e.ctrlKey || e.metaKey) || e.altKey || !this.currentNote) return;
+    const key = e.key.toLowerCase();
+    if (!e.shiftKey && (key === 'f' || key === 'h')) {      // (Ctrl+Shift+H stays the yellow marker)
+      e.preventDefault();
+      this.openFind(key === 'h');
+    }
+  }
+
+  /** Opens the bar (with the selected words in it, if any) and searches from the cursor. */
+  openFind(replace = false) {
+    const { from, to, empty } = this.editor.state.selection;
+    const picked = empty ? '' : this.editor.state.doc.textBetween(from, to, ' ');
+    if (picked && !picked.includes('\n') && picked.length <= 200) this.findQuery = picked;
+    this.findOpen = true;
+    this.findReplace = this.findReplace || replace;
+    this.runFind();
+    this.cdr.detectChanges();          // the box exists now, so what's typed next goes into it, not the note
+    this.findInput?.nativeElement.focus();
+    this.findInput?.nativeElement.select();
+  }
+
+  runFind() {
+    this.editor.commands.setFind(this.findQuery, this.findCase);
+    this.showMatch();
+  }
+
+  findStep(dir: 1 | -1) {
+    if (!this.findInfo.matches.length) return;
+    this.editor.commands.findStep(dir);
+    this.showMatch();
+  }
+
+  replaceOne() {
+    this.editor.commands.replaceCurrent(this.replaceWith);
+    this.showMatch();
+  }
+
+  replaceEvery() {
+    this.editor.commands.replaceAll(this.replaceWith);
+  }
+
+  toggleFindCase() {
+    this.findCase = !this.findCase;
+    this.runFind();
+  }
+
+  /** Esc: the bar closes and the cursor is left on the match you were at (keep typing from there). */
+  closeFind(focus = true) {
+    if (!this.findOpen) return;
+    this.findOpen = false;
+    this.editor.commands.clearFind();
+    if (focus) this.editor.commands.focus(undefined, { scrollIntoView: false });
+  }
+
+  onFindKey(e: KeyboardEvent) {
+    if (e.key === 'Enter') { e.preventDefault(); this.findStep(e.shiftKey ? -1 : 1); }
+    else if (e.key === 'Escape') { e.preventDefault(); this.closeFind(); }
+  }
+
+  onReplaceKey(e: KeyboardEvent) {
+    if (e.key === 'Enter') { e.preventDefault(); (e.ctrlKey || e.metaKey) ? this.replaceEvery() : this.replaceOne(); }
+    else if (e.key === 'Escape') { e.preventDefault(); this.closeFind(); }
+  }
+
+  /** The current match: a folded toggle around it opens, and the page scrolls so it's in the middle. */
+  private showMatch() {
+    const s = this.findInfo, m = s.matches[s.current];
+    if (!m) return;
+    const $m = this.editor.state.doc.resolve(m.from);
+    const tr = this.editor.state.tr;
+    for (let d = $m.depth; d > 0; d--) {
+      const node = $m.node(d);
+      if (node.type.name === 'details' && !node.attrs['open']) tr.setNodeAttribute($m.before(d), 'open', true);
+    }
+    if (tr.docChanged || tr.steps.length) this.editor.view.dispatch(tr);
+    setTimeout(() => {
+      const scroller = this.host.nativeElement.querySelector('.content-text') as HTMLElement | null;
+      const hit = this.host.nativeElement.querySelector('.find-hit.current') as HTMLElement | null;
+      if (!scroller || !hit) return;
+      const r = hit.getBoundingClientRect(), box = scroller.getBoundingClientRect();
+      if (r.top < box.top + 40 || r.bottom > box.bottom - 40) scroller.scrollTop += r.top - box.top - box.height / 2;
+    }, 0);
+  }
+
+  // ── outline ──
+
+  private refreshOutline() {
+    const next = this.editor ? outlineOf(this.editor.state.doc) : [];
+    const same = next.length === this.outline.length &&
+      next.every((h, i) => h.text === this.outline[i].text && h.level === this.outline[i].level && h.pos === this.outline[i].pos);
+    if (!same) this.outline = next;
+    if (this.outlineOn) setTimeout(() => this.onPageScroll(), 0);
+  }
+
+  toggleOutline() {
+    this.outlineOn = !this.outlineOn;
+    try { localStorage.setItem(OUTLINE_KEY, this.outlineOn ? 'on' : 'off'); } catch { /* not saved, fine */ }
+    if (this.outlineOn) setTimeout(() => this.onPageScroll(), 0);
+  }
+
+  /** Which heading you're reading: the last one that has passed the top quarter of the page. */
+  onPageScroll() {
+    if (!this.outlineOn || !this.outline.length) return;
+    const scroller = this.host.nativeElement.querySelector('.content-text') as HTMLElement | null;
+    if (!scroller) return;
+    const line = scroller.getBoundingClientRect().top + scroller.clientHeight / 4;
+    const tops = this.outline.map(h => (this.editor.view.nodeDOM(h.pos) as HTMLElement | null)?.getBoundingClientRect().top ?? Infinity);
+    const atEnd = scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 4;
+    this.outlineActive = atEnd ? tops.filter(t => t < Infinity).length - 1 : activeHeading(tops, line);
+  }
+
+  /** Click a heading: the page scrolls it to the top and the cursor goes to its end. */
+  jumpTo(h: OutlineItem) {
+    const el = this.editor.view.nodeDOM(h.pos) as HTMLElement | null;
+    const scroller = this.host.nativeElement.querySelector('.content-text') as HTMLElement | null;
+    if (!el || !scroller) return;
+    scroller.scrollTo({ top: scroller.scrollTop + el.getBoundingClientRect().top - scroller.getBoundingClientRect().top - 16, behavior: 'smooth' });
+    const node = this.editor.state.doc.nodeAt(h.pos);
+    if (node) this.editor.chain().setTextSelection(h.pos + node.nodeSize - 1).focus(undefined, { scrollIntoView: false }).run();
   }
 
   // ── footer ──
