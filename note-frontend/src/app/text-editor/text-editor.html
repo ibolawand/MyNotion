@@ -94,6 +94,8 @@
         <button class="bubble-btn" [class.active]="isActive('underline')" (click)="run(underline)" title="Underline (Ctrl+U)"><u>U</u></button>
         <button class="bubble-btn" [class.active]="isActive('strike')" (click)="run(strike)" title="Strikethrough"><s>S</s></button>
         <button class="bubble-btn mono" [class.active]="isActive('code')" (click)="run(inlineCode)" title="Inline code (Ctrl+E)">&lt;/&gt;</button>
+        <button class="bubble-btn" [class.active]="isActive('subscript')" (click)="run(sub)" title="Subscript, like H₂O (Ctrl+,)">x<sub>2</sub></button>
+        <button class="bubble-btn" [class.active]="isActive('superscript')" (click)="run(sup)" title="Superscript, like m² (Ctrl+.)">x<sup>2</sup></button>
         <span class="bubble-sep"></span>
         @for (h of highlights; track h.color) {
           <button class="bubble-btn dot" (click)="setHighlight(h.color)" [title]="h.label + ' highlight'"><span [style.background]="h.color"></span></button>
@@ -114,6 +116,29 @@
         <tiptap-editor [editor]="editor"></tiptap-editor>
       </div>
     </div>
+
+    @if (tableBar; as t) {
+      <div class="table-bar" role="toolbar" [style.top.px]="t.top" [style.left.px]="t.left" (mousedown)="$event.preventDefault()" [attr.aria-label]="'Table, ' + t.rows + ' rows, ' + t.cols + ' columns'">
+        <button class="tool small" (click)="tableDo('rowAfter')" title="Add a row below (Tab in the last box does it too)" aria-label="Add a row below">
+          <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="8" rx="1.5"/><path d="M12 15v6M9 18h6"/></svg>
+        </button>
+        <button class="tool small" (click)="tableDo('colAfter')" title="Add a column to the right" aria-label="Add a column to the right">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="18" rx="1.5"/><path d="M15 12h6M18 9v6"/></svg>
+        </button>
+        <button class="tool small" (click)="tableDo('delRow')" title="Remove this row" aria-label="Remove this row">
+          <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="8" rx="1.5"/><path d="M9 18h6"/></svg>
+        </button>
+        <button class="tool small" (click)="tableDo('delCol')" title="Remove this column" aria-label="Remove this column">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="18" rx="1.5"/><path d="M15 12h6"/></svg>
+        </button>
+        <button class="tool small" [class.active]="isActive('tableHeader')" (click)="tableDo('header')" title="First row as a header (bold, shaded)" aria-label="Header row">
+          <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="M3 9h18" /><path d="M4 6.5h16" stroke-width="3"/></svg>
+        </button>
+        <button class="tool small danger" (click)="tableDo('delete')" title="Delete the whole table" aria-label="Delete table">
+          <svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>
+        </button>
+      </div>
+    }
 
     @if (outlineOn) {
       <nav class="outline" aria-label="Outline of this note">
@@ -186,7 +211,14 @@
               @case ('math') { <span class="glyph-math">x²</span> }
               @case ('mathblock') { <span class="glyph-math">∑</span> }
               @case ('divider') { <svg viewBox="0 0 24 24"><path d="M4 12h16"/></svg> }
+              @case ('matrix') { <span class="glyph-math">[ ]</span> }
+              @case ('vector') { <svg viewBox="0 0 24 24"><path d="M6 6h11m-3-3 3 3-3 3M8 12l4 8 4-8"/></svg> }
+              @case ('callout') { <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M8 10v.01M8 14h8M11 10h5"/></svg> }
+              @case ('toggle') { <svg viewBox="0 0 24 24"><path d="m6 8 4 4-4 4" class="fill"/><path d="M13 12h7M13 18h5"/></svg> }
+              @case ('image') { <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="m21 16-5-5-9 9"/></svg> }
+              @case ('table') { <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18M10 4v16"/></svg> }
               @case ('date') { <svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg> }
+              @default { <svg viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 13h6M9 17h4"/></svg> }
             }
           </span>
           <span class="slash-text">
@@ -347,9 +379,14 @@
       <span>{{ readingTime }}</span>
     }
     @if (imageNote) {
-      <span class="footer-note" role="status">{{ imageNote }}</span>
+      <span class="footer-note" role="status">{{ imageNote }}
+        @if (lastPdf && !exporting) { <button type="button" class="footer-link" (click)="showPdf()">Show</button> }
+      </span>
     }
     <span class="footer-tip">Type / for blocks, Ctrl+F to find</span>
+    <button class="outline-toggle" (click)="exportPdf()" [disabled]="exporting || !currentNote" title="Save this note as a PDF (to print or hand in)">
+      <svg viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 13h6M9 17h4"/></svg>PDF
+    </button>
     <button class="outline-toggle" [class.on]="outlineOn" (click)="toggleOutline()" [attr.aria-pressed]="outlineOn"
       [title]="outlineOn ? 'Hide the outline' : 'Show the outline: the headings of this note'">
       <svg viewBox="0 0 24 24"><path d="M4 6h10M7 12h13M7 18h13"/></svg>Outline

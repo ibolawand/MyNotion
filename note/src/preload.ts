@@ -22,6 +22,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
         saveToken: (token: string) => ipcRenderer.invoke('save-token', token),
         getToken: () => ipcRenderer.invoke('get-token'),
         removeToken: () => ipcRenderer.invoke('remove-token'),
+        // "Save as PDF": the note as drawn on screen; asks where to save it
+        exportPdf: (title: string, body: string, css: string, base: string): Promise<{ ok: boolean; path?: string; canceled?: boolean; error?: string }> =>
+            ipcRenderer.invoke('note:pdf', { title, body, css, base }),
+        showPdf: (file: string) => ipcRenderer.invoke('note:pdf-show', file),
         getNoteWithCertainCategory: (category: number, userId: number) => ipcRenderer.invoke('getNoteWithCertainCategory', category, userId),
         getCategories: (userid:number) => ipcRenderer.invoke('getCategories',userid),
         createCategory: (category: Category | string) => ipcRenderer.invoke('createCategory', category),

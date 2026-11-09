@@ -30,6 +30,21 @@ Gebaut mit **Electron**, **Angular 20** und dem Editor **TipTap**.
 - **Aufklapplisten** (`/toggle`): ein Titel, darunter Text zum Ein- und Ausklappen (z. B. Frage und Antwort zum Lernen)
 - **Gliederung**: „Outline“ unten rechts zeigt die Überschriften der Notiz; ein Klick springt hin
 - **Textmarker** in vier Farben und Durchstreichen direkt in der Werkzeugleiste (Strg+Shift+H, Strg+Shift+S)
+- **Tabellen** (`/table`): mit Kopfzeile; Tab springt ins nächste Feld (und hängt am Ende eine Zeile an), Spalten
+  am rechten Rand breiter ziehen; eine kleine Leiste neben der Tabelle fügt Zeilen/Spalten hinzu oder entfernt sie
+- **Hoch- und tiefgestellt** im Text (m², H₂O): Strg+. und Strg+, oder die Knöpfe x² / x₂ im Auswahl-Menü
+- **Blöcke verschieben** mit Alt+↑ / Alt+↓: Absatz, Überschrift, Formel, Bild, Listenpunkt, ganze Tabelle oder
+  Aufklappliste (vom Titel aus) wandert eine Stelle nach oben oder unten
+- **Kurzschreibweisen** beim Tippen: `->` →, `=>` ⇒, `<=>` ⇔, `!=` ≠, `<=` ≤, `>=` ≥, `~=` ≈, `+/-` ±, `1/2` ½,
+  `...` …; Rücktaste direkt danach macht es rückgängig (nicht in Code; Anführungszeichen und `(c)` bleiben)
+- **Markdown einfügen**: Text aus ChatGPT, einer README usw. mit `##`, `**fett**`, Listen, `- [ ]`, Tabellen und
+  Formeln (`$…$`, `$$…$$`, `\(…\)`, `\[…\]`) wird beim Einfügen zu echten Überschriften, To-dos, Tabellen und Formeln
+- **Verknüpfte Notizen**: `[[` und ein Teil des Titels zeigt passende Notizen; der Link öffnet die Notiz per Klick
+  (Web-Links öffnen mit Strg+Klick oder „Open“ im Auswahl-Menü im Browser)
+- **Als PDF speichern** („PDF“ unten rechts): die Notiz auf weissem A4-Papier mit Formeln, Bildern, Tabellen und
+  Seitenzahlen, z. B. zum Drucken oder Abgeben; Aufklapplisten werden aufgeklappt gedruckt
+- **Rechtschreibprüfung** auf Deutsch und Englisch; Rechtsklick zeigt Vorschläge, „Add to dictionary“ sowie
+  Ausschneiden/Kopieren/Einfügen
 - **Kalender** mit Wochenansicht, ganztägigen Terminen und Wiederholung (täglich, wöchentlich, monatlich, jährlich)
 - **Posteingang (Gmail)** ohne Google-Cloud-Projekt: mit einem App-Passwort (im System-Schlüsselbund gespeichert),
   nur der Tab „Allgemein" (keine Werbung, Newsletter oder Spam), Lesen, Antworten, Anhänge, Archivieren, Suche,
@@ -49,7 +64,7 @@ Es läuft immer nur eine Instanz; ein zweiter Start holt das offene Fenster nach
 
 ```bash
 ./build_app.sh          # baut das Frontend und packt die Electron-App
-./install_desktop.sh    # Eintrag im Startmenü
+./install_desktop.sh    # Eintrag im Startmenü und Symbol auf dem Schreibtisch (--remove entfernt beides)
 ```
 
 Die fertige App liegt danach in `note/out/MyNotion-linux-x64/MyNotion`.

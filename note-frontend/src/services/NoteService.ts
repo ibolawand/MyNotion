@@ -30,6 +30,9 @@ declare global {
         getToken: () => Promise<string | null>;
         saveToken: (token: string) => Promise<void>;
         removeToken: () => Promise<void>;
+        exportPdf: (title: string, body: string, css: string, base: string) =>
+          Promise<{ ok: boolean; path?: string; canceled?: boolean; error?: string }>;
+        showPdf: (file: string) => Promise<void>;
       };
       folder: {
         addFolder: (folder: any) => Promise<any>,

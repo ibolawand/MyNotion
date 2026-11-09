@@ -21,6 +21,14 @@ import { Callout } from './callout';
 import { FindReplace, findState } from './find';
 import { OutlineItem, activeHeading, outlineOf } from './outline';
 import { ACCEPTED, NoteImage, imageFiles, prepareImage } from './note-image';
+import { MoveBlock } from './move-block';
+import { NOTE_TYPING } from './typing';
+import { looksLikeMarkdown, markdownToHtml } from './markdown-paste';
+import { matchNotes, noteHref, noteIdOf } from './note-links';
+import { katexCss, printableHtml } from './export-pdf';
+import { NOTE_TABLE, tableInfo } from './note-table';
+import { Subscript } from '@tiptap/extension-subscript';
+import { Superscript } from '@tiptap/extension-superscript';
 import katex from 'katex';
 import { DueDates } from './due-dates';
 import { KINDS, MAX_SIZE, Matrix, MatrixKind, OPS, blankMatrix, chainToLatex, findMatrices, fromChain, resize, setBar, trimmed } from './matrix';
@@ -75,6 +83,9 @@ const SLASH_ITEMS: SlashItem[] = [
   { id: 'vector', label: 'Vector', description: 'A column vector, filled in box by box', hint: '',
     keywords: 'vector vektor column arrow',
     run: () => {} },
+  { id: 'table', label: 'Table', description: 'Rows and columns (Tab jumps to the next box)', hint: '',
+    keywords: 'table grid rows columns tabelle spreadsheet',
+    run: e => e.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run() },
   { id: 'divider', label: 'Divider', description: 'A line between sections', hint: '---', keywords: 'hr rule separator line',
     run: e => e.chain().focus().setHorizontalRule().run() },
   { id: 'date', label: 'Today\'s date', description: 'Inserts the date', hint: '', keywords: 'date today time now',
@@ -122,7 +133,7 @@ export const MATH_SNIPPETS: { label: string; tex: string; at?: number; sel?: num
   standalone: true,
   imports: [FormsModule, TiptapEditorDirective, TiptapBubbleMenuDirective],
   templateUrl: './text-editor.html',
-  styleUrls: ['./text-editor.css', './note-content.css', './math.css', './blocks.css', './page-tools.css']
+  styleUrls: ['./text-editor.css', './note-content.css', './math.css', './blocks.css', './page-tools.css', './tables.css']
 })
 export class TextEditor implements OnInit, OnDestroy {
   @ViewChild('linkInput') linkInput?: ElementRef<HTMLInputElement>;
@@ -208,7 +219,8 @@ export class TextEditor implements OnInit, OnDestroy {
     this.editor = new Editor({
       extensions: [
         StarterKit.configure({
-          link: { openOnClick: false, autolink: true, linkOnPaste: true, HTMLAttributes: { rel: 'noopener', target: '_blank' } },
+          link: { openOnClick: false, autolink: true, linkOnPaste: true, protocols: ['mynotion'],   // (mynotion://note/12: a link to a note)
+                  HTMLAttributes: { rel: 'noopener', target: '_blank' } },
         }),
         TextStyle,
         Color,
@@ -220,6 +232,11 @@ export class TextEditor implements OnInit, OnDestroy {
         ALIGNED_TEXT,   // left / centre / right per line (formulas on their own line: see aligned-math.ts)
         TabKey,         // Tab: a tab space, or one level in inside a list; Shift+Tab undoes it
         FindReplace,    // Ctrl+F / Ctrl+H (the bar is in this component)
+        MoveBlock,      // Alt+↑ / Alt+↓ moves the line (or list item, table, toggle…) up or down
+        ...NOTE_TABLE,  // /table; the toolbar gets row / column buttons while the cursor is in one
+        Subscript,      // H₂O (Ctrl+,)
+        Superscript,    // x² in the text (Ctrl+.)
+        ...NOTE_TYPING, // -> →, => ⇒, != ≠, <= ≤, >= ≥ … while typing (Backspace undoes)
         Callout,        // coloured boxes: note, tip, important, warning
         // toggles: a title that folds its text away; whether it's open is saved with the note
         Details.configure({ persist: true, HTMLAttributes: { class: 'toggle' } }),
@@ -254,12 +271,32 @@ export class TextEditor implements OnInit, OnDestroy {
       editorProps: {
         attributes: { class: 'tiptap-editor-content', spellcheck: 'true' },
         handleKeyDown: (_view, event) => this.onEditorKey(event),
+        // a link to another note opens it; Ctrl+click opens a web link in the browser
+        handleClick: (view, pos, event) => {
+          const $pos = view.state.doc.resolve(pos);
+          const link = [...$pos.marks(), ...($pos.nodeAfter?.marks ?? [])].find(m => m.type.name === 'link');
+          const href: string | undefined = link?.attrs['href'];
+          if (!href || !view.state.selection.empty) return false;
+          const id = noteIdOf(href);
+          if (id !== null) { this.zone.run(() => this.openNote(id)); return true; }
+          if (event.ctrlKey || event.metaKey) { window.open(href, '_blank', 'noopener'); return true; }
+          return false;
+        },
         // a picture pasted (a screenshot) or dropped in from the file manager goes into the note
-        handlePaste: (_view, event) => {
+        handlePaste: (view, event) => {
           const files = imageFiles(event.clipboardData?.files);
-          if (!files.length) return false;
+          if (files.length) {
+            event.preventDefault();
+            this.zone.run(() => this.addImages(files));
+            return true;
+          }
+          // Markdown copied as plain text (ChatGPT, a README…): real headings, lists, tables and formulas.
+          // Not inside code, and not when the copy has its own formatting (a web page); Ctrl+Shift+V pastes as is.
+          const text = event.clipboardData?.getData('text/plain') ?? '';
+          if (event.clipboardData?.getData('text/html') || view.state.selection.$from.parent.type.spec.code
+              || this.editor.isActive('code') || !looksLikeMarkdown(text)) return false;
           event.preventDefault();
-          this.zone.run(() => this.addImages(files));
+          this.editor.commands.insertContent(markdownToHtml(text));
           return true;
         },
         handleDrop: (view, event, _slice, moved) => {
@@ -275,13 +312,14 @@ export class TextEditor implements OnInit, OnDestroy {
         this.updateSlash();
         this.words = this.countWords();
         this.refreshOutline();
+        this.placeTableBar();
         if (this.currentNote) {
           this.currentNote.content = editor.getHTML();
           this.modelService.updateCurrentNote(this.currentNote);
           this.noteService.triggerAutoSave(this.currentNote);
         }
       },
-      onSelectionUpdate: () => this.updateSlash(),
+      onSelectionUpdate: () => { this.updateSlash(); this.placeTableBar(); },
       onBlur: () => setTimeout(() => this.zone.run(() => { if (!this.menuHasFocus()) this.closeSlash(); }), 120),
     });
 
@@ -336,6 +374,43 @@ export class TextEditor implements OnInit, OnDestroy {
   quote = (e: Editor) => e.chain().focus().toggleBlockquote().run();
   codeBlock = (e: Editor) => e.chain().focus().toggleCodeBlock().run();
   divider = (e: Editor) => e.chain().focus().setHorizontalRule().run();
+  sub = (e: Editor) => e.chain().focus().toggleSubscript().run();
+  sup = (e: Editor) => e.chain().focus().toggleSuperscript().run();
+
+  // ── tables: a small bar above the table the cursor is in (add / remove rows and columns) ──
+
+  /** where that bar is, relative to .editor-main; null when the cursor isn't in a table */
+  tableBar: { rows: number; cols: number; top: number; left: number } | null = null;
+
+  private placeTableBar() {
+    const info = this.editor && tableInfo(this.editor.state);
+    const el = info && (this.editor.view.nodeDOM(info.pos) as HTMLElement | null);
+    const main = this.host.nativeElement.querySelector('.editor-main') as HTMLElement | null;
+    if (!info || !el || !main) { this.tableBar = null; return; }
+    const box = el.getBoundingClientRect(), area = main.getBoundingClientRect();
+    if (box.bottom < area.top + 44 || box.top > area.bottom) { this.tableBar = null; return; }
+    // next to the table's top right corner when there's room (so it covers nothing), else just above it;
+    // while the table's top is scrolled away, it stays at the top of the page
+    const page = (main.querySelector('.content-text') as HTMLElement).getBoundingClientRect();
+    const table = (el.querySelector('table') ?? el).getBoundingClientRect();   // (el: the full-width wrapper)
+    const beside = Math.min(table.right, box.right) + 10;
+    const fits = beside + 200 <= page.right - 12;
+    this.tableBar = { rows: info.rows, cols: info.cols,
+      top: Math.max(4, box.top - area.top - (fits ? 0 : 40)),
+      left: fits ? beside - area.left : Math.max(4, box.left - area.left) };
+  }
+
+  tableDo(what: 'rowAfter' | 'rowBefore' | 'colAfter' | 'colBefore' | 'delRow' | 'delCol' | 'header' | 'delete') {
+    const c = this.editor.chain().focus();
+    ({
+      rowAfter: () => c.addRowAfter(), rowBefore: () => c.addRowBefore(),
+      colAfter: () => c.addColumnAfter(), colBefore: () => c.addColumnBefore(),
+      // the last row / column: the whole table goes
+      delRow: () => (this.tableBar!.rows > 1 ? c.deleteRow() : c.deleteTable()),
+      delCol: () => (this.tableBar!.cols > 1 ? c.deleteColumn() : c.deleteTable()),
+      header: () => c.toggleHeaderRow(), delete: () => c.deleteTable(),
+    })[what]().run();
+  }
   undo = (e: Editor) => e.chain().focus().undo().run();
   redo = (e: Editor) => e.chain().focus().redo().run();
 
@@ -383,7 +458,17 @@ export class TextEditor implements OnInit, OnDestroy {
 
   openLink() {
     const href = this.editor.getAttributes('link')['href'];
-    if (href) window.open(href, '_blank', 'noopener');
+    const id = noteIdOf(href);
+    if (id !== null) this.openNote(id);
+    else if (href) window.open(href, '_blank', 'noopener');
+  }
+
+  /** Opens a linked note (the current one is saved as you type, so nothing is lost). */
+  async openNote(id: number) {
+    let note = this.noteService.getNotesCache().find(n => n.id === id);
+    if (!note) { await this.noteService.loadNotes(); note = this.noteService.getNotesCache().find(n => n.id === id); }
+    if (note) this.modelService.onNoteClicked(note);
+    else this.say('That note doesn\'t exist any more.');
   }
 
   showBubble = ({ editor, from, to }: { editor: Editor; from: number; to: number }) => {
@@ -400,6 +485,25 @@ export class TextEditor implements OnInit, OnDestroy {
     const { $from, empty } = state.selection;
     if (!empty || $from.parent.type.name === 'codeBlock') return this.closeSlash();
     const before = $from.parent.textBetween(0, $from.parentOffset, undefined, '￼');
+    // "[[" + part of a title: the notes to link to, in the same menu
+    const link = /\[\[([^[\]\n]{0,40})$/.exec(before);
+    if (link) {
+      const notes = matchNotes(this.noteService.getNotesCache(), link[1], this.currentNote?.id);
+      if (!notes.length) return this.closeSlash();
+      this.slashFrom = $from.pos - link[1].length - 2;
+      if (!this.slashOpen || link[1] !== this.slashQuery) this.slashIndex = 0;
+      this.slashQuery = link[1];
+      this.slashItems = notes.map(n => ({
+        id: 'note:' + n.id, label: n.title, description: 'Link to this note (click the link to open it)', hint: '', keywords: '',
+        run: (e: Editor) => e.chain().focus().insertContent([
+          { type: 'text', text: n.title, marks: [{ type: 'link', attrs: { href: noteHref(n.id!) } }] },
+          { type: 'text', text: ' ' },
+        ]).run(),
+      }));
+      this.slashOpen = true;
+      this.placeSlash();
+      return;
+    }
     const m = /(?:^|\s)\/([\p{L}\d' ]{0,20})$/u.exec(before);
     if (!m || m[1].includes('  ')) return this.closeSlash();
     const query = m[1].toLowerCase().trim();
@@ -1066,9 +1170,40 @@ export class TextEditor implements OnInit, OnDestroy {
   }
 
   /** A short line in the footer (gone after a few seconds unless `stay`). */
+  // ── Save as PDF (the footer button) ──
+
+  exporting = false;
+  lastPdf = '';                    // the PDF just saved, for "Show"
+
+  async exportPdf() {
+    if (!this.currentNote || this.exporting) return;
+    this.exporting = true;
+    this.lastPdf = '';
+    this.say('Making the PDF…', false);
+    try {
+      const res = await window.electronAPI.notes.exportPdf(this.currentNote.title ?? '', printableHtml(this.editor.view.dom),
+        katexCss(), document.baseURI);
+      if (res.ok && res.path) {
+        this.say('Saved as ' + res.path.split(/[\\/]/).pop());
+        this.lastPdf = res.path;
+      } else {
+        this.say(res.canceled ? '' : res.error ?? 'The PDF could not be saved.');
+      }
+    } catch {
+      this.say('The PDF could not be saved.');
+    } finally {
+      this.exporting = false;
+    }
+  }
+
+  showPdf() {
+    if (this.lastPdf) window.electronAPI.notes.showPdf(this.lastPdf);
+  }
+
   private say(text: string, fade = true) {
     clearTimeout(this.imageNoteTimer);
     this.imageNote = text;
+    this.lastPdf = '';               // ("Show" belongs to the PDF message only)
     if (text && fade) this.imageNoteTimer = setTimeout(() => (this.imageNote = ''), 6000);
   }
 
@@ -1090,6 +1225,7 @@ export class TextEditor implements OnInit, OnDestroy {
 
   /** Which heading you're reading: the last one that has passed the top quarter of the page. */
   onPageScroll() {
+    if (this.tableBar) this.placeTableBar();
     if (!this.outlineOn || !this.outline.length) return;
     const scroller = this.host.nativeElement.querySelector('.content-text') as HTMLElement | null;
     if (!scroller) return;
