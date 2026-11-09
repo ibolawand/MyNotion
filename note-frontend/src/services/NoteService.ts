@@ -71,6 +71,10 @@ declare global {
         openAttachment: (attachmentId: number) => Promise<{ ok: boolean; error?: string }>;
       };
       onDbChanged?: (callback: () => void) => () => void;
+      aria?: {
+        setOpenNote: (id: number | null) => Promise<void>;
+        editing: () => Promise<number | null>;
+      };
       takeOpenTarget?: () => Promise<string | null>;
       onOpenTarget?: (callback: (target: string) => void) => () => void;
     };

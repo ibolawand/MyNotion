@@ -202,6 +202,12 @@ export class TextEditor implements OnInit, OnDestroy {
   outlineOn = false;
   outlineActive = -1;
 
+  // Aria reworking this note ("organise this note"): it's locked meanwhile, so nothing typed gets lost
+  ariaEditing = false;
+  private ariaTimer?: ReturnType<typeof setTimeout>;
+  private sentOpenNote: number | null | undefined = undefined;
+  private externalSub?: { unsubscribe(): void };
+
   constructor(
     protected modelService: ModelService,
     protected noteService: NoteService,
@@ -323,6 +329,9 @@ export class TextEditor implements OnInit, OnDestroy {
       onBlur: () => setTimeout(() => this.zone.run(() => { if (!this.menuHasFocus()) this.closeSlash(); }), 120),
     });
 
+    // the database changed outside the app: maybe Aria started or finished editing this note
+    this.externalSub = this.noteService.externalChange$.subscribe(() => void this.checkAria());
+
     this.noteSub = this.modelService.currentNote$.subscribe((note: Note | null) => {
       if (note) {
         const switched = note.id !== this.currentNote?.id;
@@ -336,11 +345,13 @@ export class TextEditor implements OnInit, OnDestroy {
           this.closeSlash();
           this.linkEditing = false;
           this.closeFind(false);
+          void this.checkAria();
         }
       } else {
         this.currentNote = null;
         this.editor.commands.clearContent(false);
       }
+      this.tellOpenNote(note?.id ?? null);
       this.words = this.countWords();
       this.refreshOutline();
     });
@@ -348,8 +359,46 @@ export class TextEditor implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.noteSub?.unsubscribe();
+    this.externalSub?.unsubscribe();
+    clearTimeout(this.ariaTimer);
+    this.tellOpenNote(null);
     this.floatWatch.disconnect();
     this.editor?.destroy();
+  }
+
+  // ── Aria ──
+
+  /** Aria asks MyNotion which note "this note" is. */
+  private tellOpenNote(id: number | null) {
+    if (id === this.sentOpenNote) return;
+    this.sentOpenNote = id;
+    void window.electronAPI?.aria?.setOpenNote(id);
+  }
+
+  /** Locks the note while Aria reworks it, and unlocks it (with her version loaded) when she's done. */
+  async checkAria() {
+    clearTimeout(this.ariaTimer);
+    let busy: number | null = null;
+    try { busy = (await window.electronAPI?.aria?.editing()) ?? null; } catch { busy = null; }
+    const locked = busy !== null && busy === this.currentNote?.id;
+    if (locked !== this.ariaEditing) {
+      this.ariaEditing = locked;
+      // false: no "update" event, which would save the old text over Aria's and count as you typing
+      this.editor?.setEditable(!locked, false);
+      if (!locked) this.loadAriaVersion();
+      this.cdr.detectChanges();
+    }
+    // the database watcher tells us when she's done; this is in case a change slips past it
+    if (locked) this.ariaTimer = setTimeout(() => this.zone.run(() => void this.checkAria()), 3000);
+  }
+
+  /** Aria is done: show her version of the note (the notes were just reloaded from the database). */
+  private loadAriaVersion() {
+    const note = this.currentNote;
+    const fresh = note?.id != null ? this.noteService.getNotesCache().find(n => n.id === note.id) : undefined;
+    if (note && fresh && (fresh.content ?? '') !== (note.content ?? '')) {
+      this.modelService.updateCurrentNote({ ...note, title: fresh.title, content: fresh.content });
+    }
   }
 
   // ── toolbar ──

@@ -190,3 +190,33 @@
   text-decoration: underline;
   cursor: pointer;
 }
+
+/* Aria reworking the open note: a quiet banner, and the page can't be typed in meanwhile */
+.aria-editing {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border: 1px solid rgba(74, 222, 128, 0.35);
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 13px;
+  backdrop-filter: blur(6px);
+  pointer-events: none;
+}
+.aria-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: aria-pulse 1.2s ease-in-out infinite;
+}
+@keyframes aria-pulse { 50% { opacity: 0.3; transform: scale(0.8); } }
+@media (prefers-reduced-motion: reduce) { .aria-dot { animation: none; } }
+.editor-main.aria-busy .page { opacity: 0.6; transition: opacity 0.2s; }

@@ -31,6 +31,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
         createCategory: (category: Category | string) => ipcRenderer.invoke('createCategory', category),
         deleteCategory: (categoryid: number) => ipcRenderer.invoke('deleteCategory', categoryid),
     },
+    // what Aria needs to know: the note open here; and whether she is editing one (it's locked meanwhile)
+    aria: {
+        setOpenNote: (id: number | null) => ipcRenderer.invoke('state:open-note', id),
+        editing: (): Promise<number | null> => ipcRenderer.invoke('state:aria-editing'),
+    },
     // pictures in notes: stored in the database, the note keeps the link it gets back
     images: {
         save: (bytes: Uint8Array): Promise<{ ok: true; id: number; url: string } | { ok: false; error: string }> =>
