@@ -43,7 +43,7 @@ header h2 { flex: 1; font-size: 14px; font-weight: 600; }
 }
 .empty { margin: auto 0; text-align: center; color: #9ca3af; line-height: 1.5; padding: 0 12px; }
 
-.message { max-width: 92%; line-height: 1.5; overflow-wrap: anywhere; }
+.message { flex-shrink: 0; max-width: 92%; line-height: 1.5; overflow-wrap: anywhere; }
 .message .text { white-space: pre-wrap; }
 .message.user {
   align-self: flex-end;

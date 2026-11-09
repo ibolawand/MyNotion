@@ -232,6 +232,19 @@ describe('Aria panel', () => {
     expect(text()).toContain('<b>bold</b>');
   });
 
+  it('a long conversation scrolls instead of squashing the messages', async () => {
+    const host = fixture.nativeElement as HTMLElement;
+    host.style.height = '300px';
+    document.body.appendChild(host);
+    for (let i = 0; i < 30; i++) panel.messages.push({ role: i % 2 ? 'aria' : 'user', text: `message ${i}` });
+    fixture.detectChanges();
+    const list = host.querySelector('.list') as HTMLElement;
+    const heights = Array.from(host.querySelectorAll<HTMLElement>('.message')).map(m => m.offsetHeight);
+    expect(Math.min(...heights)).toBeGreaterThanOrEqual(18);       // a full line of text each
+    expect(list.scrollHeight).toBeGreaterThan(list.clientHeight);
+    host.remove();
+  });
+
   it('Escape closes the panel', () => {
     model.toggleAriaPanel();
     let open = false;
