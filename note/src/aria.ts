@@ -138,8 +138,9 @@ export class AriaLink {
         try { sock.write(JSON.stringify(obj) + '\n'); return true; } catch { return false; }
     }
 
-    ask(text: string): Promise<AskResult> {
-        return this.request({ type: 'chat', text });
+    /** tools === false: an answer only; she can't change or do anything for this message ("Explain"). */
+    ask(text: string, tools = true): Promise<AskResult> {
+        return this.request(tools ? { type: 'chat', text } : { type: 'chat', text, tools: false });
     }
 
     /** Her version of a selection: answered with one 'proposal' (or an 'error' saying why there is none). */
@@ -192,8 +193,8 @@ export function setUpAria() {
     const link = new AriaLink(socketPath(), e => {
         for (const win of BrowserWindow.getAllWindows()) win.webContents.send('aria:event', e);
     });
-    ipcMain.handle('aria:ask', (_e, text: unknown): Promise<AskResult> =>
-        typeof text === 'string' && text.trim() ? link.ask(text) : Promise.resolve({ ok: false, error: 'not-running' }));
+    ipcMain.handle('aria:ask', (_e, text: unknown, tools: unknown): Promise<AskResult> =>
+        typeof text === 'string' && text.trim() ? link.ask(text, tools !== false) : Promise.resolve({ ok: false, error: 'not-running' }));
     const text = (v: unknown, max: number) => typeof v === 'string' ? v.slice(0, max) : '';
     ipcMain.handle('aria:edit', (_e, r: Partial<EditRequest> | null): Promise<AskResult> => {
         const actions = ['rewrite', 'shorter', 'spelling', 'table', 'custom'];

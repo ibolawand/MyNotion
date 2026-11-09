@@ -138,7 +138,8 @@ export class AriaEdit implements OnInit, OnChanges, OnDestroy {
     this.close();
     if (!text) return;
     this.modelService.openAriaPanel();
-    await this.chat.ask(`Explain this part of my note${this.title ? ` "${this.title}"` : ''} simply:\n${text}`);
+    // an answer only (no tools): asked to explain, the model once translated the whole note instead
+    await this.chat.ask(`Explain this part of my note${this.title ? ` "${this.title}"` : ''} simply:\n${text}`, false);
   }
 
   accept() {

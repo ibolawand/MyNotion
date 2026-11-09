@@ -37,7 +37,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
         editing: (): Promise<number | null> => ipcRenderer.invoke('state:aria-editing'),
         // the Aria panel: send her a message, hear whether she's running, start her, and get her reply as it's
         // written (text pieces, then "done" with the final reply; see src/aria.ts)
-        ask: (text: string) => ipcRenderer.invoke('aria:ask', text),
+        ask: (text: string, tools = true) => ipcRenderer.invoke('aria:ask', text, tools),
         // "Select text, ask Aria": her version of the selection comes back as a 'proposal' event
         edit: (request: unknown) => ipcRenderer.invoke('aria:edit', request),
         status: (): Promise<'running' | 'not-running'> => ipcRenderer.invoke('aria:status'),

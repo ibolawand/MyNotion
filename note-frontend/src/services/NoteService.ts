@@ -86,7 +86,7 @@ declare global {
       aria?: {
         setOpenNote: (id: number | null) => Promise<void>;
         editing: () => Promise<number | null>;
-        ask?: (text: string) => Promise<{ ok: true; id: string } | { ok: false; error: 'not-running' }>;
+        ask?: (text: string, tools?: boolean) => Promise<{ ok: true; id: string } | { ok: false; error: 'not-running' }>;
         edit?: (request: AriaEditRequest) => Promise<{ ok: true; id: string } | { ok: false; error: 'not-running' }>;
         status?: () => Promise<'running' | 'not-running'>;
         start?: () => Promise<{ ok: boolean; error?: 'no-launcher' | 'timeout' }>;

@@ -62,10 +62,10 @@ export class AriaChat {
   }
 
   /** A message that didn't come from the text box (e.g. "Explain this" for selected text). */
-  async ask(text: string): Promise<boolean> {
+  async ask(text: string, tools = true): Promise<boolean> {
     text = text.trim();
     if (!text || this.busy) return false;
-    return this.deliver(text);
+    return this.deliver(text, tools);
   }
 
   /** Yes / No under a question. Sent as a normal message: Aria checks the answer herself, in code. */
@@ -83,7 +83,8 @@ export class AriaChat {
     await this.deliver(m.question);
   }
 
-  private async deliver(text: string): Promise<boolean> {
+  /** tools === false: an answer only, Aria can't change anything for this message */
+  private async deliver(text: string, tools = true): Promise<boolean> {
     this.messages.forEach(m => m.confirm = null);         // an older question is answered or dropped by this
     const reply: PanelMessage = { role: 'aria', text: '', pending: true, question: text };
     this.messages.push({ role: 'user', text }, reply);
@@ -91,7 +92,7 @@ export class AriaChat {
     this.asking = true;
     this.early = [];
     let result: { ok: true; id: string } | { ok: false; error: 'not-running' } | undefined;
-    try { result = await this.api?.ask?.(text); } catch { result = undefined; }
+    try { result = await (tools ? this.api?.ask?.(text) : this.api?.ask?.(text, false)); } catch { result = undefined; }
     this.asking = false;
     if (!result?.ok) {
       this.messages.splice(this.messages.indexOf(reply) - 1, 2);

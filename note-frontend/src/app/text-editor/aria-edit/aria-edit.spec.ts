@@ -13,6 +13,7 @@ describe('Select text, ask Aria', () => {
   let holder: HTMLElement;
   let edits: AriaEditRequest[];
   let asked: string[];
+  let askedTools: (boolean | undefined)[];
   let listeners: ((e: AriaEvent) => void)[];
   let editResult: () => { ok: true; id: string } | { ok: false; error: 'not-running' };
   let before: unknown;
@@ -25,13 +26,13 @@ describe('Select text, ask Aria', () => {
   const start = async (action: AriaEditRequest['action'], instruction = '') => { card.openMenu(); await card.run(action, instruction); await settle(); };
 
   beforeEach(async () => {
-    edits = []; asked = []; listeners = [];
+    edits = []; asked = []; askedTools = []; listeners = [];
     let n = 0;
     editResult = () => ({ ok: true, id: `e${++n}` });
     before = (window as any).electronAPI;
     (window as any).electronAPI = { aria: {
       edit: async (r: AriaEditRequest) => { edits.push(r); return editResult(); },
-      ask: async (t: string) => { asked.push(t); return { ok: true, id: 'chat1' }; },
+      ask: async (t: string, tools?: boolean) => { asked.push(t); askedTools.push(tools); return { ok: true, id: 'chat1' }; },
       status: async () => 'running',
       start: async () => ({ ok: true }),
       onEvent: (cb: (e: AriaEvent) => void) => { listeners.push(cb); return () => { listeners = listeners.filter(l => l !== cb); }; },
@@ -260,6 +261,7 @@ describe('Select text, ask Aria', () => {
     expect(asked.length).toBe(1);
     expect(asked[0]).toContain('mitochondria');
     expect(asked[0].toLowerCase()).toContain('explain');
+    expect(askedTools).toEqual([false]);                            // an answer only: she can't change the note for this
     expect(card.state).toBe('closed');
     expect(edits).toEqual([]);
   });

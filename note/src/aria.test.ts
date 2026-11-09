@@ -272,3 +272,16 @@ describe('select text, ask Aria', () => {
         expect(events[0].type).toBe('error');
     });
 });
+
+describe('an answer only', () => {
+    it('asks without tools when told to', async () => {
+        const got: any[] = [];
+        const file = await fakeAria(req => got.push(req));
+        const l = link(file);
+        await l.ask('explain this', false);
+        await l.ask('hello');
+        await until(() => got.length === 2);
+        expect(got[0].tools).toBe(false);
+        expect('tools' in got[1]).toBe(false);
+    });
+});
