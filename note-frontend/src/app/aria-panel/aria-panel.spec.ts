@@ -245,6 +245,30 @@ describe('Aria panel', () => {
     host.remove();
   });
 
+  it('keeps the conversation, and a reply still being written, when the panel is closed and opened again', async () => {
+    await say('clear my shopping list');
+    push({ id: 'r1', type: 'text', delta: 'Should I ' });
+    fixture.destroy();                                         // Esc / Ctrl+J: the panel is gone from the page
+    push({ id: 'r1', type: 'text', delta: 'clear it?' });
+    push({ id: 'r1', type: 'done', reply: 'Should I clear it?', tools: [], confirm: 'clear the shopping list' });
+    fixture = TestBed.createComponent(AriaPanel);
+    panel = fixture.componentInstance;
+    fixture.detectChanges();
+    await settle();
+    expect(panel.messages.map(m => m.text)).toEqual(['clear my shopping list', 'Should I clear it?']);
+    expect((fixture.nativeElement as HTMLElement).querySelectorAll('.confirm button').length).toBe(2);
+    key('ArrowUp');
+    expect(panel.draft).toBe('clear my shopping list');     // ↑ still knows what was sent
+  });
+
+  it('keeps a half-typed message when the panel is closed and opened again', async () => {
+    panel.draft = 'half a thought';
+    fixture.destroy();
+    fixture = TestBed.createComponent(AriaPanel);
+    fixture.detectChanges();
+    expect(fixture.componentInstance.draft).toBe('half a thought');
+  });
+
   it('Escape closes the panel', () => {
     model.toggleAriaPanel();
     let open = false;

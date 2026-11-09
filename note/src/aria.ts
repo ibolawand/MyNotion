@@ -131,6 +131,9 @@ export class AriaLink {
     async status(): Promise<'running' | 'not-running'> {
         const sock = await this.connect();
         if (!sock) return 'not-running';
+        // she answers one request at a time: while a message is being answered a status request would wait
+        // behind it (and time out), but an open connection with a reply on its way already says she's there
+        if (this.open.size) return 'running';
         const id = randomUUID();
         const running = await new Promise<boolean>(resolve => {
             const timer = setTimeout(() => resolve(false), STATUS_TIMEOUT_MS);

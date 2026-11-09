@@ -169,6 +169,18 @@ describe('talking to Aria', () => {
         await until(() => events.some(e => e.type === 'done'));
     });
 
+    it('says running while she is busy answering, even though status has to wait', async () => {
+        // Aria answers one request at a time per connection: during a turn a status request gets no answer yet
+        const file = await fakeAria((req, sock) => {
+            if (req.type === 'chat') sock.write(line({ id: req.id, type: 'text', delta: 'thinking…' }));
+        });
+        const l = link(file);
+        await l.ask('a long question');
+        const t0 = Date.now();
+        expect(await l.status()).toBe('running');
+        expect(Date.now() - t0).toBeLessThan(500);
+    });
+
     it('ignores a line that is not an event', async () => {
         const file = await fakeAria((req, sock) => {
             sock.write('garbage\n');
