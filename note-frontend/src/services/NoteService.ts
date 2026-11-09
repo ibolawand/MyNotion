@@ -13,7 +13,13 @@ export enum SaveStatus {
 export type AriaEvent = { id: string } & (
   | { type: 'text'; delta: string }
   | { type: 'done'; reply: string; tools: string[]; confirm: string | null }
+  | { type: 'proposal'; html: string }
   | { type: 'error'; message: string });
+/** "Select text, ask Aria": what is sent for a selection. */
+export type AriaEditRequest = {
+  action: 'rewrite' | 'shorter' | 'spelling' | 'table' | 'custom';
+  html: string; instruction: string; title: string; context: string; previous: string;
+};
 
 declare global {
   interface Window {
@@ -81,6 +87,7 @@ declare global {
         setOpenNote: (id: number | null) => Promise<void>;
         editing: () => Promise<number | null>;
         ask?: (text: string) => Promise<{ ok: true; id: string } | { ok: false; error: 'not-running' }>;
+        edit?: (request: AriaEditRequest) => Promise<{ ok: true; id: string } | { ok: false; error: 'not-running' }>;
         status?: () => Promise<'running' | 'not-running'>;
         start?: () => Promise<{ ok: boolean; error?: 'no-launcher' | 'timeout' }>;
         onEvent?: (callback: (event: AriaEvent) => void) => () => void;

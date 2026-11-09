@@ -2,6 +2,7 @@
  *
  *  Aria listens on a private Unix socket (BetterAI/ui/app_bridge.py). One JSON object per line, both ways:
  *    →  {"id","type":"chat","text"}   |  {"id","type":"status"}
+ *    →  {"id","type":"edit","action","html",…}   her version of a selection; answered with {"id","type":"proposal","html"}
  *    ←  {"id","type":"text","delta"}  |  {"id","type":"done","reply","tools","confirm"}  |  {"id","type":"error","message"}
  *  "done" carries her final reply (it replaces what was streamed) and a yes/no question that is waiting.
  *
@@ -18,7 +19,13 @@ import { DB } from './database/database';
 export type AriaEvent = { id: string } & (
     | { type: 'text'; delta: string }
     | { type: 'done'; reply: string; tools: string[]; confirm: string | null }
+    | { type: 'proposal'; html: string }
     | { type: 'error'; message: string });
+/** "Select text, ask Aria": the selection and what to do with it. */
+export type EditRequest = {
+    action: 'rewrite' | 'shorter' | 'spelling' | 'table' | 'custom';
+    html: string; instruction: string; title: string; context: string; previous: string;
+};
 export type AskResult = { ok: true; id: string } | { ok: false; error: 'not-running' };
 
 const STATUS_TIMEOUT_MS = 2000;
@@ -110,6 +117,9 @@ export class AriaLink {
                 tools: Array.isArray(e.tools) ? e.tools.filter((t: unknown) => typeof t === 'string') : [],
                 confirm: typeof e.confirm === 'string' ? e.confirm : null,
             });
+        } else if (e.type === 'proposal' && typeof e.html === 'string' && e.html) {
+            this.open.delete(e.id);
+            this.emit({ id: e.id, type: 'proposal', html: e.html });
         } else if (e.type === 'error') {
             this.open.delete(e.id);
             this.emit({ id: e.id, type: 'error', message: typeof e.message === 'string' ? e.message : STOPPED });
@@ -128,12 +138,22 @@ export class AriaLink {
         try { sock.write(JSON.stringify(obj) + '\n'); return true; } catch { return false; }
     }
 
-    async ask(text: string): Promise<AskResult> {
+    ask(text: string): Promise<AskResult> {
+        return this.request({ type: 'chat', text });
+    }
+
+    /** Her version of a selection: answered with one 'proposal' (or an 'error' saying why there is none). */
+    edit(r: EditRequest): Promise<AskResult> {
+        return this.request({ type: 'edit', action: r.action, html: r.html, instruction: r.instruction,
+                              title: r.title, context: r.context, previous: r.previous });
+    }
+
+    private async request(body: Record<string, unknown>): Promise<AskResult> {
         const sock = await this.connect();
         if (!sock) return { ok: false, error: 'not-running' };
         const id = randomUUID();
         this.open.add(id);
-        if (!this.write(sock, { id, type: 'chat', text })) {
+        if (!this.write(sock, { id, ...body })) {
             this.open.delete(id);
             return { ok: false, error: 'not-running' };
         }
@@ -174,6 +194,14 @@ export function setUpAria() {
     });
     ipcMain.handle('aria:ask', (_e, text: unknown): Promise<AskResult> =>
         typeof text === 'string' && text.trim() ? link.ask(text) : Promise.resolve({ ok: false, error: 'not-running' }));
+    const text = (v: unknown, max: number) => typeof v === 'string' ? v.slice(0, max) : '';
+    ipcMain.handle('aria:edit', (_e, r: Partial<EditRequest> | null): Promise<AskResult> => {
+        const actions = ['rewrite', 'shorter', 'spelling', 'table', 'custom'];
+        if (!r || !actions.includes(r.action as string) || typeof r.html !== 'string' || !r.html.trim())
+            return Promise.resolve({ ok: false, error: 'not-running' });
+        return link.edit({ action: r.action as EditRequest['action'], html: r.html, instruction: text(r.instruction, 500),
+                           title: text(r.title, 200), context: text(r.context, 2000), previous: text(r.previous, 40000) });
+    });
     ipcMain.handle('aria:status', () => link.status());
     let starting: Promise<{ ok: boolean; error?: 'no-launcher' | 'timeout' }> | null = null;
     ipcMain.handle('aria:start', () => {

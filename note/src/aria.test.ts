@@ -228,3 +228,47 @@ describe('only our own Aria', () => {
         expect(got).toEqual([]);
     });
 });
+
+describe('select text, ask Aria', () => {
+    const request = { action: 'shorter' as const, html: '<p>Ein langer Satz.</p>', instruction: '', title: 'Bio', context: '', previous: '' };
+
+    it('sends the selection and relays her proposal', async () => {
+        const got: any[] = [];
+        const file = await fakeAria((req, sock) => {
+            got.push(req);
+            sock.write(line({ id: req.id, type: 'proposal', html: '<p>Kürzer.</p>' }));
+        });
+        const events: AriaEvent[] = [];
+        const r = await link(file, events).edit(request);
+        const id = (r as { id: string }).id;
+        await until(() => events.length === 1);
+        expect(got).toEqual([{ id, type: 'edit', ...request }]);
+        expect(events).toEqual([{ id, type: 'proposal', html: '<p>Kürzer.</p>' }]);
+    });
+
+    it('a proposal ends the request: a later drop is not reported for it', async () => {
+        let sockRef: net.Socket | null = null;
+        const file = await fakeAria((req, sock) => { sockRef = sock; sock.write(line({ id: req.id, type: 'proposal', html: '<p>x</p>' })); });
+        const events: AriaEvent[] = [];
+        await link(file, events).edit(request);
+        await until(() => events.length === 1);
+        sockRef!.destroy();
+        await new Promise(r => setTimeout(r, 50));
+        expect(events.map(e => e.type)).toEqual(['proposal']);
+    });
+
+    it('says not-running when she is not there', async () => {
+        expect(await link(path.join(dir, 'nobody2.sock')).edit(request)).toEqual({ ok: false, error: 'not-running' });
+    });
+
+    it('ignores a proposal without HTML', async () => {
+        const file = await fakeAria((req, sock) => {
+            sock.write(line({ id: req.id, type: 'proposal' }));
+            sock.write(line({ id: req.id, type: 'error', message: 'nope' }));
+        });
+        const events: AriaEvent[] = [];
+        await link(file, events).edit(request);
+        await until(() => events.length === 1);
+        expect(events[0].type).toBe('error');
+    });
+});
