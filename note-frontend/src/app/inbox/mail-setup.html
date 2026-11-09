@@ -1,0 +1,14 @@
+<form class="setup" (ngSubmit)="connect()">
+  <h2>Connect your Gmail</h2>
+  <p>MyNotion reads your Primary inbox (no ads, newsletters or spam) and sends with your account. It uses an
+    <strong>app password</strong>, a separate password just for MyNotion. It's kept in your system keyring, not in MyNotion's files.</p>
+  <ol>
+    <li>Turn on 2-step verification for your Google account, if it isn't on yet.</li>
+    <li>Make an app password at <a href="https://myaccount.google.com/apppasswords" target="_blank">myaccount.google.com/apppasswords</a> (any name, e.g. "MyNotion").</li>
+    <li>Paste it here with your address.</li>
+  </ol>
+  <label>Gmail address <input name="address" type="email" [(ngModel)]="address" required autocomplete="email"></label>
+  <label>App password <input name="password" type="password" [(ngModel)]="password" required placeholder="abcd efgh ijkl mnop" autocomplete="off"></label>
+  @if (error) {<p class="error">{{ error }}</p>}
+  <button type="submit" [disabled]="checking || !address || !password">{{ checking ? 'Checking with Gmail…' : 'Connect' }}</button>
+</form>

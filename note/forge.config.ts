@@ -18,7 +18,8 @@ const config: ForgeConfig = {
         // `dist/note-frontend/browser/`. Forge copies it into the packaged
         // app's resources (see src/index.ts, which loads browser/index.html).
         extraResource: [
-            '../note-frontend/dist/note-frontend/browser'
+            '../note-frontend/dist/note-frontend/browser',
+            'assets/icon.png',          // the window / taskbar icon (src/index.ts)
         ]
     },
     rebuildConfig: {

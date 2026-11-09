@@ -1,0 +1,12 @@
+.compose { flex: 1; display: flex; flex-direction: column; gap: 8px; padding: 18px 20px; min-height: 0; height: 100%; }
+label { display: grid; grid-template-columns: 56px 1fr; align-items: center; gap: 10px; font-size: 13px; color: #9ca3af; }
+input, textarea { flex: 1; padding: 8px 10px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.1); background: #171a29; color: #e4e7eb; font: inherit; font-size: 14px; outline: none; }
+input:focus, textarea:focus { border-color: rgba(74, 222, 128, 0.5); }
+textarea { min-height: 240px; resize: none; line-height: 1.5; }
+.files { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; font-size: 13px; color: #cbd5e1; }
+.files li { padding: 4px 8px; border-radius: 6px; background: rgba(255, 255, 255, 0.05); }
+.files button { border: none; background: none; color: #9ca3af; cursor: pointer; }
+.error { color: #fca5a5; font-size: 13px; }
+.buttons { display: flex; gap: 6px; }
+.buttons button { padding: 7px 14px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.1); background: rgba(255, 255, 255, 0.05); color: #cbd5e1; font: inherit; font-size: 13px; cursor: pointer; }
+.buttons .primary { background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%); color: #052e16; border-color: transparent; font-weight: 600; }

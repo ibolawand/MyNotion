@@ -1,0 +1,112 @@
+/* Tables in a note, and sub- / superscript. Drag a column's right edge to resize it (prosemirror-tables). */
+::ng-deep .tiptap-editor-content .tableWrapper {
+  margin: 1em 0 1.2em;
+  overflow-x: auto !important;          /* a wide table scrolls on its own, the page doesn't */
+}
+
+::ng-deep .tiptap-editor-content table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  margin: 0;
+  font-size: 0.94em;
+  line-height: 1.5;
+}
+
+::ng-deep .tiptap-editor-content th,
+::ng-deep .tiptap-editor-content td {
+  position: relative;
+  padding: 6px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  vertical-align: top;
+  box-sizing: border-box;
+}
+
+::ng-deep .tiptap-editor-content th {
+  background: var(--raised);
+  font-family: var(--sans);
+  font-weight: 650;
+  text-align: left;
+  color: var(--ink-strong);
+}
+
+::ng-deep .tiptap-editor-content th p,
+::ng-deep .tiptap-editor-content td p {
+  margin: 0;
+}
+
+/* cells picked by dragging across them */
+::ng-deep .tiptap-editor-content .selectedCell::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--accent-soft);
+  pointer-events: none;
+}
+
+/* the handle on a column edge while resizing */
+::ng-deep .tiptap-editor-content .column-resize-handle {
+  position: absolute;
+  top: 0;
+  right: -2px;
+  bottom: -2px;
+  width: 4px;
+  background: var(--accent);
+  pointer-events: none;
+}
+
+::ng-deep .tiptap-editor-content.resize-cursor,
+::ng-deep .resize-cursor {
+  cursor: col-resize;
+}
+
+::ng-deep .tiptap-editor-content sub,
+::ng-deep .tiptap-editor-content sup {
+  font-size: 0.72em;
+  line-height: 0;
+}
+
+.table-bar .tool.danger:hover {
+  color: #f87171;
+}
+
+.bubble-btn sub,
+.bubble-btn sup {
+  font-size: 0.7em;
+}
+
+/* the bar above the table the cursor is in */
+.table-bar {
+  position: absolute;
+  z-index: 15;
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 9px;
+  background: var(--raised-2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+
+.table-bar .tool.small {
+  width: 28px;
+  height: 28px;
+}
+
+.table-bar .tool.small svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* a link to another note */
+::ng-deep .tiptap-editor-content a[href^="mynotion://note/"] {
+  color: var(--accent);
+  text-decoration: none;
+  border-bottom: 1px dashed color-mix(in srgb, var(--accent) 60%, transparent);
+  cursor: pointer;
+}
+
+::ng-deep .tiptap-editor-content a[href^="mynotion://note/"]::before {
+  content: '↗ ';
+  font-size: 0.85em;
+  opacity: 0.7;
+}

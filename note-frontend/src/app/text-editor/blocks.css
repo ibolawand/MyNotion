@@ -1,0 +1,187 @@
+/* Inside the note: find marks, callouts and toggles. */
+
+/* ── find: every match marked, the current one brighter ── */
+
+::ng-deep .tiptap-editor-content .find-hit {
+  border-radius: 2px;
+  background: rgba(250, 204, 21, 0.28);
+  box-shadow: 0 0 0 1px rgba(250, 204, 21, 0.28);
+}
+
+::ng-deep .tiptap-editor-content .find-hit.current {
+  background: rgba(74, 222, 128, 0.45);
+  box-shadow: 0 0 0 1.5px var(--accent);
+  color: var(--ink-strong);
+}
+
+/* ── callouts: a coloured box with an icon that switches the kind ── */
+
+::ng-deep .tiptap-editor-content div[data-type="callout"] {
+  --tone: #60a5fa;
+  display: flex;
+  gap: 10px;
+  margin: 1em 0;
+  padding: 10px 14px 10px 10px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--tone) 30%, transparent);
+  background: color-mix(in srgb, var(--tone) 9%, transparent);
+}
+
+::ng-deep .tiptap-editor-content div[data-type="callout"][data-kind="tip"] { --tone: #4ade80; }
+::ng-deep .tiptap-editor-content div[data-type="callout"][data-kind="important"] { --tone: #c084fc; }
+::ng-deep .tiptap-editor-content div[data-type="callout"][data-kind="warning"] { --tone: #fbbf24; }
+
+::ng-deep .tiptap-editor-content .callout-icon {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  margin-top: 1px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--tone);
+  cursor: pointer;
+}
+
+::ng-deep .tiptap-editor-content .callout-icon:hover { background: color-mix(in srgb, var(--tone) 16%, transparent); }
+::ng-deep .tiptap-editor-content .callout-icon:focus-visible { outline: 2px solid var(--tone); outline-offset: 1px; }
+
+::ng-deep .tiptap-editor-content .callout-icon svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+::ng-deep .tiptap-editor-content .callout-body { flex: 1; min-width: 0; }
+::ng-deep .tiptap-editor-content .callout-body > :first-child { margin-top: 0.15em; }
+::ng-deep .tiptap-editor-content .callout-body > :last-child { margin-bottom: 0; }
+
+/* ── toggles: an arrow, the title, and the text under it that folds away ── */
+
+::ng-deep .tiptap-editor-content div[data-type="details"] {
+  display: flex;
+  gap: 4px;
+  margin: 0.6em 0;
+}
+
+::ng-deep .tiptap-editor-content div[data-type="details"] > button {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  margin-top: 0.12em;
+  padding: 0;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+
+::ng-deep .tiptap-editor-content div[data-type="details"] > button::before {
+  content: '';
+  width: 0;
+  height: 0;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 7px solid currentColor;
+  transition: transform 0.15s ease;
+}
+
+::ng-deep .tiptap-editor-content div[data-type="details"].is-open > button::before { transform: rotate(90deg); }
+::ng-deep .tiptap-editor-content div[data-type="details"] > button:hover { background: rgba(255, 255, 255, 0.07); color: var(--accent); }
+
+::ng-deep .tiptap-editor-content div[data-type="details"] > div { flex: 1; min-width: 0; }
+
+::ng-deep .tiptap-editor-content div[data-type="details"] summary {
+  display: block;
+  font-weight: 600;
+  color: var(--ink-strong);
+  list-style: none;
+  cursor: text;
+}
+
+::ng-deep .tiptap-editor-content div[data-type="details"] summary::-webkit-details-marker { display: none; }
+
+::ng-deep .tiptap-editor-content div[data-type="details"] summary:has(> br:only-child)::before {
+  content: 'Toggle title';
+  float: left;
+  height: 0;
+  color: var(--faint);
+  font-weight: 400;
+  pointer-events: none;
+}
+
+::ng-deep .tiptap-editor-content div[data-type="detailsContent"] {
+  margin-top: 0.3em;
+  padding-left: 2px;
+}
+
+::ng-deep .tiptap-editor-content div[data-type="details"]:not(.is-open) div[data-type="detailsContent"] { display: none; }
+::ng-deep .tiptap-editor-content div[data-type="detailsContent"] > :last-child { margin-bottom: 0.2em; }
+
+@media (prefers-reduced-motion: reduce) {
+  ::ng-deep .tiptap-editor-content div[data-type="details"] > button::before { transition: none; }
+}
+
+/* ── pictures: drag a corner to resize; left / centre / right like the other blocks ── */
+
+::ng-deep .tiptap-editor-content .note-image {
+  margin: 0.9em 0;
+}
+
+::ng-deep .tiptap-editor-content .note-image img {
+  display: block;
+  max-width: 100%;
+  height: auto !important;          /* a picture wider than the page shrinks with it, keeping its shape */
+  border-radius: 8px;
+}
+
+::ng-deep .tiptap-editor-content .note-image [data-resize-wrapper] { max-width: 100%; }
+
+::ng-deep .tiptap-editor-content .note-image.ProseMirror-selectednode img,
+::ng-deep .tiptap-editor-content .note-image [data-resize-state="true"] img {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+::ng-deep .tiptap-editor-content .note-image [data-resize-handle] {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  background: var(--accent);
+  border: 2px solid var(--page);
+  opacity: 0;
+  transition: opacity 0.12s ease;
+  z-index: 2;
+}
+
+::ng-deep .tiptap-editor-content .note-image [data-resize-handle="top-left"] { top: -6px; left: -6px; cursor: nwse-resize; }
+::ng-deep .tiptap-editor-content .note-image [data-resize-handle="top-right"] { top: -6px; right: -6px; cursor: nesw-resize; }
+::ng-deep .tiptap-editor-content .note-image [data-resize-handle="bottom-left"] { bottom: -6px; left: -6px; cursor: nesw-resize; }
+::ng-deep .tiptap-editor-content .note-image [data-resize-handle="bottom-right"] { bottom: -6px; right: -6px; cursor: nwse-resize; }
+
+::ng-deep .tiptap-editor-content .note-image:hover [data-resize-handle],
+::ng-deep .tiptap-editor-content .note-image.ProseMirror-selectednode [data-resize-handle],
+::ng-deep .tiptap-editor-content .note-image [data-resize-state="true"] [data-resize-handle] { opacity: 1; }
+
+::ng-deep .tiptap-editor-content .note-image.missing img {
+  min-width: 220px;
+  min-height: 60px;
+  padding: 18px;
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  color: var(--faint);
+  font: 13px var(--sans);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::ng-deep .tiptap-editor-content .note-image [data-resize-handle] { transition: none; }
+}

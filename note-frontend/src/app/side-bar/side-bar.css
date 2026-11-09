@@ -1,4 +1,78 @@
 /* ==================== LAYOUT ==================== */
+:root {
+  --cloth: #22304F;
+  --cloth-raised: #2C3C5F;
+  --cloth-text: #C9D2E3;
+  --page: #F4F6F8;
+  --rule: #D9DEE5;
+  --ink: #1B2230;
+  --marker: #F2C14E;
+  --font-ui: 'Schibsted Grotesk Variable', system-ui, sans-serif;
+  --font-write: 'Literata Variable', Georgia, serif;
+}
+
+.sidebar {
+  background: var(--cloth);
+  color: var(--cloth-text);
+  font-family: var(--font-ui);
+}
+
+.section-title {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  color: #8E9BB8;
+}
+
+.folder-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px 7px calc(20px + var(--depth, 0) * 16px);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.folder-item::before {
+  /* the spine */
+  content: '';
+  position: absolute;
+  left: 7px;
+  top: 5px;
+  bottom: 5px;
+  width: 4px;
+  border-radius: 2px;
+  background: var(--spine, var(--marker));
+  transition: width .15s ease;
+}
+
+.folder-item:hover {
+  background: var(--cloth-raised);
+}
+
+.folder-item.active {
+  background: var(--cloth-raised);
+  color: #fff;
+}
+
+.folder-item.active::before {
+  width: 7px;
+}
+
+.new-note-btn {
+  background: var(--marker);
+  color: var(--ink);
+  font-weight: 600;
+  border-radius: 6px;
+}
+
+.menu-item.active {
+  background: var(--cloth-raised);
+  color: #fff;
+}
+
 .sidebar {
   width: 100%;
   height: 100%;
@@ -47,7 +121,8 @@
 
 .search-box input {
   width: 100%;
-  box-sizing: border-box;            /* otherwise the input sticks out on the right */
+  box-sizing: border-box;
+  /* otherwise the input sticks out on the right */
   padding: 10px 12px 10px 36px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -82,7 +157,8 @@
   margin-top: 16px;
   padding: 12px;
   background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
-  color: #052e16;                    /* dark text is readable on the green */
+  color: #052e16;
+  /* dark text is readable on the green */
   border: none;
   border-radius: 8px;
   font-size: 14px;
@@ -343,4 +419,14 @@
   padding: 10px 12px;
   font-size: 12px;
   color: #6b7280;
+}
+
+.menu-badge {
+  margin-left: auto;
+  padding: 0 7px;
+  border-radius: 9px;
+  background: #4ade80;
+  color: #052e16;
+  font-size: 11px;
+  font-weight: 700;
 }

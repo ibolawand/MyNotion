@@ -1,0 +1,73 @@
+@let status = mail.status$ | async;
+@if (status && !status.configured) {
+<app-mail-setup class="pane"></app-mail-setup>
+} @else {
+<aside class="list">
+  <header class="list-head">
+    <div class="tabs">
+      <button type="button" [class.active]="mail.view === 'inbox'" (click)="mail.setView('inbox')">
+        Inbox @if (status?.unread) {<span class="badge">{{ status?.unread }}</span>}
+      </button>
+      <button type="button" [class.active]="mail.view === 'filtered'" (click)="mail.setView('filtered')"
+        title="Newsletters and ads that were kept out of the Inbox">Filtered</button>
+    </div>
+    <div class="actions">
+      <button type="button" class="icon" title="Check for new mail" (click)="mail.refresh()">↻</button>
+      <button type="button" class="primary" (click)="compose()">New email</button>
+    </div>
+  </header>
+  <input #search class="search" type="search" placeholder="Search mail…" [(ngModel)]="query"
+    (ngModelChange)="mail.search($event)">
+  @for (p of status?.problems ?? []; track p.client_id) {
+  <p class="banner error">Not sent: "{{ p.subject }}" to {{ p.to_addrs }}. {{ p.error }}
+    <button type="button" class="link" (click)="mail.retry(p.client_id)">Retry</button>
+    <button type="button" class="link" (click)="mail.discard(p.client_id)">Discard</button></p>
+  }
+  @if (status?.error) {
+  <p class="banner error">{{ status?.error }}</p>
+  } @else if (status && !status.online) {
+  <p class="banner">Offline · last checked {{ status.lastSync ? (status.lastSync | date:'HH:mm') : 'never' }}</p>
+  }
+  <ul class="rows">
+    @for (m of mail.messages$ | async; track m.id) {
+    <li>
+      <button type="button" class="row" [class.unread]="m.unread" [class.selected]="open?.id === m.id" (click)="select(m.id)">
+        <span class="avatar" [style.background]="'hsl(' + hue(m.from_addr) + ' 55% 62%)'" aria-hidden="true">{{ initials(m.from_name || m.from_addr) }}</span>
+        <span class="from">{{ m.from_name }}</span>
+        <span class="when">{{ isToday(m.date) ? (m.date | date:'HH:mm') : (m.date | date:'d MMM') }}</span>
+        <span class="subject">@if (m.has_attachments) {<span class="clip" title="Attachment">📎</span>}{{ m.subject }}</span>
+        <span class="preview">{{ m.filtered ? 'Hidden: ' + m.filter_reason : m.preview }}</span>
+      </button>
+    </li>
+    } @empty {
+    <li class="empty">{{ mail.view === 'filtered' ? 'Nothing was filtered.' : query ? 'No mail matches.' : 'No mail in the last 3 months.' }}</li>
+    }
+  </ul>
+</aside>
+
+<section class="pane">
+  @if (notice) {<p class="notice">{{ notice }}</p>}
+  @if (draft) {
+  <app-compose [draft]="draft" (done)="sent($event)" (cancel)="draft = null"></app-compose>
+  } @else if (open) {
+  <app-mail-reader [mail]="open" (reply)="reply()" (archive)="archive()" (remind)="remindMe()"
+    (makeEvent)="startEvent()" (markUnread)="mail.markUnread(open.id)" (notJunk)="notJunk()"
+    (openAttachment)="openAttachment($event)">
+    @if (eventForm) {
+    <form class="event-form" (ngSubmit)="saveEvent()">
+      <input name="t" [(ngModel)]="eventForm.title" required aria-label="Event title">
+      <input name="d" type="date" [(ngModel)]="eventForm.date" required aria-label="Date">
+      <input name="h" type="time" [(ngModel)]="eventForm.time" title="Leave empty for all day" aria-label="Time">
+      <button type="submit" class="primary">Add to calendar</button>
+      <button type="button" (click)="eventForm = null">Cancel</button>
+    </form>
+    }
+  </app-mail-reader>
+  } @else {
+  <div class="placeholder">
+    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></svg>
+    <p>Pick an email, or write a new one.</p>
+  </div>
+  }
+</section>
+}

@@ -9,6 +9,10 @@ export class ModelService {
   isExistingNoteOpen = new BehaviorSubject(false);
   openCalendar = new BehaviorSubject(false);
   openOverview = new BehaviorSubject(false);
+  openInbox = new BehaviorSubject(false);
+  openInbox$ = this.openInbox.asObservable();
+  /** the email to show when the Inbox opens (Aria's --open=mail:<id>) */
+  inboxTarget = new BehaviorSubject<number | null>(null);
   isStartingPageOpen = new BehaviorSubject(true);
   isLoggedIn = new BehaviorSubject(false);
   isAllNotesFolderOpen = new BehaviorSubject(false);
@@ -42,7 +46,19 @@ export class ModelService {
     this.isLoggedIn.next(!this.isLoggedIn.value);
   }
 
+  /** The Inbox replaces the notes list and the editor. */
+  showInbox(mailId: number | null = null) {
+    this.isStartingPageOpen.next(false);
+    this.openOverview.next(false);
+    this.openCalendar.next(false);
+    this.isOpen.next(false);
+    this.isExistingNoteOpen.next(false);
+    this.inboxTarget.next(mailId);
+    this.openInbox.next(true);
+  }
+
   toggleCalendar() {
+    this.openInbox.next(false);
     if (this.isStartingPageOpen.value) {
       this.isStartingPageOpen.next(false);
       this.openOverview.next(false);
@@ -55,6 +71,7 @@ export class ModelService {
   }
 
   openHome() {
+    this.openInbox.next(false);
     this.isStartingPageOpen.next(false);
     this.openOverview.next(true);
     this.openCalendar.next(false);
@@ -63,6 +80,7 @@ export class ModelService {
 
   /** Always shows the calendar (toggleCalendar flips it, which is wrong for "open the calendar"). */
   showCalendar() {
+    this.openInbox.next(false);
     this.isStartingPageOpen.next(false);
     this.openOverview.next(false);
     this.isOpen.next(false);
@@ -86,6 +104,7 @@ export class ModelService {
   }
 
   onNoteClicked(note: Note) {
+    this.openInbox.next(false);
     this.noteClicked.next(note);
     this.isExistingNoteOpen.next(true);
     this.currentNoteSubject.next(note);

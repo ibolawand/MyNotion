@@ -46,3 +46,26 @@ app-root {
 }
 
 /* You can add global styles to this file, and also import other style files */
+/* calendar: to-dos due that day, in the all-day row (here, not in calendar.css, which is at its size budget) */
+.due-task {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 3px;
+  padding: 3px 6px;
+  border: none;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #cbd5e1;
+  font-size: 11px;
+  text-align: left;
+  cursor: pointer;
+}
+.due-task:hover { background: rgba(255, 255, 255, 0.09); color: #f5f6f8; }
+.due-box { flex: 0 0 auto; width: 10px; height: 10px; border: 1.5px solid #6b7280; border-radius: 3px; }
+.due-text { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.due-task.due-overdue { color: #f87171; }
+.due-task.due-overdue .due-box { border-color: #f87171; }
+.due-task.due-today { color: #4ade80; font-weight: 600; }
+.due-task.due-today .due-box { border-color: #4ade80; }

@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { ModelService } from '../model.service';
 import { CalendarEvent, EventRow, WeekDay, EventForm, Repeat } from '../../model/models';
 import { NoteService } from '../../services/NoteService';
+import { DueTask, dueTasksIn, dueLabel, dueState } from '../text-editor/due-dates';
 
 
 
@@ -89,6 +90,30 @@ export class Calendar implements OnInit, OnDestroy {
   }
  
   private externalSub?: { unsubscribe(): void };
+  private notesSub?: { unsubscribe(): void };
+
+  // ---------- to-dos with a due date (see text-editor/due-dates.ts) ----------
+  dueTasks: DueTask[] = [];
+
+  getDueTasksForDay(dayIndex: number): DueTask[] {
+    const iso = this.weekDates[dayIndex]?.iso;
+    return this.dueTasks.filter(t => t.iso === iso);
+  }
+
+  dueClass(t: DueTask): string {
+    return 'due-' + dueState(t.due);
+  }
+
+  dueTitle(t: DueTask): string {
+    return `${dueLabel(t.due)} · in “${t.noteTitle}” (click to open)`;
+  }
+
+  openTask(t: DueTask): void {
+    const note = this.noteService.getNotesCache().find(n => n.id === t.noteId);
+    if (!note) return;
+    this.modelService.openHome();
+    this.modelService.onNoteClicked(note);
+  }
 
   ngOnInit(): void {
     this.updateWeekData();
@@ -96,6 +121,11 @@ export class Calendar implements OnInit, OnDestroy {
     this.timeIndicatorInterval = setInterval(() => this.updateCurrentTimeIndicator(), 60000);
     // events added/moved from outside the app (e.g. by Aria) appear right away
     this.externalSub = this.noteService.externalChange$.subscribe(() => this.loadEvents());
+    // notes reload on outside changes too, so a to-do Aria adds shows up here as well
+    this.notesSub = this.noteService.notes$.subscribe(notes => {
+      this.dueTasks = dueTasksIn(notes);
+      this.cdr.detectChanges();
+    });
   }
 
   ngOnDestroy(): void {
@@ -103,6 +133,7 @@ export class Calendar implements OnInit, OnDestroy {
       clearInterval(this.timeIndicatorInterval);
     }
     this.externalSub?.unsubscribe();
+    this.notesSub?.unsubscribe();
   }
  
   // ==================== HELPERS ====================

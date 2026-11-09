@@ -1,0 +1,20 @@
+[
+  {"name": "newsletter with an unsubscribe link", "from": "news@medium.com",
+   "headers": {"list-unsubscribe": "<https://medium.com/unsub>", "subject": "Your weekly digest"}, "expect": "newsletter"},
+  {"name": "mailing list", "from": "group@lists.example.org", "headers": {"list-id": "<group.lists.example.org>"},
+   "expect": "newsletter"},
+  {"name": "shop ad sent in bulk", "from": "deals@shop.example", "headers": {"precedence": "bulk", "subject": "50% off!"},
+   "expect": "bulk"},
+  {"name": "marketing sender", "from": "marketing@brand.example", "headers": {"subject": "Something new for you"},
+   "expect": "no-reply sender"},
+  {"name": "Gmail 'Updates'-style receipt from a no-reply address", "from": "no-reply@accounts.example",
+   "headers": {"subject": "Your receipt"}, "expect": "no-reply sender"},
+  {"name": "bill from a no-reply address on the always-show list", "from": "noreply@energy.example",
+   "headers": {"subject": "Your bill for October"}, "alwaysShow": ["noreply@energy.example"], "expect": null},
+  {"name": "newsletter you said is not junk", "from": "club@school.example",
+   "headers": {"list-unsubscribe": "<mailto:x@y>"}, "alwaysShow": ["club@school.example"], "expect": null},
+  {"name": "teacher", "from": "huber@school.example", "headers": {"subject": "Project deadline"}, "expect": null},
+  {"name": "friend", "from": "Sara.K@gmail.com", "headers": {"subject": "friday?"}, "expect": null},
+  {"name": "always-show matches regardless of case", "from": "NoReply@Energy.example", "headers": {},
+   "alwaysShow": ["noreply@energy.example"], "expect": null}
+]

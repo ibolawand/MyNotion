@@ -21,6 +21,7 @@
       <button class="tool text" [class.active]="isActive('bold')" (click)="run(bold)" title="Bold (Ctrl+B)"><strong>B</strong></button>
       <button class="tool text" [class.active]="isActive('italic')" (click)="run(italic)" title="Italic (Ctrl+I)"><em>I</em></button>
       <button class="tool text" [class.active]="isActive('underline')" (click)="run(underline)" title="Underline (Ctrl+U)"><u>U</u></button>
+      <button class="tool text" [class.active]="isActive('strike')" (click)="run(strike)" title="Strikethrough (Ctrl+Shift+S)"><s>S</s></button>
     </div>
 
     <div class="tool-group">
@@ -40,8 +41,24 @@
         <svg viewBox="0 0 24 24"><path d="m8 7-5 5 5 5M16 7l5 5-5 5"/></svg>
       </button>
       <button class="tool math-tool" (click)="insertMath()" title="Formula (type $$x^2$$)" aria-label="Insert formula">∑</button>
+      <button class="tool" (click)="pickImage()" title="Picture (or paste / drop one into the note)" aria-label="Insert picture">
+        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="m21 16-5-5-9 9"/></svg>
+      </button>
+      <input #imageInput type="file" hidden multiple [accept]="imageTypes" (change)="onImagePicked(imageInput)">
       <button class="tool" (click)="run(divider)" title="Divider (type ---)" aria-label="Divider">
         <svg viewBox="0 0 24 24"><path d="M3 12h18"/></svg>
+      </button>
+    </div>
+
+    <div class="tool-group" role="group" aria-label="Alignment">
+      <button type="button" class="tool" [class.active]="alignActive('left')" [class.on]="alignActive('left')" (click)="setAlign('left')" title="Align left" aria-label="Align left">
+        <svg viewBox="0 0 24 24"><path d="M4 6h16M4 10h10M4 14h16M4 18h10"/></svg>
+      </button>
+      <button type="button" class="tool" [class.active]="alignActive('center')" [class.on]="alignActive('center')" (click)="setAlign('center')" title="Centre" aria-label="Centre">
+        <svg viewBox="0 0 24 24"><path d="M4 6h16M7 10h10M4 14h16M7 18h10"/></svg>
+      </button>
+      <button type="button" class="tool" [class.active]="alignActive('right')" [class.on]="alignActive('right')" (click)="setAlign('right')" title="Align right" aria-label="Align right">
+        <svg viewBox="0 0 24 24"><path d="M4 6h16M10 10h10M4 14h16M10 18h10"/></svg>
       </button>
     </div>
 
@@ -51,8 +68,8 @@
         <span class="swatch" [style.background]="editor.getAttributes('textStyle')['color'] || '#e4e7eb'"></span>
         <input type="color" (input)="setColor($any($event.target).value)" aria-label="Text colour">
       </label>
-      @for (h of highlights.slice(0, 3); track h.color) {
-        <button class="tool mark-tool" (click)="setHighlight(h.color)" [title]="h.label + ' highlight'" [attr.aria-label]="h.label + ' highlight'"
+      @for (h of highlights; track h.color) {
+        <button class="tool mark-tool" (click)="setHighlight(h.color)" [title]="h.label + ' marker (click again to remove; Ctrl+Shift+H for yellow)'" [attr.aria-label]="h.label + ' highlight'"
           [class.active]="isActive('highlight', { color: h.color })">
           <span [style.background]="h.color"></span>
         </button>
@@ -77,6 +94,8 @@
         <button class="bubble-btn" [class.active]="isActive('underline')" (click)="run(underline)" title="Underline (Ctrl+U)"><u>U</u></button>
         <button class="bubble-btn" [class.active]="isActive('strike')" (click)="run(strike)" title="Strikethrough"><s>S</s></button>
         <button class="bubble-btn mono" [class.active]="isActive('code')" (click)="run(inlineCode)" title="Inline code (Ctrl+E)">&lt;/&gt;</button>
+        <button class="bubble-btn" [class.active]="isActive('subscript')" (click)="run(sub)" title="Subscript, like H₂O (Ctrl+,)">x<sub>2</sub></button>
+        <button class="bubble-btn" [class.active]="isActive('superscript')" (click)="run(sup)" title="Superscript, like m² (Ctrl+.)">x<sup>2</sup></button>
         <span class="bubble-sep"></span>
         @for (h of highlights; track h.color) {
           <button class="bubble-btn dot" (click)="setHighlight(h.color)" [title]="h.label + ' highlight'"><span [style.background]="h.color"></span></button>
@@ -91,11 +110,86 @@
     </div>
   </tiptap-bubble-menu>
 
-  <div class="content-text" (mousedown)="focusEnd($event)">
-    <div class="page" (mousedown)="focusEnd($event)">
-      <tiptap-editor [editor]="editor"></tiptap-editor>
+  <div class="editor-main">
+    <div class="content-text" (mousedown)="focusEnd($event)" (scroll)="onPageScroll()">
+      <div class="page" (mousedown)="focusEnd($event)">
+        <tiptap-editor [editor]="editor"></tiptap-editor>
+      </div>
     </div>
+
+    @if (tableBar; as t) {
+      <div class="table-bar" role="toolbar" [style.top.px]="t.top" [style.left.px]="t.left" (mousedown)="$event.preventDefault()" [attr.aria-label]="'Table, ' + t.rows + ' rows, ' + t.cols + ' columns'">
+        <button class="tool small" (click)="tableDo('rowAfter')" title="Add a row below (Tab in the last box does it too)" aria-label="Add a row below">
+          <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="8" rx="1.5"/><path d="M12 15v6M9 18h6"/></svg>
+        </button>
+        <button class="tool small" (click)="tableDo('colAfter')" title="Add a column to the right" aria-label="Add a column to the right">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="18" rx="1.5"/><path d="M15 12h6M18 9v6"/></svg>
+        </button>
+        <button class="tool small" (click)="tableDo('delRow')" title="Remove this row" aria-label="Remove this row">
+          <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="8" rx="1.5"/><path d="M9 18h6"/></svg>
+        </button>
+        <button class="tool small" (click)="tableDo('delCol')" title="Remove this column" aria-label="Remove this column">
+          <svg viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="18" rx="1.5"/><path d="M15 12h6"/></svg>
+        </button>
+        <button class="tool small" [class.active]="isActive('tableHeader')" (click)="tableDo('header')" title="First row as a header (bold, shaded)" aria-label="Header row">
+          <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="M3 9h18" /><path d="M4 6.5h16" stroke-width="3"/></svg>
+        </button>
+        <button class="tool small danger" (click)="tableDo('delete')" title="Delete the whole table" aria-label="Delete table">
+          <svg viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>
+        </button>
+      </div>
+    }
+
+    @if (outlineOn) {
+      <nav class="outline" aria-label="Outline of this note">
+        <div class="outline-title">Outline</div>
+        @for (h of outline; track h.pos; let i = $index) {
+          <button type="button" class="outline-item" [class.l2]="h.level === 2" [class.l3]="h.level >= 3"
+            [class.on]="i === outlineActive" (click)="jumpTo(h)" [title]="h.text">{{ h.text }}</button>
+        } @empty {
+          <p class="outline-empty">Headings (H1, H2, H3) show up here, so you can jump around a long note.</p>
+        }
+      </nav>
+    }
+
+    @if (findOpen) {
+      <div class="find-bar" role="search" aria-label="Find in this note" (mousedown)="$event.stopPropagation()">
+        <div class="find-row">
+          <button type="button" class="find-btn find-expand" [class.on]="findReplace" (click)="findReplace = !findReplace"
+            [title]="findReplace ? 'Hide replace' : 'Replace (Ctrl+H)'" [attr.aria-expanded]="findReplace" aria-label="Show replace">
+            <svg viewBox="0 0 24 24"><path [attr.d]="findReplace ? 'm6 9 6 6 6-6' : 'm9 6 6 6-6 6'"/></svg>
+          </button>
+          <input #findInput class="find-input" [(ngModel)]="findQuery" (ngModelChange)="runFind()" (keydown)="onFindKey($event)"
+            placeholder="Find in note" aria-label="Find" spellcheck="false">
+          <span class="find-count" aria-live="polite">
+            @if (findQuery) {
+              {{ findInfo.matches.length ? (findInfo.current + 1) + ' of ' + findInfo.matches.length : 'No results' }}
+            }
+          </span>
+          <button type="button" class="find-btn" [class.on]="findCase" (click)="toggleFindCase()" title="Match upper and lower case"
+            aria-label="Match case" [attr.aria-pressed]="findCase">Aa</button>
+          <button type="button" class="find-btn" (click)="findStep(-1)" [disabled]="!findInfo.matches.length" title="Previous (Shift+Enter)" aria-label="Previous match">
+            <svg viewBox="0 0 24 24"><path d="m6 15 6-6 6 6"/></svg>
+          </button>
+          <button type="button" class="find-btn" (click)="findStep(1)" [disabled]="!findInfo.matches.length" title="Next (Enter)" aria-label="Next match">
+            <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+          </button>
+          <button type="button" class="find-btn" (click)="closeFind()" title="Close (Esc)" aria-label="Close find">
+            <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>
+          </button>
+        </div>
+        @if (findReplace) {
+          <div class="find-row replace-row">
+            <input class="find-input" [(ngModel)]="replaceWith" (keydown)="onReplaceKey($event)" placeholder="Replace with"
+              aria-label="Replace with" spellcheck="false">
+            <button type="button" class="find-text-btn" (click)="replaceOne()" [disabled]="!findInfo.matches.length" title="Replace this one (Enter)">Replace</button>
+            <button type="button" class="find-text-btn" (click)="replaceEvery()" [disabled]="!findInfo.matches.length" title="Replace all (Ctrl+Enter)">All</button>
+          </div>
+        }
+      </div>
+    }
   </div>
+
 
   @if (slashOpen) {
     <div class="slash-menu" #slashMenu role="listbox" aria-label="Add a block"
@@ -117,7 +211,14 @@
               @case ('math') { <span class="glyph-math">x²</span> }
               @case ('mathblock') { <span class="glyph-math">∑</span> }
               @case ('divider') { <svg viewBox="0 0 24 24"><path d="M4 12h16"/></svg> }
+              @case ('matrix') { <span class="glyph-math">[ ]</span> }
+              @case ('vector') { <svg viewBox="0 0 24 24"><path d="M6 6h11m-3-3 3 3-3 3M8 12l4 8 4-8"/></svg> }
+              @case ('callout') { <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M8 10v.01M8 14h8M11 10h5"/></svg> }
+              @case ('toggle') { <svg viewBox="0 0 24 24"><path d="m6 8 4 4-4 4" class="fill"/><path d="M13 12h7M13 18h5"/></svg> }
+              @case ('image') { <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="m21 16-5-5-9 9"/></svg> }
+              @case ('table') { <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18M10 4v16"/></svg> }
               @case ('date') { <svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg> }
+              @default { <svg viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 13h6M9 17h4"/></svg> }
             }
           </span>
           <span class="slash-text">
@@ -133,8 +234,9 @@
   }
 
   @if (math) {
-    <div class="math-box" role="dialog" aria-label="Edit formula" [style.top.px]="math.top" [style.left.px]="math.left"
-      (mousedown)="$event.stopPropagation()">
+    <div class="math-box" role="dialog" aria-label="Edit formula" #floatBox
+      (mousedown)="$event.stopPropagation()" (pointerdown)="startDrag($event)">
+      <div class="box-grip" title="Drag to move" aria-hidden="true" (mousedown)="$event.preventDefault()"><span></span></div>
       <div class="math-preview" #mathPreview aria-live="polite"></div>
       <textarea #mathInput rows="2" [(ngModel)]="math.latex" (ngModelChange)="renderMathPreview()" (keydown)="onMathKey($event)"
         placeholder="e.g. \frac{a}{b} or x^2 + y^2 = r^2" spellcheck="false" aria-label="Formula in LaTeX"></textarea>
@@ -143,12 +245,130 @@
       }
       <div class="math-snippets" aria-label="Insert">
         @for (sn of mathSnippets; track sn.label) {
-          <button type="button" (click)="addSnippet(sn)" [title]="sn.tex.trim()">{{ sn.label }}</button>
+          <button type="button" (mousedown)="$event.preventDefault()" (click)="addSnippet(sn)" [title]="sn.tex.trim()" [attr.aria-label]="sn.label">
+            @if (snippetFaces.get(sn.label); as face) { <span class="snippet-face" [innerHTML]="face"></span> } @else { {{ sn.label }} }
+          </button>
         }
+        <button type="button" class="matrix-snippet" (click)="matrixFromMathBox()" title="A new matrix, filled in box by box">+ Matrix</button>
+        <button type="button" class="matrix-snippet" (click)="matrixFromMathBox(3, 1)" title="A new column vector, filled in box by box">+ Vector</button>
       </div>
+      @if (mathMatrices.length) {
+        <div class="math-matrices" aria-label="Edit a matrix in this formula">
+          <span>Edit in grid:</span>
+          @for (mm of mathMatrices; track $index; let i = $index) {
+            <button type="button" (click)="editMatrixInFormula(i)">Matrix {{ i + 1 }}</button>
+          }
+        </div>
+      }
+      @if (math.type === 'block') {
+        <div class="box-align" role="radiogroup" aria-label="Where it sits on the line">
+          <button type="button" class="align-btn" [class.active]="math.align === 'left'" [class.on]="math.align === 'left'" (click)="setBoxAlign('left')" title="Align left" aria-label="Align left" role="radio">
+            <svg viewBox="0 0 24 24"><path d="M4 6h16M4 10h10M4 14h16M4 18h10"/></svg>
+          </button>
+          <button type="button" class="align-btn" [class.active]="math.align === 'center'" [class.on]="math.align === 'center'" (click)="setBoxAlign('center')" title="Centre" aria-label="Centre" role="radio">
+            <svg viewBox="0 0 24 24"><path d="M4 6h16M7 10h10M4 14h16M7 18h10"/></svg>
+          </button>
+          <button type="button" class="align-btn" [class.active]="math.align === 'right'" [class.on]="math.align === 'right'" (click)="setBoxAlign('right')" title="Align right" aria-label="Align right" role="radio">
+            <svg viewBox="0 0 24 24"><path d="M4 6h16M10 10h10M4 14h16M10 18h10"/></svg>
+          </button>
+        </div>
+      }
       <div class="math-actions">
         <span class="math-hint"><kbd>Enter</kbd> save <kbd>Esc</kbd> cancel</span>
         <button type="button" class="math-save" (click)="saveMath()">Save formula</button>
+      </div>
+    </div>
+  }
+
+  @if (grid) {
+    <div class="matrix-box" role="dialog" aria-label="Edit matrix" #floatBox
+      (mousedown)="$event.stopPropagation()" (pointerdown)="startDrag($event)">
+      <div class="box-grip" title="Drag to move" aria-hidden="true" (mousedown)="$event.preventDefault()"><span></span></div>
+      @if (!grid.into) {
+        <div class="matrix-chain" aria-label="Matrices in this formula">
+          @for (item of grid.items; track $index; let i = $index) {
+            @if (i > 0) {
+              <select class="matrix-op" [value]="grid.ops[i - 1]" (change)="setOp(i - 1, $any($event.target).value)"
+                [attr.aria-label]="'Symbol between matrix ' + i + ' and ' + (i + 1)">
+                @for (o of matrixOps; track o.tex) {
+                  <option [value]="o.tex" [selected]="grid.ops[i - 1] === o.tex">{{ o.label }}</option>
+                }
+              </select>
+            }
+            <button type="button" class="matrix-tab" [class.on]="grid.cur === i" (click)="pickMatrix(i)"
+              [attr.aria-pressed]="grid.cur === i">Matrix {{ i + 1 }}</button>
+          }
+          <button type="button" class="matrix-add" (click)="addMatrix()" title="Another matrix after this one (A + B = …)">+ matrix</button>
+        </div>
+      }
+      <div class="matrix-top">
+        <div class="matrix-kinds" role="radiogroup" aria-label="Brackets">
+          @for (k of matrixKinds; track k.kind) {
+            <button type="button" role="radio" [attr.aria-checked]="gm.kind === k.kind" [class.on]="gm.kind === k.kind"
+              (click)="setKind(k.kind)" [title]="k.title">{{ k.label }}</button>
+          }
+        </div>
+        <label class="matrix-bar" title="A vertical line between two columns (e.g. Sarrus, or an augmented matrix)">
+          <span>Line</span>
+          <select (change)="setGridBar(+$any($event.target).value)" [disabled]="gridCols < 2" aria-label="Vertical line after column">
+            <option value="0" [selected]="!gm.bar">none</option>
+            @for (c of barChoices; track c) {
+              <option [value]="c" [selected]="gm.bar === c">after column {{ c }}</option>
+            }
+          </select>
+        </label>
+        <span class="matrix-size">{{ gridRows }} × {{ gridCols }}</span>
+        @if (grid.items.length > 1) {
+          <button type="button" class="matrix-remove" (click)="removeMatrix()" title="Remove this matrix">Remove</button>
+        }
+      </div>
+      <div class="matrix-body">
+        <div class="matrix-grid" [style.grid-template-columns]="'repeat(' + gridCols + ', 64px)'">
+          @for (row of gm.cells; track $index; let r = $index) {
+            @for (cell of row; track $index; let c = $index) {
+              <input class="matrix-cell" [class.bar-after]="gm.bar === c + 1" [attr.data-r]="r" [attr.data-c]="c" [value]="cell" spellcheck="false"
+                (input)="setCell(r, c, $any($event.target).value)" (keydown)="onGridKey($event, r, c)"
+                [attr.aria-label]="'Row ' + (r + 1) + ', column ' + (c + 1)">
+            }
+          }
+        </div>
+        <div class="matrix-steps" aria-label="Columns">
+          <button type="button" (click)="resizeGrid(gridRows, gridCols + 1)" [disabled]="gridCols >= maxSize" title="Add a column">+</button>
+          <button type="button" (click)="resizeGrid(gridRows, gridCols - 1)" [disabled]="gridCols <= 1" title="Remove the last column">−</button>
+        </div>
+      </div>
+      <div class="matrix-steps rows" aria-label="Rows">
+        <button type="button" (click)="resizeGrid(gridRows + 1, gridCols)" [disabled]="gridRows >= maxSize" title="Add a row">+ row</button>
+        <button type="button" (click)="resizeGrid(gridRows - 1, gridCols)" [disabled]="gridRows <= 1" title="Remove the last row">− row</button>
+        @if (!grid.into) {
+          <div class="matrix-place" role="radiogroup" aria-label="Where it goes">
+            <button type="button" role="radio" [class.on]="grid.type === 'inline'" [attr.aria-checked]="grid.type === 'inline'"
+              (click)="setGridType('inline')" title="Inside your sentence, so you can write text next to it">In the text</button>
+            <button type="button" role="radio" [class.on]="grid.type === 'block'" [attr.aria-checked]="grid.type === 'block'"
+              (click)="setGridType('block')" title="On its own line">Own line</button>
+          </div>
+          @if (grid.type === 'block') {
+            <div class="box-align" role="radiogroup" aria-label="Where it sits on the line">
+              <button type="button" class="align-btn" [class.active]="grid.align === 'left'" [class.on]="grid.align === 'left'" (click)="setBoxAlign('left')" title="Align left" aria-label="Align left" role="radio">
+                <svg viewBox="0 0 24 24"><path d="M4 6h16M4 10h10M4 14h16M4 18h10"/></svg>
+              </button>
+              <button type="button" class="align-btn" [class.active]="grid.align === 'center'" [class.on]="grid.align === 'center'" (click)="setBoxAlign('center')" title="Centre" aria-label="Centre" role="radio">
+                <svg viewBox="0 0 24 24"><path d="M4 6h16M7 10h10M4 14h16M7 18h10"/></svg>
+              </button>
+              <button type="button" class="align-btn" [class.active]="grid.align === 'right'" [class.on]="grid.align === 'right'" (click)="setBoxAlign('right')" title="Align right" aria-label="Align right" role="radio">
+                <svg viewBox="0 0 24 24"><path d="M4 6h16M10 10h10M4 14h16M10 18h10"/></svg>
+              </button>
+            </div>
+          }
+        }
+      </div>
+      <div class="math-preview matrix-preview" #gridPreview aria-live="polite"></div>
+      <div class="math-actions">
+        <span class="math-hint"><kbd>Tab</kbd> next <kbd>Enter</kbd> save <kbd>Esc</kbd> cancel</span>
+        @if (!grid.into) {
+          <button type="button" class="matrix-latex" (click)="gridAsLatex()">Edit as LaTeX</button>
+        }
+        <button type="button" class="math-save" (click)="saveGrid()">{{ grid.into ? 'Insert' : 'Save' }}</button>
       </div>
     </div>
   }
@@ -158,7 +378,19 @@
     @if (words > 0) {
       <span>{{ readingTime }}</span>
     }
-    <span class="footer-tip">Type / for blocks, Ctrl+K for a link</span>
+    @if (imageNote) {
+      <span class="footer-note" role="status">{{ imageNote }}
+        @if (lastPdf && !exporting) { <button type="button" class="footer-link" (click)="showPdf()">Show</button> }
+      </span>
+    }
+    <span class="footer-tip">Type / for blocks, Ctrl+F to find</span>
+    <button class="outline-toggle" (click)="exportPdf()" [disabled]="exporting || !currentNote" title="Save this note as a PDF (to print or hand in)">
+      <svg viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 13h6M9 17h4"/></svg>PDF
+    </button>
+    <button class="outline-toggle" [class.on]="outlineOn" (click)="toggleOutline()" [attr.aria-pressed]="outlineOn"
+      [title]="outlineOn ? 'Hide the outline' : 'Show the outline: the headings of this note'">
+      <svg viewBox="0 0 24 24"><path d="M4 6h10M7 12h13M7 18h13"/></svg>Outline
+    </button>
     <button class="font-toggle" (click)="toggleFont()" [title]="font === 'serif' ? 'Switch to a sans-serif font' : 'Switch to a serif font'">
       <span [class.on]="font === 'serif'" class="serif-a">Aa</span>
       <span [class.on]="font === 'sans'" class="sans-a">Aa</span>

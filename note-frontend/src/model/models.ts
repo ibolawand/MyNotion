@@ -92,3 +92,17 @@ export interface EventForm {
   allDay: boolean;
   repeat: Repeat | null;
 }
+
+// ── Mail (the Inbox; see note/src/mail) ──
+export interface MailSummary {
+  id: number; from_name: string; from_addr: string; subject: string; date: string; preview: string;
+  unread: number; has_attachments: number; filtered: number; filter_reason: string | null; to_addrs: string;
+}
+export interface MailAttachment { id: number; filename: string; mime: string; size: number; }
+export interface MailMessage extends MailSummary {
+  body_text: string; body_html: string; cc: string; reply_to?: string | null; message_id: string | null; attachments: MailAttachment[];
+}
+export interface MailDraft { to: string; cc?: string; subject: string; body: string; inReplyToId?: number; attachments?: string[]; }
+export interface MailProblem { client_id: string; to_addrs: string; subject: string; error: string; }
+export interface MailStatus { configured: boolean; address?: string; online: boolean; lastSync?: string; error?: string; unread: number; problems?: MailProblem[]; }
+export interface MailSendResult { state: 'sent' | 'queued' | 'sending' | 'failed'; error: string | null; }

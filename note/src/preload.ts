@@ -22,10 +22,19 @@ contextBridge.exposeInMainWorld('electronAPI', {
         saveToken: (token: string) => ipcRenderer.invoke('save-token', token),
         getToken: () => ipcRenderer.invoke('get-token'),
         removeToken: () => ipcRenderer.invoke('remove-token'),
+        // "Save as PDF": the note as drawn on screen; asks where to save it
+        exportPdf: (title: string, body: string, css: string, base: string): Promise<{ ok: boolean; path?: string; canceled?: boolean; error?: string }> =>
+            ipcRenderer.invoke('note:pdf', { title, body, css, base }),
+        showPdf: (file: string) => ipcRenderer.invoke('note:pdf-show', file),
         getNoteWithCertainCategory: (category: number, userId: number) => ipcRenderer.invoke('getNoteWithCertainCategory', category, userId),
         getCategories: (userid:number) => ipcRenderer.invoke('getCategories',userid),
         createCategory: (category: Category | string) => ipcRenderer.invoke('createCategory', category),
         deleteCategory: (categoryid: number) => ipcRenderer.invoke('deleteCategory', categoryid),
+    },
+    // pictures in notes: stored in the database, the note keeps the link it gets back
+    images: {
+        save: (bytes: Uint8Array): Promise<{ ok: true; id: number; url: string } | { ok: false; error: string }> =>
+            ipcRenderer.invoke('image:save', bytes),
     },
     calendar: {
         getAllEvents: (userId: number) => ipcRenderer.invoke('getAllEvents', userId),
@@ -37,6 +46,22 @@ contextBridge.exposeInMainWorld('electronAPI', {
         addFolder: (folder: any) => ipcRenderer.invoke('addFolder', folder),
         getAllFolders: (userId?: number): Promise<Folder[]> => ipcRenderer.invoke('getAllFolders', userId),
         deleteFolder: (folder: any) => ipcRenderer.invoke('deleteFolder', folder),
+    },
+    mail: {
+        setup: (address: string, password: string) => ipcRenderer.invoke('mail:setup', address, password),
+        status: () => ipcRenderer.invoke('mail:status'),
+        forget: () => ipcRenderer.invoke('mail:forget'),
+        refresh: () => ipcRenderer.invoke('mail:refresh'),
+        list: (opts: { view: 'inbox' | 'filtered'; query?: string }) => ipcRenderer.invoke('mail:list', opts),
+        get: (id: number) => ipcRenderer.invoke('mail:get', id),
+        markRead: (id: number, read: boolean) => ipcRenderer.invoke('mail:mark-read', id, read),
+        archive: (id: number) => ipcRenderer.invoke('mail:archive', id),
+        notJunk: (id: number) => ipcRenderer.invoke('mail:not-junk', id),
+        send: (draft: any) => ipcRenderer.invoke('mail:send', draft),
+        retry: (clientId: string) => ipcRenderer.invoke('mail:retry', clientId),
+        discard: (clientId: string) => ipcRenderer.invoke('mail:discard', clientId),
+        pickAttachments: (): Promise<string[]> => ipcRenderer.invoke('mail:pick-attachments'),
+        openAttachment: (attachmentId: number) => ipcRenderer.invoke('mail:attachment', attachmentId),
     },
     // "open calendar" / "open note 12" from Aria or a second launch. takeOpenTarget() returns the
     // one given at startup (once); onOpenTarget fires for later ones.

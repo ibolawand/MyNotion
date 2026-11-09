@@ -1,0 +1,11 @@
+:host { flex: 1; display: flex; justify-content: center; overflow-y: auto; }
+.setup { width: 100%; max-width: 520px; margin: 48px 20px; display: flex; flex-direction: column; gap: 14px; color: #cbd5e1; font-size: 14px; line-height: 1.55; }
+h2 { color: #f5f6f8; font-size: 22px; }
+ol { padding-left: 20px; list-style: decimal; display: flex; flex-direction: column; gap: 4px; }
+a { color: #4ade80; }
+label { display: flex; flex-direction: column; gap: 6px; font-size: 13px; color: #9ca3af; }
+input { padding: 9px 11px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.1); background: #171a29; color: #e4e7eb; font: inherit; outline: none; }
+input:focus { border-color: rgba(74, 222, 128, 0.5); }
+.error { padding: 8px 10px; border-radius: 6px; background: rgba(239, 68, 68, 0.15); color: #fca5a5; }
+button { align-self: flex-start; padding: 9px 18px; border-radius: 6px; border: none; background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%); color: #052e16; font: inherit; font-weight: 600; cursor: pointer; }
+button:disabled { opacity: 0.5; cursor: default; }

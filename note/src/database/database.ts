@@ -3,6 +3,7 @@ import { Database, open } from 'sqlite';
 import { app } from 'electron';
 import fs from 'fs';
 import path from 'path';
+import { MAIL_COLUMNS, MAIL_SCHEMA } from '../mail/schema';
 
 export class DB {
     private static DB_NAME = 'noted.db';
@@ -96,6 +97,11 @@ export class DB {
             );
 
         `);
+        await this.dbInstance.exec(MAIL_SCHEMA);   // the Inbox (src/mail)
+        for (const [table, column, type] of MAIL_COLUMNS) {
+            const cols = await this.dbInstance.all<{ name: string }[]>(`PRAGMA table_info(${table})`);
+            if (!cols.some(c => c.name === column)) await this.dbInstance.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
+        }
 
         await this.migrateLegacySchema();
         await this.addColumnIfMissing('EVENTS', 'repeat', 'TEXT DEFAULT NULL');  // daily|weekly|monthly|yearly

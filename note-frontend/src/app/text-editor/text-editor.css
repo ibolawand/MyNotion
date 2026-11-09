@@ -36,7 +36,7 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 2px 8px;
-  padding: 7px max(24px, calc((100% - 720px) / 2 + 26px));    /* same left edge as the title and the text */
+  padding: 7px 26px;    /* same left edge as the title and the text */
   border-bottom: 1px solid var(--line);
   background: var(--page);
 }
@@ -144,8 +144,6 @@
 }
 
 .page {
-  max-width: 720px;
-  margin: 0 auto;
   padding: 30px 32px 30vh;     /* room under the last line, so you never write at the bottom edge */
   min-height: 100%;
 }
@@ -346,7 +344,7 @@ tiptap-editor {
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 6px max(24px, calc((100% - 720px) / 2 + 32px));
+  padding: 6px 32px;
   border-top: 1px solid var(--line);
   color: var(--faint);
   font: 12px var(--sans);
@@ -361,6 +359,13 @@ tiptap-editor {
   margin-left: auto;
 }
 
+.footer-note {
+  color: var(--accent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* narrow editor pane: keep the counts, drop the tip (sized by the pane, not the window) */
 .content-body {
   container-type: inline-size;
@@ -368,7 +373,7 @@ tiptap-editor {
 
 @container (max-width: 560px) {
   .footer-tip { display: none; }
-  .font-toggle { margin-left: auto; }
+  .outline-toggle { margin-left: auto; }
   .editor-toolbar, .editor-footer { padding-left: 16px; padding-right: 16px; }
   .page { padding: 24px 16px 30vh; }
 }
