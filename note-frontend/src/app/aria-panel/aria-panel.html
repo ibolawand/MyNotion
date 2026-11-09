@@ -1,0 +1,56 @@
+<aside class="panel" aria-label="Aria">
+  <header>
+    <span class="dot" [class.on]="running" [class.off]="running === false"></span>
+    <h2>Aria</h2>
+    <button type="button" class="close" (click)="close()" title="Close (Esc)" aria-label="Close">×</button>
+  </header>
+
+  <div class="list" #list>
+    @if (!messages.length && running !== false) {
+    <p class="empty">Ask about this note, your lists or your calendar.</p>
+    }
+    @for (m of messages; track m) {
+    <div class="message" [class.user]="m.role === 'user'" [class.aria]="m.role === 'aria'" [class.failed]="m.failed">
+      @if (m.pending && !m.text) {
+      <span class="thinking" aria-label="Aria is thinking"><i></i><i></i><i></i></span>
+      } @else {
+      <span class="text">{{ m.text }}</span>
+      }
+      @if (m.failed) {
+      <div class="problem">
+        <span>{{ m.error }}</span>
+        <button type="button" (click)="retry(m)" [disabled]="busy">Retry</button>
+      </div>
+      }
+      @if (m.confirm && !busy) {
+      <div class="confirm">
+        <button type="button" class="yes" (click)="answer('yes')">Yes</button>
+        <button type="button" (click)="answer('no')">No</button>
+      </div>
+      }
+    </div>
+    }
+  </div>
+
+  @if (running === false) {
+  <div class="offline" role="status">
+    @if (starting) {
+    <span>Starting Aria…</span>
+    } @else {
+    <span>Aria isn't running</span>
+    <button type="button" class="yes" (click)="startAria()">Start</button>
+    }
+    @if (startError) {
+    <p>{{ startError }}</p>
+    }
+  </div>
+  }
+
+  <footer>
+    @if (noteTitle) {
+    <div class="chip" title="Aria knows which note is open">This note: {{ noteTitle }}</div>
+    }
+    <textarea #input rows="1" placeholder="Ask Aria…" [(ngModel)]="draft" (keydown)="onKey($event)"
+      [attr.aria-busy]="busy" maxlength="4000" spellcheck="true"></textarea>
+  </footer>
+</aside>

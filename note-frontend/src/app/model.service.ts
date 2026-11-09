@@ -42,6 +42,12 @@ export class ModelService {
 
 
 
+  /** The Aria panel on the right (Ctrl+J): it sits next to whatever is open, so it has its own switch. */
+  private ariaPanelOpen = new BehaviorSubject(false);
+  ariaPanelOpen$ = this.ariaPanelOpen.asObservable();
+  toggleAriaPanel() { this.ariaPanelOpen.next(!this.ariaPanelOpen.value); }
+  closeAriaPanel() { this.ariaPanelOpen.next(false); }
+
   toggleLogin() {
     this.isLoggedIn.next(!this.isLoggedIn.value);
   }

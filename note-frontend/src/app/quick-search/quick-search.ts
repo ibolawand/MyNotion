@@ -93,6 +93,9 @@ export class QuickSearch implements OnInit, OnDestroy {
       e.preventDefault();
       this.close();
       this.openToday();
+    } else if (mod && !e.shiftKey && e.key.toLowerCase() === 'j') {
+      e.preventDefault();
+      this.modelService.toggleAriaPanel();      // talk to Aria; the panel takes the cursor when it opens
     }
   }
 

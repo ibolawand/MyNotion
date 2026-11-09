@@ -13,6 +13,7 @@ import { Calendar } from '../calendar/calendar';
 import { Inbox } from '../inbox/inbox';
 import { CreateAccount } from '../creat-account/creat-account';
 import { WindowBar } from '../window-bar/window-bar';
+import { AriaPanel } from '../aria-panel/aria-panel';
 
 @Component({
   selector: 'app-home-app',
@@ -28,6 +29,7 @@ import { WindowBar } from '../window-bar/window-bar';
     Calendar,
     CreateAccount,
     WindowBar,
+    AriaPanel,
   ],
   templateUrl: './home-app.html',
   styleUrls: ['./home-app.css']

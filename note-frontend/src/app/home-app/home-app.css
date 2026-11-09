@@ -27,6 +27,14 @@ app-overview-panel {
   height: 100%;
 }
 
+/* Aria, next to whatever is open (Ctrl+J) */
+app-aria-panel {
+  display: flex;
+  flex: 0 0 360px;
+  min-width: 0;
+  height: 100%;
+}
+
 app-adder,
 app-editor,
 app-inbox,
