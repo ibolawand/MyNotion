@@ -51,6 +51,9 @@ Gebaut mit **Electron**, **Angular 20** und dem Editor **TipTap**.
   „Erinnere mich" (To-do mit Fälligkeit) und „Termin daraus machen". Aria kann Mails vorlesen und beantworten.
 - **Tägliches Backup** nach `~/.config/MyNotion/backups/` (die letzten 14 bleiben)
 - **Kein Login**: eine App für eine Person auf dem eigenen Rechner
+- **Aria direkt in MyNotion** (Strg+J oder „Aria“ in der Seitenleiste): ein Feld rechts neben der Notiz, in dem man
+  Aria schreibt, ohne die App zu verlassen. Sie kennt die offene Notiz, antwortet schriftlich (Wort für Wort) und
+  zeigt bei Rückfragen Ja/Nein-Knöpfe. Läuft Aria nicht, kann man sie von dort starten.
 - **Zusammenarbeit mit [Aria](https://github.com/ibolawand/personal-ai)**, meiner Desktop-Assistentin: Aria liest und
   schreibt dieselbe Datenbank („schreib Eier auf die Einkaufsliste", „was habe ich morgen?"), MyNotion zeigt
   Änderungen sofort an, und `MyNotion --open=calendar` oder `--open=note:<id>` öffnet die passende Seite.
