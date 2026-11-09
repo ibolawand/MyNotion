@@ -54,6 +54,10 @@ Gebaut mit **Electron**, **Angular 20** und dem Editor **TipTap**.
 - **Zusammenarbeit mit [Aria](https://github.com/ibolawand/personal-ai)**, meiner Desktop-Assistentin: Aria liest und
   schreibt dieselbe Datenbank („schreib Eier auf die Einkaufsliste", „was habe ich morgen?"), MyNotion zeigt
   Änderungen sofort an, und `MyNotion --open=calendar` oder `--open=note:<id>` öffnet die passende Seite.
+  Aria kann auch ganze Notizen schreiben und überarbeiten („ordne diese Notiz", „schreib einen Lernzettel zur
+  Französischen Revolution", „fass die Notiz oben zusammen"). Dafür sagt MyNotion ihr, welche Notiz offen ist
+  (Tabelle `app_state`), und solange sie arbeitet, steht „Aria is editing this note…" über der Notiz und man kann
+  dort nicht tippen. So geht weder ihre noch deine Änderung verloren.
 
 ## Daten
 

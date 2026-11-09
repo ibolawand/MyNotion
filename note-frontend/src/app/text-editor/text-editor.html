@@ -110,7 +110,10 @@
     </div>
   </tiptap-bubble-menu>
 
-  <div class="editor-main">
+  <div class="editor-main" [class.aria-busy]="ariaEditing">
+    @if (ariaEditing) {
+      <div class="aria-editing" role="status"><span class="aria-dot" aria-hidden="true"></span>Aria is editing this note…</div>
+    }
     <div class="content-text" (mousedown)="focusEnd($event)" (scroll)="onPageScroll()">
       <div class="page" (mousedown)="focusEnd($event)">
         <tiptap-editor [editor]="editor"></tiptap-editor>
