@@ -47,6 +47,7 @@ export class ModelService {
   ariaPanelOpen$ = this.ariaPanelOpen.asObservable();
   toggleAriaPanel() { this.ariaPanelOpen.next(!this.ariaPanelOpen.value); }
   closeAriaPanel() { this.ariaPanelOpen.next(false); }
+  openAriaPanel() { this.ariaPanelOpen.next(true); }
 
   toggleLogin() {
     this.isLoggedIn.next(!this.isLoggedIn.value);

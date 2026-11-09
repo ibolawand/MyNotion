@@ -61,6 +61,13 @@ export class AriaChat {
     }
   }
 
+  /** A message that didn't come from the text box (e.g. "Explain this" for selected text). */
+  async ask(text: string): Promise<boolean> {
+    text = text.trim();
+    if (!text || this.busy) return false;
+    return this.deliver(text);
+  }
+
   /** Yes / No under a question. Sent as a normal message: Aria checks the answer herself, in code. */
   async answer(text: 'yes' | 'no') {
     if (this.busy) return;

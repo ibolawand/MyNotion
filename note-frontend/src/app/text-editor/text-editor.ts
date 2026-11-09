@@ -35,6 +35,8 @@ import katex from 'katex';
 import { DueDates } from './due-dates';
 import { KINDS, MAX_SIZE, Matrix, MatrixKind, OPS, blankMatrix, chainToLatex, findMatrices, fromChain, resize, setBar, trimmed } from './matrix';
 import { TiptapEditorDirective, TiptapBubbleMenuDirective } from 'ngx-tiptap';
+import { AriaRange } from './aria-range';
+import { AriaEdit } from './aria-edit/aria-edit';
 
 /** One entry of the "/" menu. `hint` is the Markdown shortcut that does the same while typing. */
 interface SlashItem {
@@ -135,12 +137,13 @@ export const MATH_SNIPPETS: { label: string; tex: string; at?: number; sel?: num
 @Component({
   selector: 'text-editor',
   standalone: true,
-  imports: [FormsModule, TiptapEditorDirective, TiptapBubbleMenuDirective, StudyScene, RadioButton],
+  imports: [FormsModule, TiptapEditorDirective, TiptapBubbleMenuDirective, StudyScene, RadioButton, AriaEdit],
   templateUrl: './text-editor.html',
   styleUrls: ['./text-editor.css', './note-content.css', './math.css', './blocks.css', './page-tools.css', './tables.css']
 })
 export class TextEditor implements OnInit, OnDestroy {
   @ViewChild('linkInput') linkInput?: ElementRef<HTMLInputElement>;
+  @ViewChild(AriaEdit) ariaEdit?: AriaEdit;
   @ViewChild('slashMenu') slashMenuEl?: ElementRef<HTMLElement>;
   @ViewChild('mathInput') mathInput?: ElementRef<HTMLTextAreaElement>;
   @ViewChild('mathPreview') mathPreview?: ElementRef<HTMLElement>;
@@ -246,6 +249,7 @@ export class TextEditor implements OnInit, OnDestroy {
         ALIGNED_TEXT,   // left / centre / right per line (formulas on their own line: see aligned-math.ts)
         TabKey,         // Tab: a tab space, or one level in inside a list; Shift+Tab undoes it
         FindReplace,    // Ctrl+F / Ctrl+H (the bar is in this component)
+        AriaRange,      // the text Aria was asked about stays marked while her card is open (aria-edit/)
         MoveBlock,      // Alt+↑ / Alt+↓ moves the line (or list item, table, toggle…) up or down
         ...NOTE_TABLE,  // /table; the toolbar gets row / column buttons while the cursor is in one
         Subscript,      // H₂O (Ctrl+,)
@@ -526,6 +530,11 @@ export class TextEditor implements OnInit, OnDestroy {
     if (!note) { await this.noteService.loadNotes(); note = this.noteService.getNotesCache().find(n => n.id === id); }
     if (note) this.modelService.onNoteClicked(note);
     else this.say('That note doesn\'t exist any more.');
+  }
+
+  /** "Select text, ask Aria": her card opens under the selection (aria-edit/). */
+  askAria() {
+    this.ariaEdit?.openMenu();
   }
 
   showBubble = ({ editor, from, to }: { editor: Editor; from: number; to: number }) => {

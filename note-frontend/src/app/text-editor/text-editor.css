@@ -190,6 +190,10 @@ tiptap-editor {
   background: var(--accent-soft);
 }
 
+.bubble-btn.aria {
+  color: var(--accent);
+}
+
 .bubble-btn.quiet {
   color: var(--muted);
   font-weight: 500;

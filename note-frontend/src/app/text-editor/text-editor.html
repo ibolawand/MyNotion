@@ -89,6 +89,8 @@
           }
         </form>
       } @else {
+        <button class="bubble-btn aria" (click)="askAria()" title="Ask Aria to rewrite, shorten, correct or explain this">Aria</button>
+        <span class="bubble-sep"></span>
         <button class="bubble-btn" [class.active]="isActive('bold')" (click)="run(bold)" title="Bold (Ctrl+B)"><strong>B</strong></button>
         <button class="bubble-btn" [class.active]="isActive('italic')" (click)="run(italic)" title="Italic (Ctrl+I)"><em>I</em></button>
         <button class="bubble-btn" [class.active]="isActive('underline')" (click)="run(underline)" title="Underline (Ctrl+U)"><u>U</u></button>
@@ -121,6 +123,9 @@
       <div class="page" (mousedown)="focusEnd($event)">
         <tiptap-editor [editor]="editor"></tiptap-editor>
       </div>
+      @if (!ariaEditing) {
+        <aria-edit [editor]="editor" [title]="currentNote?.title ?? ''" [noteId]="currentNote?.id"></aria-edit>
+      }
     </div>
 
     @if (tableBar; as t) {

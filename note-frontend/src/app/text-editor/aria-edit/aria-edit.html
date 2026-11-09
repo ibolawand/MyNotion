@@ -1,0 +1,64 @@
+@if (state !== 'closed') {
+<div class="card" role="dialog" aria-label="Aria" [style.top.px]="top" [style.left.px]="left" [style.width.px]="width"
+  (keydown)="onKey($event)">
+  @switch (state) {
+  @case ('menu') {
+  <div class="actions">
+    @for (a of actions; track a.id) {
+    <button type="button" (click)="run(a.id)">{{ a.label }}</button>
+    }
+    <button type="button" (click)="explain()" title="Aria explains it in her panel; the note stays as it is">Explain</button>
+  </div>
+  <form class="own" (submit)="$event.preventDefault(); runOwn()">
+    <input #own name="instruction" [(ngModel)]="instruction" maxlength="500" autocomplete="off"
+      placeholder="Or tell Aria what to do with it…" aria-label="Your own instruction">
+    <button type="submit" class="go" [disabled]="!instruction.trim()">Go</button>
+  </form>
+  }
+  @case ('writing') {
+  <div class="status" role="status">
+    <span class="thinking" aria-hidden="true"><i></i><i></i><i></i></span>
+    <span>Aria is writing…</span>
+    <button type="button" class="quiet" (click)="reject()">Cancel</button>
+  </div>
+  }
+  @case ('proposal') {
+  <div class="label">Aria's version</div>
+  <div class="preview" #preview></div>
+  <div class="buttons">
+    <button type="button" class="go" (click)="accept()">Accept</button>
+    <button type="button" (click)="tryAgain()">Try again</button>
+    <button type="button" class="quiet" (click)="reject()">Reject</button>
+  </div>
+  <form class="own" (submit)="$event.preventDefault(); steer()">
+    <input name="steer" [(ngModel)]="steerText" maxlength="300" autocomplete="off"
+      placeholder="Not quite? Say what to change…" aria-label="What to change">
+    <button type="submit" [disabled]="!steerText.trim()">Redo</button>
+  </form>
+  }
+  @case ('message') {
+  <div class="status" role="status">
+    <span class="grow">{{ message }}</span>
+    @if (canRetry) {
+    <button type="button" (click)="tryAgain()">Try again</button>
+    }
+    <button type="button" class="quiet" (click)="reject()">Close</button>
+  </div>
+  }
+  @case ('offline') {
+  <div class="status" role="status">
+    @if (starting) {
+    <span class="grow">Starting Aria…</span>
+    } @else {
+    <span class="grow">Aria isn't running</span>
+    <button type="button" class="go" (click)="startAria()">Start</button>
+    }
+    <button type="button" class="quiet" (click)="reject()">Close</button>
+  </div>
+  @if (message) {
+  <p class="problem">{{ message }}</p>
+  }
+  }
+  }
+</div>
+}

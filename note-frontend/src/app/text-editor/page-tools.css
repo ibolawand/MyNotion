@@ -11,6 +11,14 @@
 
 .editor-main > .content-text { flex: 1; min-width: 0; }
 
+/* Aria's card sits inside the scrolling page, under the text it is about */
+.editor-main > .content-text { position: relative; }
+::ng-deep .tiptap-editor-content .aria-range {
+  background: rgba(74, 222, 128, 0.16);
+  box-shadow: 0 2px 0 rgba(74, 222, 128, 0.55);
+  border-radius: 2px;
+}
+
 .outline {
   width: 190px;
   flex-shrink: 0;
