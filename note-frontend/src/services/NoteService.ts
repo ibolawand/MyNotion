@@ -9,6 +9,12 @@ export enum SaveStatus {
   SAVED = 'saved',
   ERROR = 'error'
 }
+/** What Aria sends back for a message from the Aria panel (note/src/aria.ts). */
+export type AriaEvent = { id: string } & (
+  | { type: 'text'; delta: string }
+  | { type: 'done'; reply: string; tools: string[]; confirm: string | null }
+  | { type: 'error'; message: string });
+
 declare global {
   interface Window {
     electronAPI: {
@@ -74,6 +80,10 @@ declare global {
       aria?: {
         setOpenNote: (id: number | null) => Promise<void>;
         editing: () => Promise<number | null>;
+        ask?: (text: string) => Promise<{ ok: true; id: string } | { ok: false; error: 'not-running' }>;
+        status?: () => Promise<'running' | 'not-running'>;
+        start?: () => Promise<{ ok: boolean; error?: 'no-launcher' | 'timeout' }>;
+        onEvent?: (callback: (event: AriaEvent) => void) => () => void;
       };
       takeOpenTarget?: () => Promise<string | null>;
       onOpenTarget?: (callback: (target: string) => void) => () => void;

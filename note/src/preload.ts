@@ -35,6 +35,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
     aria: {
         setOpenNote: (id: number | null) => ipcRenderer.invoke('state:open-note', id),
         editing: (): Promise<number | null> => ipcRenderer.invoke('state:aria-editing'),
+        // the Aria panel: send her a message, hear whether she's running, start her, and get her reply as it's
+        // written (text pieces, then "done" with the final reply; see src/aria.ts)
+        ask: (text: string) => ipcRenderer.invoke('aria:ask', text),
+        status: (): Promise<'running' | 'not-running'> => ipcRenderer.invoke('aria:status'),
+        start: (): Promise<{ ok: boolean; error?: 'no-launcher' | 'timeout' }> => ipcRenderer.invoke('aria:start'),
+        onEvent: (callback: (event: unknown) => void) => {
+            const listener = (_e: unknown, event: unknown) => callback(event);
+            ipcRenderer.on('aria:event', listener);
+            return () => ipcRenderer.removeListener('aria:event', listener);
+        },
     },
     // pictures in notes: stored in the database, the note keeps the link it gets back
     images: {
