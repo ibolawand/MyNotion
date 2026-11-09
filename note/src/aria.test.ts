@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('electron', () => ({ ipcMain: {}, BrowserWindow: {}, app: { getPath: () => '/tmp' } }));
 vi.mock('./database/database', () => ({ DB: {} }));
-import { AriaEvent, AriaLink, launcherFrom, socketPath, splitLines } from './aria';
+import { AriaEvent, AriaLink, isOurSocket, launcherFrom, socketPath, splitLines } from './aria';
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'aria-link-'));
 let n = 0;
@@ -207,5 +207,24 @@ describe('starting Aria', () => {
     });
     it('not when the file is gone', () => {
         expect(launcherFrom('/home/me/BetterAI/aria.sh', () => false)).toBeNull();
+    });
+});
+
+describe('only our own Aria', () => {
+    const sock = (uid: number, socket = true) => ({ uid, isSocket: () => socket });
+    it('accepts a socket that belongs to us', () => expect(isOurSocket(sock(1000), 1000)).toBe(true));
+    it('refuses one that belongs to someone else', () => expect(isOurSocket(sock(1001), 1000)).toBe(false));
+    it('refuses something that is not a socket', () => expect(isOurSocket(sock(1000, false), 1000)).toBe(false));
+    it('refuses a missing file', () => expect(isOurSocket(null, 1000)).toBe(false));
+
+    it('does not talk to a socket somebody else put there', async () => {
+        const got: unknown[] = [];
+        const file = await fakeAria(req => got.push(req));
+        const l = new AriaLink(file, () => undefined, () => false);      // the check says: not ours
+        links.push(l);
+        expect(await l.status()).toBe('not-running');
+        expect(await l.ask('my private note text')).toEqual({ ok: false, error: 'not-running' });
+        await new Promise(r => setTimeout(r, 50));
+        expect(got).toEqual([]);
     });
 });

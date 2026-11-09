@@ -43,17 +43,29 @@ export function splitLines(buffer: Buffer, chunk: Buffer): { lines: string[]; re
     return { lines, rest };
 }
 
+/** Is this Aria's socket, and ours? Normally it's in our private runtime folder; if that isn't set it falls
+ *  back to /tmp, where anyone could put a socket with that name and read what we send. */
+export function isOurSocket(st: { uid: number; isSocket(): boolean } | null, uid: number = process.getuid?.() ?? 0): boolean {
+    return !!st && st.isSocket() && st.uid === uid;
+}
+
+const ours = (file: string): boolean => {
+    try { return isOurSocket(fs.statSync(file)); } catch { return false; }
+};
+
 export class AriaLink {
     private sock: net.Socket | null = null;
     private connecting: Promise<net.Socket | null> | null = null;
     private open = new Set<string>();                               // chat requests still being answered
     private waiting = new Map<string, (running: boolean) => void>(); // status requests
 
-    constructor(private file: string, private emit: (e: AriaEvent) => void) {}
+    constructor(private file: string, private emit: (e: AriaEvent) => void,
+                private trusted: (file: string) => boolean = ours) {}
 
     private connect(): Promise<net.Socket | null> {
         if (this.sock) return Promise.resolve(this.sock);
         if (this.connecting) return this.connecting;
+        if (!this.trusted(this.file)) return Promise.resolve(null);
         this.connecting = new Promise(resolve => {
             const sock = net.connect(this.file);
             let rest: Buffer = Buffer.alloc(0);
