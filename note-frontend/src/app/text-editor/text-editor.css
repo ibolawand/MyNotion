@@ -359,6 +359,13 @@ tiptap-editor {
   margin-left: auto;
 }
 
+.footer-note {
+  color: var(--accent);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* narrow editor pane: keep the counts, drop the tip (sized by the pane, not the window) */
 .content-body {
   container-type: inline-size;

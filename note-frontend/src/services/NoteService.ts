@@ -36,6 +36,10 @@ declare global {
         getAllFolders: (userId?: number) => Promise<Folder[]>,
         deleteFolder: (folder: Folder | number) => Promise<any>,
       },
+      images: {
+        /** Stores a picture for a note; `url` is the mynotion-image:// link to put in the note. */
+        save: (bytes: Uint8Array) => Promise<{ ok: true; id: number; url: string } | { ok: false; error: string }>,
+      },
       window: {
         minimizeWindow: () => Promise<void>,
         maximizeWindow: () => Promise<void>,

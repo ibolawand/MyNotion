@@ -19,6 +19,10 @@ Gebaut mit **Electron**, **Angular 20** und dem Editor **TipTap**.
 - **Tab** wie in Word: rückt in Listen und To-dos eine Ebene ein, sonst ein Tabulator; Shift+Tab macht es rückgängig
 - **Suchen & Ersetzen** in der offenen Notiz: Strg+F sucht (alle Treffer markiert, Enter/Shift+Enter springt),
   Strg+H ersetzt einzeln oder alle auf einmal; ein Treffer in einer zugeklappten Aufklappliste klappt sie auf
+- **Bilder**: einfügen (Strg+V, z. B. ein Screenshot), aus dem Dateimanager hineinziehen oder mit `/image` bzw. dem
+  Bild-Knopf auswählen (PNG, JPEG, GIF, WebP). Ecke ziehen zum Vergrößern, links/zentriert/rechts wie andere Blöcke.
+  Bilder liegen in der Datenbank (Tabelle `images`, also auch in den Backups), die Notiz enthält nur einen Link;
+  große Fotos werden auf 2400 px verkleinert, Bilder aus dem Internet werden nicht geladen
 - **Hinweisboxen** (`/callout`): farbige Box für Notiz, Tipp, Wichtig oder Warnung; Klick aufs Symbol wechselt die Art
 - **Aufklapplisten** (`/toggle`): ein Titel, darunter Text zum Ein- und Ausklappen (z. B. Frage und Antwort zum Lernen)
 - **Gliederung**: „Outline“ unten rechts zeigt die Überschriften der Notiz; ein Klick springt hin

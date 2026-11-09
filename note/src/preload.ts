@@ -27,6 +27,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
         createCategory: (category: Category | string) => ipcRenderer.invoke('createCategory', category),
         deleteCategory: (categoryid: number) => ipcRenderer.invoke('deleteCategory', categoryid),
     },
+    // pictures in notes: stored in the database, the note keeps the link it gets back
+    images: {
+        save: (bytes: Uint8Array): Promise<{ ok: true; id: number; url: string } | { ok: false; error: string }> =>
+            ipcRenderer.invoke('image:save', bytes),
+    },
     calendar: {
         getAllEvents: (userId: number) => ipcRenderer.invoke('getAllEvents', userId),
         createEvent: (event: CalendarEvent ) => ipcRenderer.invoke('createEvent', event),

@@ -41,6 +41,10 @@
         <svg viewBox="0 0 24 24"><path d="m8 7-5 5 5 5M16 7l5 5-5 5"/></svg>
       </button>
       <button class="tool math-tool" (click)="insertMath()" title="Formula (type $$x^2$$)" aria-label="Insert formula">∑</button>
+      <button class="tool" (click)="pickImage()" title="Picture (or paste / drop one into the note)" aria-label="Insert picture">
+        <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="1.6"/><path d="m21 16-5-5-9 9"/></svg>
+      </button>
+      <input #imageInput type="file" hidden multiple [accept]="imageTypes" (change)="onImagePicked(imageInput)">
       <button class="tool" (click)="run(divider)" title="Divider (type ---)" aria-label="Divider">
         <svg viewBox="0 0 24 24"><path d="M3 12h18"/></svg>
       </button>
@@ -329,6 +333,9 @@
     <span>{{ words }} {{ words === 1 ? 'word' : 'words' }}</span>
     @if (words > 0) {
       <span>{{ readingTime }}</span>
+    }
+    @if (imageNote) {
+      <span class="footer-note" role="status">{{ imageNote }}</span>
     }
     <span class="footer-tip">Type / for blocks, Ctrl+F to find</span>
     <button class="outline-toggle" [class.on]="outlineOn" (click)="toggleOutline()" [attr.aria-pressed]="outlineOn"

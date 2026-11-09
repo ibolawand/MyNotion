@@ -19,6 +19,7 @@ import { Details, DetailsContent, DetailsSummary } from '@tiptap/extension-detai
 import { Callout } from './callout';
 import { FindReplace, findState } from './find';
 import { OutlineItem, activeHeading, outlineOf } from './outline';
+import { ACCEPTED, NoteImage, imageFiles, prepareImage } from './note-image';
 import katex from 'katex';
 import { DueDates } from './due-dates';
 import { KINDS, MAX_SIZE, Matrix, MatrixKind, OPS, blankMatrix, chainToLatex, findMatrices, fromChain, resize, trimmed } from './matrix';
@@ -66,6 +67,10 @@ const SLASH_ITEMS: SlashItem[] = [
   { id: 'toggle', label: 'Toggle', description: 'A title that folds the text under it away (good for practice questions)',
     hint: '', keywords: 'toggle fold collapse details hide spoiler question answer',
     run: e => { e.chain().focus().setDetails().run(); openToggleAtCursor(e); } },
+  // (opens the file picker: see chooseSlash)
+  { id: 'image', label: 'Image', description: 'A picture from your computer (or paste / drop one straight in)', hint: '',
+    keywords: 'image picture photo screenshot img upload',
+    run: () => {} },
   { id: 'divider', label: 'Divider', description: 'A line between sections', hint: '---', keywords: 'hr rule separator line',
     run: e => e.chain().focus().setHorizontalRule().run() },
   { id: 'date', label: 'Today\'s date', description: 'Inserts the date', hint: '', keywords: 'date today time now',
@@ -208,6 +213,11 @@ export class TextEditor implements OnInit, OnDestroy {
         Details.configure({ persist: true, HTMLAttributes: { class: 'toggle' } }),
         DetailsSummary,
         DetailsContent,
+        // pictures: pasted, dropped or picked; resized by a corner (the picture is stored by the app, see note-image.ts)
+        NoteImage.configure({
+          resize: { enabled: true, directions: ['bottom-right', 'bottom-left', 'top-right', 'top-left'],
+                    minWidth: 60, minHeight: 40, alwaysPreserveAspectRatio: true },
+        }),
         // formulas: $$x^2$$ inline, $$$…$$$ as a block; click one to edit it in the formula box
         // (configured one by one: the combined Mathematics extension gives blocks the inline options, so a block
         // formula came out small instead of in display size)
@@ -232,6 +242,22 @@ export class TextEditor implements OnInit, OnDestroy {
       editorProps: {
         attributes: { class: 'tiptap-editor-content', spellcheck: 'true' },
         handleKeyDown: (_view, event) => this.onEditorKey(event),
+        // a picture pasted (a screenshot) or dropped in from the file manager goes into the note
+        handlePaste: (_view, event) => {
+          const files = imageFiles(event.clipboardData?.files);
+          if (!files.length) return false;
+          event.preventDefault();
+          this.zone.run(() => this.addImages(files));
+          return true;
+        },
+        handleDrop: (view, event, _slice, moved) => {
+          const files = moved ? [] : imageFiles((event as DragEvent).dataTransfer?.files);
+          if (!files.length) return false;
+          event.preventDefault();
+          const at = view.posAtCoords({ left: (event as DragEvent).clientX, top: (event as DragEvent).clientY })?.pos;
+          this.zone.run(() => this.addImages(files, at));
+          return true;
+        },
       },
       onUpdate: ({ editor }) => {
         this.updateSlash();
@@ -406,6 +432,7 @@ export class TextEditor implements OnInit, OnDestroy {
     item.run(this.editor);
     this.closeSlash();
     if (item.id === 'math' || item.id === 'mathblock') this.openNewMath(item.id === 'math' ? 'inline' : 'block');
+    if (item.id === 'image') this.pickImage();
     if (item.id === 'matrix') this.openGrid([blankMatrix(2, 2)], [], 'block', this.editor.state.selection.from, true);
   }
 
@@ -604,7 +631,7 @@ export class TextEditor implements OnInit, OnDestroy {
   /** Toolbar: left / centre / right for the line the cursor is in (or a selected formula on its own line). */
   setAlign(align: Align) {
     const sel = this.editor.state.selection;
-    if (sel instanceof NodeSelection && sel.node.type.name === 'blockMath') {
+    if (sel instanceof NodeSelection && ['blockMath', 'image'].includes(sel.node.type.name)) {
       this.editor.view.dispatch(this.editor.state.tr.setNodeAttribute(sel.from, 'align', align));
     } else {
       this.editor.chain().focus().setTextAlign(align).run();
@@ -613,7 +640,7 @@ export class TextEditor implements OnInit, OnDestroy {
 
   alignActive(align: Align): boolean {
     const sel = this.editor?.state.selection;
-    if (sel instanceof NodeSelection && sel.node.type.name === 'blockMath') return (sel.node.attrs['align'] || 'left') === align;
+    if (sel instanceof NodeSelection && ['blockMath', 'image'].includes(sel.node.type.name)) return (sel.node.attrs['align'] || 'left') === align;
     const set = ['center', 'right'].find(a => this.editor?.isActive({ textAlign: a }));
     return (set ?? 'left') === align;
   }
@@ -953,6 +980,73 @@ export class TextEditor implements OnInit, OnDestroy {
       const r = hit.getBoundingClientRect(), box = scroller.getBoundingClientRect();
       if (r.top < box.top + 40 || r.bottom > box.bottom - 40) scroller.scrollTop += r.top - box.top - box.height / 2;
     }, 0);
+  }
+
+  // ── pictures ──
+
+  @ViewChild('imageInput') imageInput?: ElementRef<HTMLInputElement>;
+  readonly imageTypes = ACCEPTED.join(',');
+  imageNote = '';                  // "Adding picture…" or what went wrong, shown in the footer
+  private imageNoteTimer?: ReturnType<typeof setTimeout>;
+
+  /** Toolbar picture button and /image: the file picker. */
+  pickImage() {
+    const input = this.imageInput?.nativeElement;
+    if (!input) return;
+    input.value = '';
+    input.click();
+  }
+
+  onImagePicked(input: HTMLInputElement) {
+    const files = imageFiles(input.files);
+    if (files.length) this.addImages(files);
+    else if (input.files?.length) this.say('Only PNG, JPEG, GIF and WebP pictures can go into a note.');
+  }
+
+  /** Stores the pictures and puts them in the note at `at` (default: the cursor), one after the other. */
+  async addImages(files: File[], at?: number) {
+    if (!this.currentNote) return;
+    const noteId = this.currentNote.id;
+    this.say(files.length > 1 ? `Adding ${files.length} pictures…` : 'Adding picture…', false);
+    let pos = at ?? this.editor.state.selection.from;
+    let failed = '';
+    for (const file of files) {
+      try {
+        const saved = await window.electronAPI.images.save(await prepareImage(file));
+        if (!saved.ok) { failed = saved.error; continue; }
+        if (this.currentNote?.id !== noteId) return;        // switched notes meanwhile: don't put it in the other one
+        const before = this.editor.state.doc.content.size;
+        this.editor.chain().focus().insertContentAt(Math.min(pos, before), { type: 'image', attrs: { src: saved.url, alt: file.name } }).run();
+        pos = this.cursorAfterImage();                       // typing goes under it (not over it); the next one goes there
+      } catch {
+        failed = 'The picture could not be added.';
+      }
+    }
+    this.say(failed);
+  }
+
+  /** After a picture goes in it is selected, so the next key would replace it: the cursor moves to the line under
+   *  it instead: an empty line there, or a new one (so what you type isn't glued to the next line). */
+  private cursorAfterImage(): number {
+    const { state } = this.editor;
+    const sel = state.selection;
+    const img = sel instanceof NodeSelection && sel.node.type.name === 'image' ? sel : null;
+    if (!img) return sel.to;
+    const end = img.from + img.node.nodeSize;
+    const next = state.doc.resolve(end).nodeAfter;
+    if (next?.isTextblock && next.content.size === 0) {        // an empty line is already there
+      this.editor.commands.setTextSelection(end + 1);
+    } else {
+      this.editor.chain().insertContentAt(end, { type: 'paragraph' }).setTextSelection(end + 1).run();
+    }
+    return this.editor.state.selection.from;
+  }
+
+  /** A short line in the footer (gone after a few seconds unless `stay`). */
+  private say(text: string, fade = true) {
+    clearTimeout(this.imageNoteTimer);
+    this.imageNote = text;
+    if (text && fade) this.imageNoteTimer = setTimeout(() => (this.imageNote = ''), 6000);
   }
 
   // ── outline ──

@@ -131,3 +131,57 @@
 @media (prefers-reduced-motion: reduce) {
   ::ng-deep .tiptap-editor-content div[data-type="details"] > button::before { transition: none; }
 }
+
+/* ── pictures: drag a corner to resize; left / centre / right like the other blocks ── */
+
+::ng-deep .tiptap-editor-content .note-image {
+  margin: 0.9em 0;
+}
+
+::ng-deep .tiptap-editor-content .note-image img {
+  display: block;
+  max-width: 100%;
+  height: auto !important;          /* a picture wider than the page shrinks with it, keeping its shape */
+  border-radius: 8px;
+}
+
+::ng-deep .tiptap-editor-content .note-image [data-resize-wrapper] { max-width: 100%; }
+
+::ng-deep .tiptap-editor-content .note-image.ProseMirror-selectednode img,
+::ng-deep .tiptap-editor-content .note-image [data-resize-state="true"] img {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+::ng-deep .tiptap-editor-content .note-image [data-resize-handle] {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  background: var(--accent);
+  border: 2px solid var(--page);
+  opacity: 0;
+  transition: opacity 0.12s ease;
+  z-index: 2;
+}
+
+::ng-deep .tiptap-editor-content .note-image [data-resize-handle="top-left"] { top: -6px; left: -6px; cursor: nwse-resize; }
+::ng-deep .tiptap-editor-content .note-image [data-resize-handle="top-right"] { top: -6px; right: -6px; cursor: nesw-resize; }
+::ng-deep .tiptap-editor-content .note-image [data-resize-handle="bottom-left"] { bottom: -6px; left: -6px; cursor: nesw-resize; }
+::ng-deep .tiptap-editor-content .note-image [data-resize-handle="bottom-right"] { bottom: -6px; right: -6px; cursor: nwse-resize; }
+
+::ng-deep .tiptap-editor-content .note-image:hover [data-resize-handle],
+::ng-deep .tiptap-editor-content .note-image.ProseMirror-selectednode [data-resize-handle],
+::ng-deep .tiptap-editor-content .note-image [data-resize-state="true"] [data-resize-handle] { opacity: 1; }
+
+::ng-deep .tiptap-editor-content .note-image.missing img {
+  min-width: 220px;
+  min-height: 60px;
+  padding: 18px;
+  border: 1px dashed rgba(255, 255, 255, 0.2);
+  color: var(--faint);
+  font: 13px var(--sans);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::ng-deep .tiptap-editor-content .note-image [data-resize-handle] { transition: none; }
+}
