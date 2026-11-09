@@ -187,6 +187,15 @@
 .matrix-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .matrix-kinds { display: flex; gap: 4px; }
 .matrix-size { color: var(--faint); font-size: 12px; font-variant-numeric: tabular-nums; }
+.matrix-bar { display: flex; align-items: center; gap: 6px; margin-left: auto; color: var(--muted); font-size: 12px; }
+.matrix-bar select {
+  height: 26px; padding: 0 6px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--page); color: var(--ink); font: 12px var(--sans); cursor: pointer;
+}
+.matrix-bar select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.matrix-bar select:disabled { opacity: 0.45; cursor: default; }
+/* the line itself, drawn in the gap after that column */
+.matrix-cell.bar-after { box-shadow: 3px 0 0 -1px var(--accent); }
 
 .matrix-kinds button, .matrix-steps button, .matrix-latex {
   height: 28px;
@@ -282,3 +291,6 @@
 .math-box.dragging, .matrix-box.dragging { cursor: grabbing; user-select: none; box-shadow: 0 24px 56px rgba(5, 7, 18, 0.7); }
 .dragging .box-grip { cursor: grabbing; }
 .dragging .box-grip span { background: var(--accent); }
+
+/* formula-box buttons whose label is drawn by KaTeX (v with an arrow, AB with an arrow, ≠) */
+.snippet-face { font-size: 13px; line-height: 1; pointer-events: none; }

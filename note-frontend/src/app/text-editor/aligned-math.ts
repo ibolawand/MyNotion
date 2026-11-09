@@ -30,12 +30,16 @@ export const AlignedBlockMath = BlockMath.extend({
       const view: any = parent(props);
       const show = (node: any) => ((view.dom as HTMLElement).dataset['align'] = node.attrs.align || 'left');
       show(props.node);
+      // the stock view has no update(): the editor then draws a changed formula anew, and so must this one
+      // (saying "up to date" here kept showing the old formula after an edit until the note was reopened)
       const update = view.update?.bind(view);
-      view.update = (node: any, ...rest: any[]) => {
-        const ok = update ? update(node, ...rest) : node.type === props.node.type;
-        if (ok) show(node);
-        return ok;
-      };
+      if (update) {
+        view.update = (node: any, ...rest: any[]) => {
+          const ok = update(node, ...rest);
+          if (ok) show(node);
+          return ok;
+        };
+      }
       return view;
     };
   },

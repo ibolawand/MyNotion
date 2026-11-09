@@ -29,4 +29,13 @@ describe('alignment', () => {
     editor.chain().setTextSelection(2).setTextAlign('center').run();
     expect(editor.getHTML()).toContain('<h2 style="text-align: center;">Title</h2>');
   });
+
+  it('an edited formula shows the new formula right away (not only after reopening the note)', () => {
+    make('<div data-type="block-math" data-latex="x^2" data-align="center"></div>');
+    editor.commands.updateBlockMath({ pos: 0, latex: 'y^3' });
+    const shown = editor.view.dom.querySelector('[data-type="block-math"]') as HTMLElement;
+    expect(shown.textContent).toContain('y');
+    expect(shown.textContent).not.toContain('x');
+    expect(shown.dataset['align']).toBe('center');
+  });
 });

@@ -1,4 +1,5 @@
-import { Component, OnInit, OnDestroy, ElementRef, HostListener, ViewChild, NgZone, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, ElementRef, HostListener, ViewChild, NgZone, ChangeDetectorRef, inject } from '@angular/core';
+import { DomSanitizer } from '@angular/platform-browser';
 import { NoteService } from '../../services/NoteService';
 import { FormsModule } from '@angular/forms';
 import { Subscription } from 'rxjs';
@@ -22,7 +23,7 @@ import { OutlineItem, activeHeading, outlineOf } from './outline';
 import { ACCEPTED, NoteImage, imageFiles, prepareImage } from './note-image';
 import katex from 'katex';
 import { DueDates } from './due-dates';
-import { KINDS, MAX_SIZE, Matrix, MatrixKind, OPS, blankMatrix, chainToLatex, findMatrices, fromChain, resize, trimmed } from './matrix';
+import { KINDS, MAX_SIZE, Matrix, MatrixKind, OPS, blankMatrix, chainToLatex, findMatrices, fromChain, resize, setBar, trimmed } from './matrix';
 import { TiptapEditorDirective, TiptapBubbleMenuDirective } from 'ngx-tiptap';
 
 /** One entry of the "/" menu. `hint` is the Markdown shortcut that does the same while typing. */
@@ -71,6 +72,9 @@ const SLASH_ITEMS: SlashItem[] = [
   { id: 'image', label: 'Image', description: 'A picture from your computer (or paste / drop one straight in)', hint: '',
     keywords: 'image picture photo screenshot img upload',
     run: () => {} },
+  { id: 'vector', label: 'Vector', description: 'A column vector, filled in box by box', hint: '',
+    keywords: 'vector vektor column arrow',
+    run: () => {} },
   { id: 'divider', label: 'Divider', description: 'A line between sections', hint: '---', keywords: 'hr rule separator line',
     run: e => e.chain().focus().setHorizontalRule().run() },
   { id: 'date', label: 'Today\'s date', description: 'Inserts the date', hint: '', keywords: 'date today time now',
@@ -100,12 +104,16 @@ interface GridTarget { math: MathState; at: number; end: number; }
 
 /** One-click pieces for the formula box, so nobody has to remember LaTeX. `at`/`sel`: the placeholder that gets
  *  selected, so typing replaces it (\frac{a}{b}: the "a"). */
-export const MATH_SNIPPETS: { label: string; tex: string; at?: number; sel?: number }[] = [
+/** `face`: draw the button's label with KaTeX (for symbols the UI font can't show, like the arrow over v). */
+export const MATH_SNIPPETS: { label: string; tex: string; at?: number; sel?: number; face?: string }[] = [
   { label: 'x²', tex: '^{2}', at: 2, sel: 1 }, { label: 'xₙ', tex: '_{n}', at: 2, sel: 1 },
   { label: 'a/b', tex: '\\frac{a}{b}', at: 6, sel: 1 }, { label: '√', tex: '\\sqrt{x}', at: 6, sel: 1 }, { label: 'Σ', tex: '\\sum_{i=1}^{n} ' }, { label: '∫', tex: '\\int_{a}^{b} ' },
   { label: 'lim', tex: '\\lim_{x \\to \\infty} ' }, { label: '·', tex: '\\cdot ' }, { label: '≤', tex: '\\le ' },
-  { label: '≠', tex: '\\neq ' }, { label: '±', tex: '\\pm ' }, { label: '→', tex: '\\to ' }, { label: '∞', tex: '\\infty' },
+  { label: '≠', tex: '\\neq ', face: '\\neq' }, { label: '±', tex: '\\pm ' }, { label: '→', tex: '\\to ' }, { label: '∞', tex: '\\infty' },
   { label: 'α', tex: '\\alpha' }, { label: 'β', tex: '\\beta' }, { label: 'π', tex: '\\pi' }, { label: 'θ', tex: '\\theta' },
+  { label: 'Vector v', tex: '\\vec{v}', at: 5, sel: 1, face: '\\vec{v}' },
+  { label: 'Vector from A to B', tex: '\\overrightarrow{AB}', at: 16, sel: 2, face: '\\overrightarrow{AB}' },
+  { label: 'Length of a vector', tex: '\\left| \\vec{v} \\right|', at: 12, sel: 1, face: '|\\vec{v}|' },
   { label: 'Δ', tex: '\\Delta ' }, { label: 'λ', tex: '\\lambda' }, { label: 'μ', tex: '\\mu' }, { label: 'Ω', tex: '\\Omega' },
 ];
 
@@ -126,6 +134,10 @@ export class TextEditor implements OnInit, OnDestroy {
   math: MathState | null = null;
   mathError = '';
   readonly mathSnippets = MATH_SNIPPETS;
+  /** KaTeX-drawn button labels (our own fixed formulas, so they're trusted as HTML) */
+  private readonly sanitizer = inject(DomSanitizer);   // (inject: fields are set up before the constructor runs)
+  readonly snippetFaces = new Map(MATH_SNIPPETS.filter(sn => sn.face).map(sn =>
+    [sn.label, this.sanitizer.bypassSecurityTrustHtml(katex.renderToString(sn.face!, { throwOnError: false }))]));
 
   // the matrix box: a grid of boxes for one matrix. `into`: opened from the formula box, so the matrix goes
   // back into that formula (A = …) at `at` instead of becoming a formula of its own
@@ -433,6 +445,7 @@ export class TextEditor implements OnInit, OnDestroy {
     this.closeSlash();
     if (item.id === 'math' || item.id === 'mathblock') this.openNewMath(item.id === 'math' ? 'inline' : 'block');
     if (item.id === 'image') this.pickImage();
+    if (item.id === 'vector') this.openGrid([blankMatrix(3, 1)], [], 'block', this.editor.state.selection.from, true);
     if (item.id === 'matrix') this.openGrid([blankMatrix(2, 2)], [], 'block', this.editor.state.selection.from, true);
   }
 
@@ -561,11 +574,10 @@ export class TextEditor implements OnInit, OnDestroy {
     const end = input.selectionEnd ?? start;
     this.math.latex = this.math.latex.slice(0, start) + sn.tex + this.math.latex.slice(end);
     const cursor = start + (sn.at ?? sn.tex.length);
-    setTimeout(() => {
-      input.focus();
-      input.setSelectionRange(cursor, cursor + (sn.sel ?? 0));
-      this.renderMathPreview();
-    }, 0);
+    input.value = this.math.latex;     // in the box now (ngModel would only write it a moment later), so the
+    input.focus();                     // placeholder can be selected right away
+    input.setSelectionRange(cursor, cursor + (sn.sel ?? 0));   // typing replaces it (the "a" of a/b, the "v" of v⃗)
+    this.renderMathPreview();
   }
 
   saveMath() {
@@ -677,12 +689,12 @@ export class TextEditor implements OnInit, OnDestroy {
   }
 
   /** The formula box's Matrix button: build one in the grid, then it goes into the formula at the cursor. */
-  matrixFromMathBox() {
+  matrixFromMathBox(rows = 2, cols = 2) {
     const m = this.math, input = this.mathInput?.nativeElement;
     if (!m) return;
     const at = input?.selectionStart ?? m.latex.length;
     this.math = null;
-    this.openGrid([blankMatrix(2, 2)], [], m.type, m.pos, m.isNew, { math: m, at, end: input?.selectionEnd ?? at });
+    this.openGrid([blankMatrix(rows, cols)], [], m.type, m.pos, m.isNew, { math: m, at, end: input?.selectionEnd ?? at });
   }
 
   /** "Matrix 2" in the formula box: that one matrix in the grid; the rest of the formula stays as it is. */
@@ -703,6 +715,17 @@ export class TextEditor implements OnInit, OnDestroy {
     if (!this.grid) return;
     this.setGm({ ...this.gm, kind });
     this.renderGridPreview();
+  }
+
+  /** The vertical line: after which column (0 = none). */
+  setGridBar(after: number) {
+    if (!this.grid) return;
+    this.setGm(setBar(this.gm, after || undefined));
+    this.renderGridPreview();
+  }
+
+  get barChoices(): number[] {
+    return Array.from({ length: Math.max(0, this.gridCols - 1) }, (_, i) => i + 1);
   }
 
   resizeGrid(rows: number, cols: number) {

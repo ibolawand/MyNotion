@@ -213,9 +213,12 @@
       }
       <div class="math-snippets" aria-label="Insert">
         @for (sn of mathSnippets; track sn.label) {
-          <button type="button" (click)="addSnippet(sn)" [title]="sn.tex.trim()">{{ sn.label }}</button>
+          <button type="button" (mousedown)="$event.preventDefault()" (click)="addSnippet(sn)" [title]="sn.tex.trim()" [attr.aria-label]="sn.label">
+            @if (snippetFaces.get(sn.label); as face) { <span class="snippet-face" [innerHTML]="face"></span> } @else { {{ sn.label }} }
+          </button>
         }
         <button type="button" class="matrix-snippet" (click)="matrixFromMathBox()" title="A new matrix, filled in box by box">+ Matrix</button>
+        <button type="button" class="matrix-snippet" (click)="matrixFromMathBox(3, 1)" title="A new column vector, filled in box by box">+ Vector</button>
       </div>
       @if (mathMatrices.length) {
         <div class="math-matrices" aria-label="Edit a matrix in this formula">
@@ -273,6 +276,15 @@
               (click)="setKind(k.kind)" [title]="k.title">{{ k.label }}</button>
           }
         </div>
+        <label class="matrix-bar" title="A vertical line between two columns (e.g. Sarrus, or an augmented matrix)">
+          <span>Line</span>
+          <select (change)="setGridBar(+$any($event.target).value)" [disabled]="gridCols < 2" aria-label="Vertical line after column">
+            <option value="0" [selected]="!gm.bar">none</option>
+            @for (c of barChoices; track c) {
+              <option [value]="c" [selected]="gm.bar === c">after column {{ c }}</option>
+            }
+          </select>
+        </label>
         <span class="matrix-size">{{ gridRows }} × {{ gridCols }}</span>
         @if (grid.items.length > 1) {
           <button type="button" class="matrix-remove" (click)="removeMatrix()" title="Remove this matrix">Remove</button>
@@ -282,7 +294,7 @@
         <div class="matrix-grid" [style.grid-template-columns]="'repeat(' + gridCols + ', 64px)'">
           @for (row of gm.cells; track $index; let r = $index) {
             @for (cell of row; track $index; let c = $index) {
-              <input class="matrix-cell" [attr.data-r]="r" [attr.data-c]="c" [value]="cell" spellcheck="false"
+              <input class="matrix-cell" [class.bar-after]="gm.bar === c + 1" [attr.data-r]="r" [attr.data-c]="c" [value]="cell" spellcheck="false"
                 (input)="setCell(r, c, $any($event.target).value)" (keydown)="onGridKey($event, r, c)"
                 [attr.aria-label]="'Row ' + (r + 1) + ', column ' + (c + 1)">
             }

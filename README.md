@@ -14,6 +14,9 @@ Gebaut mit **Electron**, **Angular 20** und dem Editor **TipTap**.
   + − · × =), „In the text" oder „Own line" bestimmt, ob Text daneben stehen kann. In der Formel-Box fügt „+ Matrix"
   eine Matrix an der Cursorstelle ein, und „Matrix 1, 2 …" bearbeitet eine Matrix aus einer Formel wie A = … im Raster
   (die Formel- und die Matrix-Box lassen sich am Griff oben verschieben und bleiben dann dort)
+  „Line“ setzt einen senkrechten Strich nach einer Spalte (z. B. Sarrus 3 | 2 oder eine erweiterte Matrix)
+- **Vektoren**: `/vector` öffnet das Raster als Spaltenvektor (3 × 1); in der Formel-Box gibt es „+ Vector“ und Knöpfe
+  für v⃗, AB⃗ und |v⃗|. Skalar- und Kreuzprodukt mit · und × zwischen den Vektoren im Raster
 - **Ausrichtung** pro Zeile: links, zentriert oder rechts für Text, Überschriften und Formeln auf eigener Zeile
   (Knöpfe in der Werkzeugleiste und in der Formel-/Matrix-Box); alles beginnt links
 - **Tab** wie in Word: rückt in Listen und To-dos eine Ebene ein, sonst ein Tabulator; Shift+Tab macht es rückgängig

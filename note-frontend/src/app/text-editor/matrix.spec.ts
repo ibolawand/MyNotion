@@ -1,4 +1,4 @@
-import { blankMatrix, chainToLatex, findMatrices, fromChain, fromLatex, resize, toLatex, trimmed } from './matrix';
+import { blankMatrix, chainToLatex, findMatrices, fromChain, fromLatex, resize, setBar, toLatex, trimmed } from './matrix';
 
 describe('matrix', () => {
   it('writes a grid as LaTeX', () => {
@@ -75,5 +75,42 @@ describe('matrix', () => {
     expect(fromChain('\\begin{pmatrix} 1 \\end{pmatrix} + 3')).toBeNull();
     expect(fromChain('\\begin{pmatrix} 1 \\end{pmatrix} \\begin{pmatrix} 1 \\end{pmatrix}')).toBeNull();
     expect(fromChain('x^2')).toBeNull();
+  });
+
+  describe('a line between columns', () => {
+    const sarrus = { kind: 'vmatrix' as const, bar: 3, cells: [['a', 'b', 'c', 'a', 'b'], ['d', 'e', 'f', 'd', 'e'], ['g', 'h', 'i', 'g', 'h']] };
+
+    it('is written as an array with | in the column spec, with the right brackets', () => {
+      expect(toLatex(sarrus)).toBe('\\left| \\begin{array}{ccc|cc} a & b & c & a & b \\\\ d & e & f & d & e \\\\ g & h & i & g & h \\end{array} \\right|');
+      expect(toLatex({ kind: 'pmatrix', bar: 2, cells: [['1', '2', '3']] })).toBe('\\left( \\begin{array}{cc|c} 1 & 2 & 3 \\end{array} \\right)');
+      expect(toLatex({ kind: 'bmatrix', bar: 1, cells: [['1', '2']] })).toContain('\\left[');
+    });
+
+    it('reads back into the grid with the line where it was', () => {
+      expect(fromLatex(toLatex(sarrus))).toEqual(sarrus);
+      expect(fromLatex('\\left( \\begin{array}{cc} 1 & 2 \\end{array} \\right)')).toEqual({ kind: 'pmatrix', cells: [['1', '2']] });
+      expect(fromLatex('\\left( \\begin{array}{c|c} 1 & 2 & 3 \\end{array} \\right)')).toBeNull();     // spec doesn't fit the cells
+      expect(fromLatex('\\left( \\begin{array}{c|c} 1 & 2 \\end{array} \\right]')).toBeNull();         // brackets don't match
+    });
+
+    it('stays only where it divides columns, through resizing and trimming', () => {
+      expect(setBar(blankMatrix(2, 3), 2).bar).toBe(2);
+      expect(setBar(blankMatrix(2, 3), 3).bar).toBeUndefined();
+      expect(setBar(blankMatrix(2, 3), 0).bar).toBeUndefined();
+      expect(resize(setBar(blankMatrix(2, 3), 2), 2, 5).bar).toBe(2);
+      expect(resize(setBar(blankMatrix(2, 3), 2), 2, 2).bar).toBeUndefined();
+      expect(trimmed({ kind: 'pmatrix', bar: 2, cells: [['1', '2', '']] }).bar).toBeUndefined();
+    });
+
+    it('is found inside a bigger formula and in chains', () => {
+      const f = 'A \\Rightarrow \\det(A) = ' + toLatex(sarrus);
+      const [found] = findMatrices(f);
+      expect(found.m).toEqual(sarrus);
+      expect(f.slice(found.end)).toBe('');
+      expect(f.slice(found.start)).toBe(toLatex(sarrus));
+      const plain = { kind: 'pmatrix' as const, cells: [['1']] };
+      expect(fromChain(chainToLatex([sarrus, plain], ['=']))).toEqual({ items: [sarrus, plain], ops: ['='] });
+      expect(findMatrices('\\begin{array}{cc} 1 & 2 \\end{array}')).toEqual([]);         // a plain table isn't a matrix
+    });
   });
 });
