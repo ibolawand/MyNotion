@@ -1,0 +1,11 @@
+<canvas #canvas class="scene-canvas" aria-hidden="true"></canvas>
+@if (mode === 'corner') {
+  <div class="scene-tools">
+    <button type="button" (click)="modeChange.emit('background')" title="Put it behind the note" aria-label="Put the scene behind the note">
+      <svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg>
+    </button>
+    <button type="button" (click)="modeChange.emit('off')" title="Hide the scene" aria-label="Hide the scene">
+      <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></svg>
+    </button>
+  </div>
+}

@@ -1,0 +1,54 @@
+:host { display: block; overflow: hidden; }
+.scene-canvas { display: block; width: 100%; height: 100%; }
+
+/* the small window in the corner */
+:host(.scene-corner) {
+  position: absolute;
+  right: 18px;
+  bottom: 18px;
+  width: 300px;
+  height: 178px;
+  z-index: 25;
+  border-radius: 12px;
+  border: 1px solid rgba(74, 222, 128, 0.28);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+.scene-tools {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+:host(.scene-corner:hover) .scene-tools, .scene-tools:focus-within { opacity: 1; }
+.scene-tools button {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 7px;
+  background: rgba(10, 9, 22, 0.7);
+  color: #e6e6f0;
+  cursor: pointer;
+}
+.scene-tools button:hover { color: #4ade80; border-color: rgba(74, 222, 128, 0.5); }
+.scene-tools button:focus-visible { outline: 2px solid #4ade80; outline-offset: 1px; }
+.scene-tools svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+
+/* behind the note: dimmed, so the text stays easy to read */
+:host(.scene-background) {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+}
+:host(.scene-background)::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(rgba(12, 11, 24, 0.55), rgba(12, 11, 24, 0.7));
+}

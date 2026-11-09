@@ -110,7 +110,10 @@
     </div>
   </tiptap-bubble-menu>
 
-  <div class="editor-main" [class.aria-busy]="ariaEditing">
+  <div class="editor-main" [class.aria-busy]="ariaEditing" [class.scene-behind]="scene === 'background'">
+    @if (scene !== 'off') {
+      <app-study-scene [mode]="scene" (modeChange)="setScene($event)" [class]="'scene-' + scene" />
+    }
     @if (ariaEditing) {
       <div class="aria-editing" role="status"><span class="aria-dot" aria-hidden="true"></span>Aria is editing this note…</div>
     }
@@ -389,6 +392,11 @@
     <span class="footer-tip">Type / for blocks, Ctrl+F to find</span>
     <button class="outline-toggle" (click)="exportPdf()" [disabled]="exporting || !currentNote" title="Save this note as a PDF (to print or hand in)">
       <svg viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 13h6M9 17h4"/></svg>PDF
+    </button>
+    <app-radio-button />
+    <button class="outline-toggle" [class.on]="scene !== 'off'" (click)="nextScene()" [attr.aria-pressed]="scene !== 'off'"
+      [title]="scene === 'off' ? 'Show the study scene in the corner' : scene === 'corner' ? 'Put the study scene behind the note' : 'Hide the study scene'">
+      <svg viewBox="0 0 24 24"><path d="M16 4a7 7 0 1 0 4 12 6 6 0 0 1-4-12z"/><path d="M4 20h16"/></svg>Scene
     </button>
     <button class="outline-toggle" [class.on]="outlineOn" (click)="toggleOutline()" [attr.aria-pressed]="outlineOn"
       [title]="outlineOn ? 'Hide the outline' : 'Show the outline: the headings of this note'">

@@ -1,4 +1,6 @@
 import { Component, OnInit, OnDestroy, ElementRef, HostListener, ViewChild, NgZone, ChangeDetectorRef, inject } from '@angular/core';
+import { SceneMode, StudyScene } from '../study-scene/study-scene';
+import { RadioButton } from '../radio/radio-button';
 import { DomSanitizer } from '@angular/platform-browser';
 import { NoteService } from '../../services/NoteService';
 import { FormsModule } from '@angular/forms';
@@ -106,6 +108,8 @@ function openToggleAtCursor(e: Editor) {
 
 const FONT_KEY = 'mynotion.editorFont';
 const OUTLINE_KEY = 'mynotion.outline';
+const SCENE_KEY = 'mynotion.scene';
+const SCENE_NEXT: Record<SceneMode, SceneMode> = { off: 'corner', corner: 'background', background: 'off' };
 
 /** The formula box: editing one inline or block formula. */
 interface MathState { type: 'inline' | 'block'; pos: number; latex: string; original: string; isNew: boolean; top: number; left: number;
@@ -131,7 +135,7 @@ export const MATH_SNIPPETS: { label: string; tex: string; at?: number; sel?: num
 @Component({
   selector: 'text-editor',
   standalone: true,
-  imports: [FormsModule, TiptapEditorDirective, TiptapBubbleMenuDirective],
+  imports: [FormsModule, TiptapEditorDirective, TiptapBubbleMenuDirective, StudyScene, RadioButton],
   templateUrl: './text-editor.html',
   styleUrls: ['./text-editor.css', './note-content.css', './math.css', './blocks.css', './page-tools.css', './tables.css']
 })
@@ -202,6 +206,8 @@ export class TextEditor implements OnInit, OnDestroy {
   outlineOn = false;
   outlineActive = -1;
 
+  scene: SceneMode = 'off';
+
   // Aria reworking this note ("organise this note"): it's locked meanwhile, so nothing typed gets lost
   ariaEditing = false;
   private ariaTimer?: ReturnType<typeof setTimeout>;
@@ -220,6 +226,8 @@ export class TextEditor implements OnInit, OnDestroy {
     try {
       this.font = localStorage.getItem(FONT_KEY) === 'sans' ? 'sans' : 'serif';
       this.outlineOn = localStorage.getItem(OUTLINE_KEY) === 'on';
+      const scene = localStorage.getItem(SCENE_KEY);
+      if (scene === 'corner' || scene === 'background') this.scene = scene;
     } catch { /* storage unavailable: keep the default */ }
 
     this.editor = new Editor({
@@ -1264,6 +1272,16 @@ export class TextEditor implements OnInit, OnDestroy {
       next.every((h, i) => h.text === this.outline[i].text && h.level === this.outline[i].level && h.pos === this.outline[i].pos);
     if (!same) this.outline = next;
     if (this.outlineOn) setTimeout(() => this.onPageScroll(), 0);
+  }
+
+  /** The study scene: off → small window in the corner → behind the note → off. */
+  setScene(mode: SceneMode) {
+    this.scene = mode;
+    try { localStorage.setItem(SCENE_KEY, mode); } catch { /* not saved, fine */ }
+  }
+
+  nextScene() {
+    this.setScene(SCENE_NEXT[this.scene]);
   }
 
   toggleOutline() {

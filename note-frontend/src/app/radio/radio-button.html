@@ -1,0 +1,36 @@
+<div class="radio" [class.on]="radio.playing">
+  <button type="button" class="play" (click)="radio.toggle()"
+    [attr.aria-label]="radio.playing ? 'Pause the radio' : 'Play ' + radio.station.name"
+    [title]="radio.playing ? 'Pause' : 'Play ' + radio.station.name">
+    @if (radio.state === 'loading') {
+      <span class="spinner" aria-hidden="true"></span>
+    } @else if (radio.playing) {
+      <svg viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></svg>
+    } @else {
+      <svg viewBox="0 0 24 24"><path d="M8 5l11 7-11 7z"/></svg>
+    }
+  </button>
+  <button type="button" class="name" (click)="open = !open" [attr.aria-expanded]="open" aria-haspopup="true"
+    title="Choose a station and the volume">
+    @if (radio.playing) { <span class="bars" aria-hidden="true"><i></i><i></i><i></i></span> }
+    {{ radio.state === 'error' ? "Can't connect" : radio.station.name }}
+  </button>
+
+  @if (open) {
+    <div class="menu" role="menu" aria-label="Radio stations">
+      @for (s of stations; track s.id) {
+        <button type="button" role="menuitemradio" [attr.aria-checked]="s.id === radio.station.id"
+          [class.current]="s.id === radio.station.id" (click)="pick(s)">
+          <span class="station">{{ s.name }}</span><span class="kind">{{ s.kind }}</span>
+        </button>
+      }
+      <label class="volume">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16 9a4 4 0 0 1 0 6"/></svg>
+        <input type="range" min="0" max="100" [value]="radio.volume * 100" (input)="onVolume($event)" aria-label="Volume">
+      </label>
+      @if (radio.state === 'error') {
+        <p class="error">Couldn't reach {{ radio.station.name }}. Check the internet, or try another station.</p>
+      }
+    </div>
+  }
+</div>
