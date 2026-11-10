@@ -14,13 +14,13 @@
 }
 
 ::ng-deep .tiptap-editor-content .tiptap-mathematics-render:hover {
-  background: rgba(74, 222, 128, 0.1);
+  background: var(--accent-soft);
 }
 
 ::ng-deep .tiptap-editor-content span.tiptap-mathematics-render:empty::before,
 ::ng-deep .tiptap-editor-content .tiptap-mathematics-render .katex:empty::before {
   content: "formula";
-  color: var(--faint);
+  color: var(--text-faint);
   font-style: italic;
   font-size: 0.85em;
 }
@@ -45,8 +45,8 @@
 }
 
 ::ng-deep .tiptap-editor-content .ProseMirror-selectednode.tiptap-mathematics-render {
-  background: rgba(74, 222, 128, 0.16);
-  outline: 1px solid rgba(74, 222, 128, 0.4);
+  background: var(--accent-soft);
+  outline: 1px solid var(--accent-line);
 }
 
 .tool.math-tool {
@@ -58,22 +58,24 @@
   font-size: 15px;
 }
 
-.math-box {
+/* the formula box and the matrix box share one floating panel */
+.math-box, .matrix-box {
   position: absolute;
   z-index: 60;
   max-height: calc(100% - 16px);
   overflow-y: auto;
-  width: 370px;
   display: flex;
   flex-direction: column;
   gap: 8px;
   padding: 10px;
   border-radius: 12px;
-  background: var(--raised);
-  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: var(--bg-raised);
+  border: 1px solid var(--line-strong);
   box-shadow: 0 18px 44px rgba(5, 7, 18, 0.6);
   font-family: var(--sans);
 }
+
+.math-box { width: 370px; }
 
 .math-preview {
   min-height: 44px;
@@ -81,14 +83,14 @@
   place-items: center;
   padding: 8px;
   border-radius: 8px;
-  background: var(--page);
-  color: var(--ink-strong);
+  background: var(--bg);
+  color: var(--text-strong);
   overflow-x: auto;
   font-size: 18px;
 }
 
 .math-preview.empty {
-  color: var(--faint);
+  color: var(--text-faint);
   font-size: 13px;
 }
 
@@ -96,9 +98,9 @@
   resize: none;
   padding: 8px 10px;
   border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: var(--page);
-  color: var(--ink);
+  border: 1px solid var(--line-strong);
+  background: var(--bg);
+  color: var(--text);
   font: 13px/1.5 var(--mono);
   outline: none;
 }
@@ -106,7 +108,7 @@
 .math-box textarea:focus { border-color: var(--accent); }
 
 .math-error {
-  color: #fca5a5;
+  color: var(--danger);
   font-size: 12px;
 }
 
@@ -121,14 +123,14 @@
   height: 28px;
   padding: 0 7px;
   border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--ink);
+  border: 1px solid var(--line);
+  background: var(--hover);
+  color: var(--text);
   font: 14px/1 var(--serif);
   cursor: pointer;
 }
 
-.math-snippets button:hover { background: rgba(255, 255, 255, 0.1); }
+.math-snippets button:hover { background: var(--line); }
 .math-snippets button:focus-visible, .math-save:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
 .math-actions {
@@ -139,7 +141,7 @@
 }
 
 .math-hint {
-  color: var(--faint);
+  color: var(--text-3);
   font-size: 12px;
 }
 
@@ -154,8 +156,8 @@
 .math-save {
   padding: 6px 12px;
   border-radius: 7px;
-  border: 1px solid rgba(74, 222, 128, 0.4);
-  background: rgba(74, 222, 128, 0.12);
+  border: 1px solid var(--accent-line);
+  background: var(--accent-soft);
   color: var(--accent);
   font: 600 13px var(--sans);
   cursor: pointer;
@@ -166,31 +168,18 @@
 .math-snippets .matrix-snippet { font: 600 12px/1 var(--sans); }
 
 .matrix-box {
-  position: absolute;
-  z-index: 60;
-  max-height: calc(100% - 16px);
-  overflow-y: auto;
   width: max-content;
   min-width: 330px;
   max-width: min(640px, calc(100% - 20px));
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 10px;
-  border-radius: 12px;
-  background: var(--raised);
-  border: 1px solid rgba(255, 255, 255, 0.09);
-  box-shadow: 0 18px 44px rgba(5, 7, 18, 0.6);
-  font-family: var(--sans);
 }
 
 .matrix-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .matrix-kinds { display: flex; gap: 4px; }
-.matrix-size { color: var(--faint); font-size: 12px; font-variant-numeric: tabular-nums; }
-.matrix-bar { display: flex; align-items: center; gap: 6px; margin-left: auto; color: var(--muted); font-size: 12px; }
+.matrix-size { color: var(--text-3); font-size: 12px; font-variant-numeric: tabular-nums; }
+.matrix-bar { display: flex; align-items: center; gap: 6px; margin-left: auto; color: var(--text-3); font-size: 12px; }
 .matrix-bar select {
-  height: 26px; padding: 0 6px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.08);
-  background: var(--page); color: var(--ink); font: 12px var(--sans); cursor: pointer;
+  height: 26px; padding: 0 6px; border-radius: 6px; border: 1px solid var(--line);
+  background: var(--bg); color: var(--text); font: 12px var(--sans); cursor: pointer;
 }
 .matrix-bar select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .matrix-bar select:disabled { opacity: 0.45; cursor: default; }
@@ -201,18 +190,18 @@
   height: 28px;
   padding: 0 9px;
   border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--ink);
+  border: 1px solid var(--line);
+  background: var(--hover);
+  color: var(--text);
   font: 13px/1 var(--sans);
   cursor: pointer;
 }
 
 .matrix-kinds button { font-family: var(--serif); }
-.matrix-kinds button.on { border-color: rgba(74, 222, 128, 0.45); background: rgba(74, 222, 128, 0.12); color: var(--accent); }
-.matrix-kinds button:hover, .matrix-steps button:hover:not(:disabled), .matrix-latex:hover { background: rgba(255, 255, 255, 0.1); }
+.matrix-kinds button.on { border-color: var(--accent-strong); background: var(--accent-soft); color: var(--accent); }
+.matrix-kinds button:hover, .matrix-steps button:hover:not(:disabled), .matrix-latex:hover { background: var(--line); }
 .matrix-steps button:disabled { opacity: 0.35; cursor: default; }
-.matrix-latex { margin-left: auto; color: var(--muted); }
+.matrix-latex { margin-left: auto; color: var(--text-3); }
 
 .matrix-body { display: flex; align-items: flex-start; gap: 6px; overflow-x: auto; }
 .matrix-grid { display: grid; gap: 4px; }
@@ -224,9 +213,9 @@
   height: 32px;
   padding: 0 6px;
   border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: var(--page);
-  color: var(--ink);
+  border: 1px solid var(--line-strong);
+  background: var(--bg);
+  color: var(--text);
   font: 14px/1 var(--mono);
   text-align: center;
   outline: none;
@@ -242,18 +231,18 @@
 
 .matrix-chain { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
 .matrix-tab, .matrix-add, .matrix-remove, .matrix-place button, .math-matrices button {
-  height: 26px; padding: 0 9px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.04); color: var(--muted); font: 12px/1 var(--sans); cursor: pointer;
+  height: 26px; padding: 0 9px; border-radius: 6px; border: 1px solid var(--line);
+  background: var(--hover); color: var(--text-3); font: 12px/1 var(--sans); cursor: pointer;
 }
-.matrix-tab.on, .matrix-place button.on { border-color: rgba(74, 222, 128, 0.45); background: rgba(74, 222, 128, 0.12); color: var(--accent); }
+.matrix-tab.on, .matrix-place button.on { border-color: var(--accent-strong); background: var(--accent-soft); color: var(--accent); }
 .matrix-add { border-style: dashed; }
-.matrix-tab:hover, .matrix-add:hover, .matrix-remove:hover, .matrix-place button:hover, .math-matrices button:hover { background: rgba(255, 255, 255, 0.1); }
-.matrix-op { height: 26px; padding: 0 4px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.12); background: var(--page); color: var(--ink); font: 15px var(--serif); cursor: pointer; }
-.matrix-op option { background: #262a3d; }
+.matrix-tab:hover, .matrix-add:hover, .matrix-remove:hover, .matrix-place button:hover, .math-matrices button:hover { background: var(--line); }
+.matrix-op { height: 26px; padding: 0 4px; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--bg); color: var(--text); font: 15px var(--serif); cursor: pointer; }
+.matrix-op option { background: var(--bg-raised); }
 .matrix-remove { margin-left: auto; }
 .matrix-size + .matrix-remove { margin-left: 8px; }
 .matrix-place { display: flex; gap: 2px; margin-left: auto; }
-.math-matrices { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; color: var(--faint); font-size: 12px; }
+.math-matrices { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; color: var(--text-3); font-size: 12px; }
 .matrix-tab:focus-visible, .matrix-add:focus-visible, .matrix-remove:focus-visible, .matrix-place button:focus-visible,
 .math-matrices button:focus-visible, .matrix-op:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
@@ -261,11 +250,11 @@
 .matrix-steps.rows .box-align { margin-left: 6px; }
 .box-align .align-btn {
   width: 28px; height: 26px; display: grid; place-items: center; padding: 0; border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.08); background: rgba(255, 255, 255, 0.04); color: var(--muted); cursor: pointer;
+  border: 1px solid var(--line); background: var(--hover); color: var(--text-3); cursor: pointer;
 }
 .box-align .align-btn svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
-.box-align .align-btn.on { border-color: rgba(74, 222, 128, 0.45); background: rgba(74, 222, 128, 0.12); color: var(--accent); }
-.box-align .align-btn:hover { background: rgba(255, 255, 255, 0.1); }
+.box-align .align-btn.on { border-color: var(--accent-strong); background: var(--accent-soft); color: var(--accent); }
+.box-align .align-btn:hover { background: var(--line); }
 .box-align .align-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
 /* ── moving the formula / matrix box: the grip at the top (or its empty edge) ── */
@@ -283,7 +272,7 @@
   width: 36px;
   height: 4px;
   border-radius: 2px;
-  background: rgba(255, 255, 255, 0.16);
+  background: var(--line-strong);
   transition: background 0.12s ease;
 }
 

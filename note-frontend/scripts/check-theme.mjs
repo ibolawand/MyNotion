@@ -14,6 +14,9 @@ const ALLOW = {
   'src/app/calendar/calendar.css': ['#ef4444', '#3b82f6', '#22c55e', '#a855f7'], // the four event colours users pick
   'src/app/inbox/mail-reader.css': ['#fff', '#10131f'], // white mail "paper"; initials on a generated avatar hue
   'src/app/inbox/inbox.css': ['#10131f'], // initials on a generated avatar hue
+  'src/app/text-editor/blocks.css': ['#c084fc'], // the "important" callout tone (content colour)
+  // content colours of the note itself: quote, inline code, code block, highlighter mark
+  'src/app/text-editor/note-content.css': ['#c9ced8', '#f0abfc', '#d6dbe4', '#fde68a'],
 };
 
 const COLOUR = /#[0-9a-fA-F]{3,8}\b|(?:rgba?|hsla?)\([^)]*\)/g;
@@ -73,6 +76,12 @@ function checkContrast(tokens) {
   return failures;
 }
 
+// Near-black colours are shadows, not palette colours.
+function isShadow(v) {
+  const c = v.startsWith('rgb') && rgba(v);
+  return !!c && Math.max(c[0], c[1], c[2]) <= 20;
+}
+
 function literals(file) {
   let css = readFileSync(file, 'utf8');
   if (file === STYLES) css = css.replace(/:root\s*\{[^}]*\}/, (m) => m.replace(/[^\n]/g, ' '));
@@ -82,7 +91,7 @@ function literals(file) {
   css.split('\n').forEach((line, i) => {
     for (const m of line.matchAll(COLOUR)) {
       const v = m[0].toLowerCase().replace(/\s+/g, ' ');
-      if (allowed.has(v) || /^rgba?\(\s*0[ ,]+0[ ,]+0\b/.test(v)) continue; // black = shadows
+      if (allowed.has(v) || isShadow(v)) continue;
       found.push(`${file}:${i + 1}: ${m[0]}`);
     }
   });

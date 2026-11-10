@@ -28,6 +28,7 @@ app-root {
   --hover: rgba(255, 255, 255, 0.05);
 
   /* Text: all reach 4.5:1 on every surface (scripts/check-theme.mjs). --text-faint is never readable text. */
+  --text-strong: #f5f6f8;
   --text: #e4e7eb;
   --text-2: #9ca3af;
   --text-3: #8b93a3;

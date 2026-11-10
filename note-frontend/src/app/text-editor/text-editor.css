@@ -1,17 +1,6 @@
 /* The writing surface. The note text is set in a serif, so the page reads like paper and is
    clearly apart from the sans-serif controls around it ("Aa" in the footer switches it). */
 :host {
-  --page: #1f2233;
-  --raised: #262a3d;
-  --raised-2: #2e3349;
-  --ink: #e4e7eb;
-  --ink-strong: #f5f6f8;
-  --muted: #8b93a3;
-  --faint: #5c6476;
-  --line: rgba(255, 255, 255, 0.07);
-  --accent: #4ade80;
-  --accent-soft: rgba(74, 222, 128, 0.14);
-
   display: flex;
   flex: 1;
   min-height: 0;
@@ -35,7 +24,7 @@
   gap: 2px 8px;
   padding: 7px 26px;    /* same left edge as the title and the text */
   border-bottom: 1px solid var(--line);
-  background: var(--page);
+  background: var(--bg);
 }
 
 .tool-group {
@@ -55,15 +44,15 @@
   background: transparent;
   border: none;
   border-radius: 6px;
-  color: var(--muted);
+  color: var(--text-3);
   font: 600 13px/1 var(--sans);
   cursor: pointer;
   position: relative;
 }
 
 .tool:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.06);
-  color: var(--ink);
+  background: var(--hover);
+  color: var(--text);
 }
 
 .tool.active {
@@ -115,7 +104,7 @@
   width: 10px;
   height: 10px;
   border-radius: 3px;
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  border: 1px solid var(--line-strong);
 }
 
 .mark-tool span {
@@ -126,7 +115,7 @@
 }
 
 .mark-tool.active span {
-  box-shadow: 0 0 0 2px var(--page), 0 0 0 3.5px var(--accent);
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px var(--accent);
 }
 
 /* ── the page ── */
@@ -137,7 +126,7 @@
   overflow-y: auto;
   cursor: text;
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+  scrollbar-color: var(--line-strong) transparent;
 }
 
 .page {
@@ -157,8 +146,8 @@ tiptap-editor {
   gap: 1px;
   padding: 4px;
   border-radius: 9px;
-  background: var(--raised-2);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--bg-overlay);
+  border: 1px solid var(--line-strong);
   box-shadow: 0 10px 28px rgba(5, 7, 18, 0.55);
   font-family: var(--sans);
 }
@@ -170,7 +159,7 @@ tiptap-editor {
   border: none;
   border-radius: 6px;
   background: transparent;
-  color: var(--ink);
+  color: var(--text);
   font: 600 13px/1 var(--sans);
   cursor: pointer;
   display: inline-flex;
@@ -179,7 +168,7 @@ tiptap-editor {
 }
 
 .bubble-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--line);
 }
 
 .bubble-btn.active {
@@ -192,7 +181,7 @@ tiptap-editor {
 }
 
 .bubble-btn.quiet {
-  color: var(--muted);
+  color: var(--text-3);
   font-weight: 500;
 }
 
@@ -218,7 +207,7 @@ tiptap-editor {
   width: 1px;
   height: 18px;
   margin: 0 4px;
-  background: rgba(255, 255, 255, 0.12);
+  background: var(--line-strong);
 }
 
 .link-form {
@@ -232,9 +221,9 @@ tiptap-editor {
   height: 28px;
   padding: 0 10px;
   border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: var(--page);
-  color: var(--ink);
+  border: 1px solid var(--line-strong);
+  background: var(--bg);
+  color: var(--text);
   font: 13px var(--sans);
   outline: none;
 }
@@ -253,12 +242,12 @@ tiptap-editor {
   overflow-y: auto;
   padding: 6px;
   border-radius: 12px;
-  background: var(--raised);
-  border: 1px solid rgba(255, 255, 255, 0.09);
+  background: var(--bg-raised);
+  border: 1px solid var(--line-strong);
   box-shadow: 0 18px 44px rgba(5, 7, 18, 0.6);
   font-family: var(--sans);
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+  scrollbar-color: var(--line-strong) transparent;
   animation: slash-in 0.12s ease-out;
 }
 
@@ -276,14 +265,14 @@ tiptap-editor {
   border: none;
   border-radius: 8px;
   background: transparent;
-  color: var(--ink);
+  color: var(--text);
   text-align: left;
   cursor: pointer;
   font-family: inherit;
 }
 
 .slash-item.selected {
-  background: rgba(255, 255, 255, 0.07);
+  background: var(--line);
 }
 
 .slash-glyph {
@@ -292,9 +281,9 @@ tiptap-editor {
   border-radius: 8px;
   display: grid;
   place-items: center;
-  background: var(--page);
+  background: var(--bg);
   border: 1px solid var(--line);
-  color: var(--muted);
+  color: var(--text-3);
   font: 700 13px/1 var(--sans);
 }
 
@@ -302,7 +291,7 @@ tiptap-editor {
 
 .slash-item.selected .slash-glyph {
   color: var(--accent);
-  border-color: rgba(74, 222, 128, 0.35);
+  border-color: var(--accent-line);
 }
 
 .slash-text {
@@ -320,7 +309,7 @@ tiptap-editor {
 
 .slash-desc {
   font-size: 12px;
-  color: var(--muted);
+  color: var(--text-3);
   white-space: nowrap;
   text-overflow: ellipsis;
 }
@@ -330,13 +319,13 @@ tiptap-editor {
   padding: 2px 6px;
   border-radius: 5px;
   border: 1px solid var(--line);
-  background: var(--page);
-  color: var(--faint);
+  background: var(--bg);
+  color: var(--text-3);
   font: 11.5px/1.4 var(--mono);
 }
 
 .slash-item.selected .slash-hint {
-  color: var(--muted);
+  color: var(--text-3);
 }
 
 /* ── footer ── */
@@ -347,7 +336,7 @@ tiptap-editor {
   gap: 16px;
   padding: 6px 32px;
   border-top: 1px solid var(--line);
-  color: var(--faint);
+  color: var(--text-3);
   font: 12px var(--sans);
   font-variant-numeric: tabular-nums;
 }
@@ -392,7 +381,7 @@ tiptap-editor {
 .font-toggle span {
   padding: 2px 6px;
   border-radius: 4px;
-  color: var(--faint);
+  color: var(--text-3);
   font-size: 12.5px;
 }
 
@@ -400,8 +389,8 @@ tiptap-editor {
 .font-toggle .sans-a { font-family: var(--sans); }
 
 .font-toggle span.on {
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--ink);
+  background: var(--line);
+  color: var(--text);
 }
 
 @media (max-width: 720px) {
