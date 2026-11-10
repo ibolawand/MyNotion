@@ -3,7 +3,6 @@
 
 .main-content {
   --gutter: 32px;
-  --serif: Charter, 'Bitstream Charter', 'Iowan Old Style', 'Noto Serif', 'DejaVu Serif', Georgia, serif;
   flex: 1;
   display: flex;
   flex-direction: column;

@@ -18,34 +18,88 @@ app-root {
 }
 
 :root {
-  --primary-color: #667eea;
-  --secondary-color: #764ba2;
-  --accent-color: #f093fb;
-  --text-light: #ffffff;
-  --text-dark: #2d3748;
-  --glass-bg: rgba(255, 255, 255, 0.1);
-  --glass-border: rgba(255, 255, 255, 0.2);
-  --accent-2: #4facfe;
-  --text-gray: #718096;
-  --card-bg: rgba(255, 255, 255, 0.08);
-  --shadow: rgba(0, 0, 0, 0.1);
-  --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
-  --accent-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-  --dark-gradient: linear-gradient(135deg, #0c0c0c 0%, #1a1a1a 100%);
+  /* Surfaces, darkest first: ~60% sunken/page, ~30% panels, the rest raised */
+  --bg-sunken: #171a29;
+  --bg: #1f2233;
+  --bg-raised: #262a3d;
+  --bg-overlay: #2e3349;
+  --line: rgba(255, 255, 255, 0.07);
+  --line-strong: rgba(255, 255, 255, 0.14);
+  --hover: rgba(255, 255, 255, 0.05);
 
-  --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+  /* Text: all reach 4.5:1 on every surface (scripts/check-theme.mjs). --text-faint is never readable text. */
+  --text: #e4e7eb;
+  --text-2: #9ca3af;
+  --text-3: #8b93a3;
+  --text-faint: #6b7280;
 
-  --text-primary: #ffffff;
-  --text-secondary: rgba(255, 255, 255, 0.8);
-  --text-muted: rgba(255, 255, 255, 0.6);
+  /* The green accent (~10%), and the colours for states */
+  --accent: #4ade80;
+  --accent-fill: #22c55e;
+  --on-accent: #052e16;
+  --accent-soft: rgba(74, 222, 128, 0.12);
+  --accent-line: rgba(74, 222, 128, 0.35);
+  --accent-strong: rgba(74, 222, 128, 0.5);
+  --danger: #f87171;
+  --warn: #fbbf24;
+  --info: #60a5fa;
 
-  --border-radius: 16px;
-  --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  --shadow-hover: 0 20px 40px rgba(0, 0, 0, 0.3);
+  --r-sm: 4px;
+  --r-md: 6px;
+  --r-lg: 10px;
+  --r-xl: 16px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+
+  --sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Ubuntu, Cantarell, 'Noto Sans', sans-serif;
+  --serif: Charter, 'Bitstream Charter', 'Iowan Old Style', 'Noto Serif', 'DejaVu Serif', Georgia, serif;
+  --mono: 'JetBrains Mono', 'Fira Code', 'Ubuntu Mono', 'DejaVu Sans Mono', monospace;
 }
 
-/* You can add global styles to this file, and also import other style files */
+body {
+  background: var(--bg-sunken);
+  color: var(--text);
+  font-family: var(--sans);
+  color-scheme: dark;
+}
+
+/* Shared controls. Component styles still win where a screen needs its own size. */
+.btn {
+  padding: 6px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-md);
+  background: var(--hover);
+  color: var(--text-2);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.btn:hover { border-color: var(--accent-line); color: var(--text); }
+.btn.primary, button.primary {
+  border-color: transparent;
+  background: var(--accent-fill);
+  color: var(--on-accent);
+  font-weight: 600;
+}
+.btn.primary:hover, button.primary:hover { background: var(--accent); }
+.field-input, input.input {
+  padding: 8px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-md);
+  background: var(--bg-sunken);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+  color-scheme: dark;
+}
+.field-input:focus, input.input:focus { border-color: var(--accent-strong); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
 /* calendar: to-dos due that day, in the all-day row (here, not in calendar.css, which is at its size budget) */
 .due-task {
   width: 100%;
@@ -56,16 +110,16 @@ app-root {
   padding: 3px 6px;
   border: none;
   border-radius: 4px;
-  background: rgba(255, 255, 255, 0.04);
-  color: #cbd5e1;
+  background: var(--hover);
+  color: var(--text-2);
   font-size: 11px;
   text-align: left;
   cursor: pointer;
 }
-.due-task:hover { background: rgba(255, 255, 255, 0.09); color: #f5f6f8; }
-.due-box { flex: 0 0 auto; width: 10px; height: 10px; border: 1.5px solid #6b7280; border-radius: 3px; }
+.due-task:hover { background: var(--line-strong); color: var(--text); }
+.due-box { flex: 0 0 auto; width: 10px; height: 10px; border: 1.5px solid var(--text-faint); border-radius: 3px; }
 .due-text { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.due-task.due-overdue { color: #f87171; }
-.due-task.due-overdue .due-box { border-color: #f87171; }
-.due-task.due-today { color: #4ade80; font-weight: 600; }
-.due-task.due-today .due-box { border-color: #4ade80; }
+.due-task.due-overdue { color: var(--danger); }
+.due-task.due-overdue .due-box { border-color: var(--danger); }
+.due-task.due-today { color: var(--accent); font-weight: 600; }
+.due-task.due-today .due-box { border-color: var(--accent); }
