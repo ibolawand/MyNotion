@@ -9,6 +9,7 @@ describe('Aria panel', () => {
   let panel: AriaPanel;
   let model: ModelService;
   let asked: string[];
+  let studied: string[];
   let askResult: () => { ok: true; id: string } | { ok: false; error: 'not-running' };
   let startResult: { ok: boolean; error?: 'no-launcher' | 'timeout' };
   let push: (e: AriaEvent) => void;
@@ -26,6 +27,7 @@ describe('Aria panel', () => {
 
   beforeEach(async () => {
     asked = [];
+    studied = [];
     let n = 0;
     askResult = () => ({ ok: true, id: `r${++n}` });
     startResult = { ok: true };
@@ -34,6 +36,7 @@ describe('Aria panel', () => {
     (window as any).electronAPI = {
       aria: {
         ask: async (t: string) => { asked.push(t); return askResult(); },
+        study: async (a: string) => { studied.push(a); return askResult(); },
         status: async () => status,
         start: async () => startResult,
         onEvent: (cb: (e: AriaEvent) => void) => { push = cb; return () => { push = () => undefined; }; },
@@ -276,5 +279,88 @@ describe('Aria panel', () => {
     expect(open).toBeTrue();
     key('Escape');
     expect(open).toBeFalse();
+  });
+
+  describe('study buttons', () => {
+    const openBio = async () => {
+      model.onNoteClicked({ id: 3, title: 'Biology', content: '<p>x</p>', categoryID: 0, folderID: 0 } as Note);
+      await settle();
+    };
+    const studyButtons = () => Array.from((fixture.nativeElement as HTMLElement).querySelectorAll('.study button')) as HTMLButtonElement[];
+    const labels = () => studyButtons().map(b => b.textContent?.trim());
+    const click = async (label: string) => { studyButtons().find(b => b.textContent?.trim() === label)!.click(); await settle(); };
+
+    it('hides the study buttons when no note is open', () => {
+      expect(labels()).toEqual([]);
+    });
+
+    it('Quiz me sends the quiz study action and shows "Quiz me"', async () => {
+      await openBio();
+      expect(labels()).toEqual(['Quiz me', 'Explain simply', 'Test prep']);
+      await click('Quiz me');
+      expect(studied).toEqual(['quiz']);
+      expect(asked).toEqual([]);
+      expect(panel.messages.map(m => [m.role, m.text])).toEqual([['user', 'Quiz me'], ['aria', '']]);
+    });
+
+    it('Explain simply and Test prep send explain and prep', async () => {
+      await openBio();
+      await click('Explain simply');
+      push({ id: 'r1', type: 'done', reply: 'Simple.', tools: [], confirm: null, quiz: false });
+      await settle();
+      await click('Test prep');
+      expect(studied).toEqual(['explain', 'prep']);
+    });
+
+    it('a done with quiz true shows Hint, Skip and Stop, and they send hint, skip and stop', async () => {
+      await openBio();
+      await click('Quiz me');
+      push({ id: 'r1', type: 'done', reply: 'Quiz on Biology. First one: ?', tools: ['start_quiz'], confirm: null, quiz: true });
+      await settle();
+      expect(labels()).toEqual(['Hint', 'Skip', 'Stop']);
+      await click('Hint');
+      push({ id: 'r2', type: 'done', reply: 'It starts with M.', tools: ['quiz'], confirm: null, quiz: true });
+      await settle();
+      await click('Skip');
+      push({ id: 'r3', type: 'done', reply: 'Next: ?', tools: ['quiz'], confirm: null, quiz: true });
+      await settle();
+      await click('Stop');
+      expect(asked).toEqual(['hint', 'skip', 'stop']);
+    });
+
+    it('a done with quiz false brings the study buttons back', async () => {
+      await openBio();
+      await click('Quiz me');
+      push({ id: 'r1', type: 'done', reply: 'Quiz on Biology.', tools: ['start_quiz'], confirm: null, quiz: true });
+      await settle();
+      await click('Stop');
+      push({ id: 'r2', type: 'done', reply: 'You got 0 of 1.', tools: ['quiz'], confirm: null, quiz: false });
+      await settle();
+      expect(labels()).toEqual(['Quiz me', 'Explain simply', 'Test prep']);
+    });
+
+    it('study buttons are disabled while a reply is pending', async () => {
+      await openBio();
+      await click('Explain simply');
+      expect(studyButtons().every(b => b.disabled)).toBe(true);
+    });
+
+    it('retry resends a failed study action', async () => {
+      await openBio();
+      await click('Test prep');
+      push({ id: 'r1', type: 'error', message: 'Aria stopped answering.' });
+      await settle();
+      await panel.retry(panel.messages[1]);
+      await settle();
+      expect(studied).toEqual(['prep', 'prep']);
+      expect(asked).toEqual([]);
+      expect(panel.messages.map(m => [m.role, m.text])).toEqual([['user', 'Test prep'], ['aria', '']]);
+    });
+
+    it('the empty panel points to the buttons when a note is open', async () => {
+      expect(text()).toContain('Ask about this note, your lists or your calendar.');
+      await openBio();
+      expect(text()).toContain('Ask about this note, or use the buttons below to study it.');
+    });
   });
 });

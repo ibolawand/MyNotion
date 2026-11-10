@@ -58,7 +58,7 @@ header h2 { flex: 1; font-size: 14px; font-weight: 600; }
 .problem { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 12.5px; color: var(--danger); }
 .confirm { display: flex; gap: 8px; margin-top: 8px; }
 button { font: inherit; }
-.problem button, .confirm button, .offline button {
+.problem button, .confirm button, .offline button, .study button {
   padding: 5px 12px;
   border-radius: var(--r-md);
   border: 1px solid var(--line-strong);
@@ -67,8 +67,10 @@ button { font: inherit; }
   font-size: 13px;
   cursor: pointer;
 }
-.problem button:hover, .confirm button:hover { background: var(--bg-overlay); }
-.problem button:disabled { opacity: 0.5; cursor: default; }
+.problem button:hover, .confirm button:hover, .study button:hover:not(:disabled) { background: var(--bg-overlay); }
+.problem button:disabled, .study button:disabled { opacity: 0.5; cursor: default; }
+.study { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.study button { padding: 4px 10px; font-size: 12.5px; border-radius: 999px; }
 button.yes {
   background: var(--accent-fill);
   color: var(--on-accent);

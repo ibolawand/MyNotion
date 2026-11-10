@@ -1,6 +1,6 @@
 import { Injectable, NgZone } from '@angular/core';
 import { Subject } from 'rxjs';
-import { AriaEvent } from '../../services/NoteService';
+import { AriaEvent, StudyAction } from '../../services/NoteService';
 
 export type PanelMessage = {
   role: 'user' | 'aria';
@@ -11,7 +11,13 @@ export type PanelMessage = {
   error?: string;            // why it failed
   confirm?: string | null;   // a yes/no question waiting for an answer
   question?: string;         // what was asked, for Retry
+  study?: StudyAction;       // a study button sent it (Retry presses it again)
 };
+
+/** What a study button shows as the user's message. */
+export const STUDY_LABELS: Record<StudyAction, string> = { quiz: 'Quiz me', explain: 'Explain simply', prep: 'Test prep' };
+
+type Sent = { ok: true; id: string } | { ok: false; error: 'not-running' } | undefined;
 
 const START_ERRORS = {
   'no-launcher': 'Start Aria once from the menu, then try again.',
@@ -28,6 +34,8 @@ export class AriaChat {
   /** null until we know */
   running: boolean | null = null;
   starting = false;
+  /** a quiz is running: the panel shows Hint, Skip and Stop (every reply from Aria says) */
+  quizActive = false;
   startError = '';
   /** fires whenever the messages changed (the panel scrolls down) */
   readonly changed = new Subject<void>();
@@ -68,6 +76,18 @@ export class AriaChat {
     return this.deliver(text, tools);
   }
 
+  /** Quiz me / Explain simply / Test prep, on the open note. Aria reads the note herself. */
+  async study(action: StudyAction): Promise<boolean> {
+    if (this.busy) return false;
+    return this.deliver(STUDY_LABELS[action], () => this.api?.study?.(action), action);
+  }
+
+  /** Hint / Skip / Stop during a quiz: the same words typed would do, and Aria handles them in code. */
+  async quizButton(word: 'hint' | 'skip' | 'stop') {
+    if (this.busy) return;
+    await this.deliver(word);
+  }
+
   /** Yes / No under a question. Sent as a normal message: Aria checks the answer herself, in code. */
   async answer(text: 'yes' | 'no') {
     if (this.busy) return;
@@ -80,19 +100,24 @@ export class AriaChat {
     if (at < 0) return;
     const from = at > 0 && this.messages[at - 1].role === 'user' ? at - 1 : at;
     this.messages.splice(from, at - from + 1);
-    await this.deliver(m.question);
+    if (m.study) await this.study(m.study);
+    else await this.deliver(m.question);
   }
 
-  /** tools === false: an answer only, Aria can't change anything for this message */
-  private async deliver(text: string, tools = true): Promise<boolean> {
+  /** tools === false: an answer only, Aria can't change anything for this message. `send` replaces the chat
+   *  request (a study button); `text` is then what the panel shows for it. */
+  private deliver(text: string, tools?: boolean): Promise<boolean>;
+  private deliver(text: string, send: () => Promise<Sent> | undefined, study: StudyAction): Promise<boolean>;
+  private async deliver(text: string, how: boolean | (() => Promise<Sent> | undefined) = true, study?: StudyAction): Promise<boolean> {
     this.messages.forEach(m => m.confirm = null);         // an older question is answered or dropped by this
-    const reply: PanelMessage = { role: 'aria', text: '', pending: true, question: text };
+    const reply: PanelMessage = { role: 'aria', text: '', pending: true, question: text, study };
     this.messages.push({ role: 'user', text }, reply);
     this.changed.next();
     this.asking = true;
     this.early = [];
-    let result: { ok: true; id: string } | { ok: false; error: 'not-running' } | undefined;
-    try { result = await (tools ? this.api?.ask?.(text) : this.api?.ask?.(text, false)); } catch { result = undefined; }
+    let result: Sent;
+    const send = typeof how === 'function' ? how : how ? () => this.api?.ask?.(text) : () => this.api?.ask?.(text, false);
+    try { result = await send(); } catch { result = undefined; }
     this.asking = false;
     if (!result?.ok) {
       this.messages.splice(this.messages.indexOf(reply) - 1, 2);
@@ -119,6 +144,7 @@ export class AriaChat {
       m.text = e.reply || m.text;     // her final wording replaces the draft that was streamed
       m.pending = false;
       m.confirm = e.confirm;
+      this.quizActive = e.quiz === true;
     } else if (e.type === 'error') {
       m.pending = false;
       m.failed = true;

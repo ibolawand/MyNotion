@@ -7,7 +7,7 @@
 
   <div class="list" #list>
     @if (!messages.length && running !== false) {
-    <p class="empty">Ask about this note, your lists or your calendar.</p>
+    <p class="empty">{{ noteTitle ? 'Ask about this note, or use the buttons below to study it.' : 'Ask about this note, your lists or your calendar.' }}</p>
     }
     @for (m of messages; track m) {
     <div class="message" [class.user]="m.role === 'user'" [class.aria]="m.role === 'aria'" [class.failed]="m.failed">
@@ -49,6 +49,19 @@
   <footer>
     @if (noteTitle) {
     <div class="chip" title="Aria knows which note is open">This note: {{ noteTitle }}</div>
+    }
+    @if (noteTitle && running !== false) {
+    <div class="study" role="group" [attr.aria-label]="quizActive ? 'Quiz' : 'Study this note'">
+      @if (quizActive) {
+      <button type="button" (click)="quizButton('hint')" [disabled]="busy">Hint</button>
+      <button type="button" (click)="quizButton('skip')" [disabled]="busy">Skip</button>
+      <button type="button" (click)="quizButton('stop')" [disabled]="busy">Stop</button>
+      } @else {
+      <button type="button" (click)="study('quiz')" [disabled]="busy" title="5 questions from this note">Quiz me</button>
+      <button type="button" (click)="study('explain')" [disabled]="busy" title="The main ideas in plain words">Explain simply</button>
+      <button type="button" (click)="study('prep')" [disabled]="busy" title="What to know for a test, and likely questions">Test prep</button>
+      }
+    </div>
     }
     <textarea #input rows="1" placeholder="Ask Aria…" [(ngModel)]="draft" (keydown)="onKey($event)"
       [attr.aria-busy]="busy" maxlength="4000" spellcheck="true"></textarea>

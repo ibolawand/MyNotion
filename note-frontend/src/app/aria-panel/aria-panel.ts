@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { Subscription, combineLatest } from 'rxjs';
 import { ModelService } from '../model.service';
 import { AriaChat, PanelMessage } from './aria-chat';
+import { StudyAction } from '../../services/NoteService';
 
 export type { PanelMessage } from './aria-chat';
 
@@ -33,6 +34,7 @@ export class AriaPanel implements OnInit, AfterViewInit, OnDestroy {
   get starting() { return this.chat.starting; }
   get startError() { return this.chat.startError; }
   get busy() { return this.chat.busy; }
+  get quizActive() { return this.chat.quizActive; }
 
   ngOnInit() {
     this.subs.add(combineLatest([this.modelService.currentNote$, this.modelService.isExistingNoteOpen$])
@@ -53,6 +55,8 @@ export class AriaPanel implements OnInit, AfterViewInit, OnDestroy {
   send() { return this.chat.send(); }
   answer(text: 'yes' | 'no') { return this.chat.answer(text); }
   retry(m: PanelMessage) { return this.chat.retry(m); }
+  study(action: StudyAction) { return this.chat.study(action); }
+  quizButton(word: 'hint' | 'skip' | 'stop') { return this.chat.quizButton(word); }
 
   async startAria() {
     if (await this.chat.startAria()) setTimeout(() => this.input?.nativeElement.focus());
