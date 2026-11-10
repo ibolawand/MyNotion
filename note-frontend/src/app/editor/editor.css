@@ -48,7 +48,7 @@
   align-items: center;
   justify-content: center;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--r-lg);
   background: transparent;
   color: var(--text-3);
   cursor: pointer;
@@ -106,7 +106,7 @@
   max-width: 220px;
   padding: 4px 6px;
   border: 1px solid transparent;
-  border-radius: 6px;
+  border-radius: var(--r-md);
   background: transparent;
   color: var(--text-2);
   font: 13px/1.3 inherit;

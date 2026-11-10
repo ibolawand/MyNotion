@@ -14,6 +14,7 @@ const ALLOW = {
   'src/app/calendar/calendar.css': ['#ef4444', '#3b82f6', '#22c55e', '#a855f7'], // the four event colours users pick
   'src/app/inbox/mail-reader.css': ['#fff', '#10131f'], // white mail "paper"; initials on a generated avatar hue
   'src/app/inbox/inbox.css': ['#10131f'], // initials on a generated avatar hue
+  'src/app/window-bar/window-bar.css': ['#e81123'], // the standard red of a window's close button
   'src/app/text-editor/blocks.css': ['#c084fc'], // the "important" callout tone (content colour)
   // content colours of the note itself: quote, inline code, code block, highlighter mark
   'src/app/text-editor/note-content.css': ['#c9ced8', '#f0abfc', '#d6dbe4', '#fde68a'],
@@ -76,10 +77,10 @@ function checkContrast(tokens) {
   return failures;
 }
 
-// Near-black colours are shadows, not palette colours.
+// Near-black colours are shadows and backdrops, not palette colours.
 function isShadow(v) {
   const c = v.startsWith('rgb') && rgba(v);
-  return !!c && Math.max(c[0], c[1], c[2]) <= 20;
+  return !!c && Math.max(c[0], c[1], c[2]) <= 30;
 }
 
 function literals(file) {

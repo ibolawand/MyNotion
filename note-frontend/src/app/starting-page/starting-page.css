@@ -4,8 +4,8 @@
     align-items: center;
     min-height: 100vh;
     width: 100vw;
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-    color: #e4e7eb;
+    background: linear-gradient(135deg, var(--bg-sunken) 0%, var(--bg) 100%);
+    color: var(--text);
     position: relative;
     overflow: hidden;
 }
@@ -19,8 +19,8 @@
     right: 0;
     bottom: 0;
     background:
-        radial-gradient(circle at 20% 50%, rgba(74, 222, 128, 0.08) 0%, transparent 50%),
-        radial-gradient(circle at 80% 80%, rgba(59, 130, 246, 0.08) 0%, transparent 50%);
+        radial-gradient(circle at 20% 50%, var(--accent-soft) 0%, transparent 50%),
+        radial-gradient(circle at 80% 80%, color-mix(in srgb, var(--info) 8%, transparent) 0%, transparent 50%);
     pointer-events: none;
 }
 
@@ -58,12 +58,12 @@
     font-size: 36px;
     width: 64px;
     height: 64px;
-    background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
-    border-radius: 16px;
+    background: var(--accent-fill);
+    border-radius: var(--r-xl);
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 8px 32px rgba(74, 222, 128, 0.3);
+    box-shadow: 0 8px 32px var(--accent-line);
     animation: float 3s ease-in-out infinite;
 }
 
@@ -82,7 +82,7 @@
 h1 {
     font-size: 56px;
     font-weight: 800;
-    background: linear-gradient(135deg, #e4e7eb 0%, #94a3b8 100%);
+    background: linear-gradient(135deg, var(--text) 0%, var(--text-2) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -92,7 +92,7 @@ h1 {
 
 .subtitle {
     font-size: 22px;
-    color: #94a3b8;
+    color: var(--text-2);
     margin-bottom: 72px;
     font-weight: 400;
     letter-spacing: 0.3px;
@@ -107,9 +107,9 @@ h1 {
 }
 
 .option-card {
-    background: rgba(255, 255, 255, 0.04);
+    background: var(--hover);
     backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: 1px solid var(--line);
     border-radius: 24px;
     padding: 40px 32px;
     cursor: pointer;
@@ -129,18 +129,18 @@ h1 {
     left: 0;
     right: 0;
     bottom: 0;
-    background: linear-gradient(135deg, rgba(74, 222, 128, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%);
+    background: linear-gradient(135deg, var(--accent-soft) 0%, color-mix(in srgb, var(--info) 10%, transparent) 100%);
     opacity: 0;
     transition: opacity 0.4s ease;
 }
 
 .option-card:hover {
     transform: translateY(-12px) scale(1.02);
-    background: rgba(255, 255, 255, 0.08);
-    border-color: rgba(74, 222, 128, 0.4);
+    background: var(--line);
+    border-color: var(--accent-line);
     box-shadow:
         0 24px 48px -12px rgba(0, 0, 0, 0.6),
-        0 0 0 1px rgba(74, 222, 128, 0.2) inset;
+        0 0 0 1px var(--accent-line) inset;
 }
 
 .option-card:hover::before {
@@ -150,12 +150,12 @@ h1 {
 .icon {
     width: 72px;
     height: 72px;
-    background: linear-gradient(135deg, rgba(74, 222, 128, 0.1) 0%, rgba(34, 197, 94, 0.1) 100%);
-    border-radius: 18px;
+    background: var(--accent-soft);
+    border-radius: var(--r-xl);
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #4ade80;
+    color: var(--accent);
     margin-bottom: 8px;
     transition: all 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
     position: relative;
@@ -163,15 +163,15 @@ h1 {
 }
 
 .option-card:hover .icon {
-    background: linear-gradient(135deg, rgba(74, 222, 128, 0.2) 0%, rgba(34, 197, 94, 0.2) 100%);
+    background: var(--accent-line);
     transform: scale(1.15) rotate(5deg);
-    box-shadow: 0 8px 24px rgba(74, 222, 128, 0.3);
+    box-shadow: 0 8px 24px var(--accent-line);
 }
 
 h3 {
     font-size: 22px;
     font-weight: 700;
-    color: #f1f5f9;
+    color: var(--text);
     margin: 0;
     position: relative;
     z-index: 1;
@@ -180,7 +180,7 @@ h3 {
 
 .option-card p {
     font-size: 15px;
-    color: #94a3b8;
+    color: var(--text-2);
     line-height: 1.6;
     margin: 0;
     position: relative;

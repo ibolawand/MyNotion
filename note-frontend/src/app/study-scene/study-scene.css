@@ -9,8 +9,8 @@
   width: 300px;
   height: 178px;
   z-index: 25;
-  border-radius: 12px;
-  border: 1px solid rgba(74, 222, 128, 0.28);
+  border-radius: var(--r-lg);
+  border: 1px solid var(--accent-line);
   box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
 }
 .scene-tools {
@@ -29,14 +29,14 @@
   display: grid;
   place-items: center;
   padding: 0;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 7px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-md);
   background: rgba(10, 9, 22, 0.7);
-  color: #e6e6f0;
+  color: var(--text);
   cursor: pointer;
 }
-.scene-tools button:hover { color: #4ade80; border-color: rgba(74, 222, 128, 0.5); }
-.scene-tools button:focus-visible { outline: 2px solid #4ade80; outline-offset: 1px; }
+.scene-tools button:hover { color: var(--accent); border-color: var(--accent-strong); }
+.scene-tools button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 .scene-tools svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
 
 /* behind the note: dimmed, so the text stays easy to read */

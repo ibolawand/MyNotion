@@ -8,7 +8,7 @@
 
 ::ng-deep .tiptap-editor-content .tiptap-mathematics-render {
   cursor: pointer;
-  border-radius: 4px;
+  border-radius: var(--r-sm);
   padding: 0 2px;
   transition: background 0.12s;
 }
@@ -68,7 +68,7 @@
   flex-direction: column;
   gap: 8px;
   padding: 10px;
-  border-radius: 12px;
+  border-radius: var(--r-lg);
   background: var(--bg-raised);
   border: 1px solid var(--line-strong);
   box-shadow: 0 18px 44px rgba(5, 7, 18, 0.6);
@@ -82,7 +82,7 @@
   display: grid;
   place-items: center;
   padding: 8px;
-  border-radius: 8px;
+  border-radius: var(--r-lg);
   background: var(--bg);
   color: var(--text-strong);
   overflow-x: auto;
@@ -97,7 +97,7 @@
 .math-box textarea {
   resize: none;
   padding: 8px 10px;
-  border-radius: 8px;
+  border-radius: var(--r-lg);
   border: 1px solid var(--line-strong);
   background: var(--bg);
   color: var(--text);
@@ -122,7 +122,7 @@
   min-width: 30px;
   height: 28px;
   padding: 0 7px;
-  border-radius: 6px;
+  border-radius: var(--r-md);
   border: 1px solid var(--line);
   background: var(--hover);
   color: var(--text);
@@ -148,14 +148,14 @@
 .math-hint kbd {
   padding: 0 5px;
   margin-right: 2px;
-  border-radius: 4px;
+  border-radius: var(--r-sm);
   border: 1px solid var(--line);
   font: 11px/1.6 var(--mono);
 }
 
 .math-save {
   padding: 6px 12px;
-  border-radius: 7px;
+  border-radius: var(--r-md);
   border: 1px solid var(--accent-line);
   background: var(--accent-soft);
   color: var(--accent);
@@ -178,7 +178,7 @@
 .matrix-size { color: var(--text-3); font-size: 12px; font-variant-numeric: tabular-nums; }
 .matrix-bar { display: flex; align-items: center; gap: 6px; margin-left: auto; color: var(--text-3); font-size: 12px; }
 .matrix-bar select {
-  height: 26px; padding: 0 6px; border-radius: 6px; border: 1px solid var(--line);
+  height: 26px; padding: 0 6px; border-radius: var(--r-md); border: 1px solid var(--line);
   background: var(--bg); color: var(--text); font: 12px var(--sans); cursor: pointer;
 }
 .matrix-bar select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
@@ -189,7 +189,7 @@
 .matrix-kinds button, .matrix-steps button, .matrix-latex {
   height: 28px;
   padding: 0 9px;
-  border-radius: 6px;
+  border-radius: var(--r-md);
   border: 1px solid var(--line);
   background: var(--hover);
   color: var(--text);
@@ -212,7 +212,7 @@
   width: 64px;
   height: 32px;
   padding: 0 6px;
-  border-radius: 6px;
+  border-radius: var(--r-md);
   border: 1px solid var(--line-strong);
   background: var(--bg);
   color: var(--text);
@@ -231,13 +231,13 @@
 
 .matrix-chain { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding-bottom: 8px; border-bottom: 1px solid var(--line); }
 .matrix-tab, .matrix-add, .matrix-remove, .matrix-place button, .math-matrices button {
-  height: 26px; padding: 0 9px; border-radius: 6px; border: 1px solid var(--line);
+  height: 26px; padding: 0 9px; border-radius: var(--r-md); border: 1px solid var(--line);
   background: var(--hover); color: var(--text-3); font: 12px/1 var(--sans); cursor: pointer;
 }
 .matrix-tab.on, .matrix-place button.on { border-color: var(--accent-strong); background: var(--accent-soft); color: var(--accent); }
 .matrix-add { border-style: dashed; }
 .matrix-tab:hover, .matrix-add:hover, .matrix-remove:hover, .matrix-place button:hover, .math-matrices button:hover { background: var(--line); }
-.matrix-op { height: 26px; padding: 0 4px; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--bg); color: var(--text); font: 15px var(--serif); cursor: pointer; }
+.matrix-op { height: 26px; padding: 0 4px; border-radius: var(--r-md); border: 1px solid var(--line-strong); background: var(--bg); color: var(--text); font: 15px var(--serif); cursor: pointer; }
 .matrix-op option { background: var(--bg-raised); }
 .matrix-remove { margin-left: auto; }
 .matrix-size + .matrix-remove { margin-left: 8px; }
@@ -249,7 +249,7 @@
 .box-align { display: flex; gap: 2px; }
 .matrix-steps.rows .box-align { margin-left: 6px; }
 .box-align .align-btn {
-  width: 28px; height: 26px; display: grid; place-items: center; padding: 0; border-radius: 6px;
+  width: 28px; height: 26px; display: grid; place-items: center; padding: 0; border-radius: var(--r-md);
   border: 1px solid var(--line); background: var(--hover); color: var(--text-3); cursor: pointer;
 }
 .box-align .align-btn svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
@@ -271,7 +271,7 @@
 .box-grip span {
   width: 36px;
   height: 4px;
-  border-radius: 2px;
+  border-radius: var(--r-sm);
   background: var(--line-strong);
   transition: background 0.12s ease;
 }

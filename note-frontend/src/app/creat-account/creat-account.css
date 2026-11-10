@@ -5,7 +5,7 @@
     min-height: 100vh;
     height: 100vh;
     width: 100vw;
-    background: #1a2332;
+    background: var(--bg);
     position: fixed;
     top: 0;
     left: 0;
@@ -61,17 +61,17 @@
     font-size: 32px;
     width: 56px;
     height: 56px;
-    background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
-    border-radius: 12px;
+    background: var(--accent-fill);
+    border-radius: var(--r-lg);
     display: flex;
     align-items: center;
     justify-content: center;
     margin: 0 auto 24px;
-    box-shadow: 0 8px 24px rgba(34, 197, 94, 0.25);
+    box-shadow: 0 8px 24px var(--accent-line);
 }
 
 h2 {
-    color: #ffffff;
+    color: var(--text-strong);
     font-size: 28px;
     font-weight: 600;
     margin-bottom: 8px;
@@ -79,7 +79,7 @@ h2 {
 }
 
 .header p {
-    color: #8b95a8;
+    color: var(--text-3);
     font-size: 15px;
     font-weight: 400;
 }
@@ -99,7 +99,7 @@ h2 {
 
 label {
     display: block;
-    color: #d1d5db;
+    color: var(--text-2);
     font-size: 14px;
     font-weight: 500;
     margin-bottom: 8px;
@@ -115,7 +115,7 @@ label {
 .input-wrapper svg {
     position: absolute;
     left: 14px;
-    color: #6b7280;
+    color: var(--text-3);
     pointer-events: none;
     transition: color 0.2s;
 }
@@ -123,41 +123,41 @@ label {
 input {
     width: 100%;
     padding: 12px 14px 12px 42px;
-    background: #2a3544;
+    background: var(--bg-raised);
     border: 1px solid transparent;
-    border-radius: 10px;
-    color: #ffffff;
+    border-radius: var(--r-lg);
+    color: var(--text-strong);
     font-size: 15px;
     transition: all 0.2s;
     outline: none;
 }
 
 input::placeholder {
-    color: #6b7280;
+    color: var(--text-3);
 }
 
 input:hover {
-    background: #303c4d;
-    border-color: rgba(255, 255, 255, 0.05);
+    background: var(--bg-overlay);
+    border-color: var(--line);
 }
 
 input:focus {
-    background: #303c4d;
-    border-color: #4ade80;
-    box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.08);
+    background: var(--bg-overlay);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
 .input-wrapper:focus-within svg {
-    color: #4ade80;
+    color: var(--accent);
 }
 
 .submit-btn {
     width: 100%;
     padding: 13px;
-    background: #3d4a5c;
-    color: #b4bcc8;
+    background: var(--line-strong);
+    color: var(--text-2);
     border: none;
-    border-radius: 10px;
+    border-radius: var(--r-lg);
     font-size: 15px;
     font-weight: 600;
     cursor: pointer;
@@ -171,8 +171,8 @@ input:focus {
 }
 
 .submit-btn:hover:not(:disabled) {
-    background: #4a5768;
-    color: #d1d5db;
+    background: var(--line-strong);
+    color: var(--text-2);
     transform: none;
 }
 
@@ -183,13 +183,13 @@ input:focus {
 .submit-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
-    background: #3d4a5c;
-    color: #6b7280;
+    background: var(--line-strong);
+    color: var(--text-3);
 }
 
 .divider {
     text-align: center;
-    color: #6b7280;
+    color: var(--text-3);
     font-size: 13px;
     margin: 28px 0;
     position: relative;
@@ -202,7 +202,7 @@ input:focus {
     top: 50%;
     width: 45%;
     height: 1px;
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--line);
 }
 
 .divider::before {
@@ -218,12 +218,12 @@ input:focus {
 }
 
 .footer-links p {
-    color: #8b95a8;
+    color: var(--text-3);
     font-size: 14px;
 }
 
 .footer-links a {
-    color: #4ade80;
+    color: var(--accent);
     font-weight: 600;
     text-decoration: none;
     margin-left: 4px;
@@ -231,7 +231,7 @@ input:focus {
 }
 
 .footer-links a:hover {
-    color: #86efac;
+    color: var(--accent);
     text-decoration: none;
 }
 

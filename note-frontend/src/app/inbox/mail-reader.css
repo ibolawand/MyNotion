@@ -9,20 +9,20 @@ h1 { font-size: 22px; font-weight: 650; line-height: 1.3; color: var(--text-stro
 .who .to { color: var(--text-3); }
 time { align-self: start; font-size: 12.5px; color: var(--text-3); white-space: nowrap; }
 .actions { display: flex; flex-wrap: wrap; gap: 6px; margin: 18px 0 16px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
-.actions button { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--hover); color: var(--text-2); font: inherit; font-size: 13px; cursor: pointer; transition: background 0.15s, border-color 0.15s; }
+.actions button { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: var(--r-lg); border: 1px solid var(--line); background: var(--hover); color: var(--text-2); font: inherit; font-size: 13px; cursor: pointer; transition: background 0.15s, border-color 0.15s; }
 .actions button:hover { background: var(--line); border-color: var(--accent-line); }
 .actions button.primary { background: var(--accent-fill); border-color: transparent; color: var(--on-accent); font-weight: 600; }
 .actions button.primary:hover { background: var(--accent); }
 svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .files { list-style: none; display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
-.files button { display: flex; align-items: center; gap: 10px; padding: 8px 12px 8px 8px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg-sunken); color: var(--text); font: inherit; cursor: pointer; max-width: 260px; }
+.files button { display: flex; align-items: center; gap: 10px; padding: 8px 12px 8px 8px; border-radius: var(--r-lg); border: 1px solid var(--line); background: var(--bg-sunken); color: var(--text); font: inherit; cursor: pointer; max-width: 260px; }
 .files button:hover { border-color: var(--accent-line); }
-.ext { flex: 0 0 auto; width: 38px; height: 38px; border-radius: 8px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); font-size: 10.5px; font-weight: 700; letter-spacing: 0.03em; }
+.ext { flex: 0 0 auto; width: 38px; height: 38px; border-radius: var(--r-lg); display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); font-size: 10.5px; font-weight: 700; letter-spacing: 0.03em; }
 .name { display: flex; flex-direction: column; min-width: 0; font-size: 13px; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .name small { font-size: 11.5px; color: var(--text-3); }
 .images-off { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; font-size: 12.5px; color: var(--text-3); }
-.images-off button { padding: 4px 10px; border-radius: 6px; border: 1px solid var(--line-strong); background: none; color: var(--accent); font: inherit; font-size: 12.5px; cursor: pointer; }
-.paper { border-radius: 12px; overflow: hidden; background: #fff; box-shadow: 0 1px 0 var(--hover), 0 12px 30px -12px rgba(0, 0, 0, 0.6); }
+.images-off button { padding: 4px 10px; border-radius: var(--r-md); border: 1px solid var(--line-strong); background: none; color: var(--accent); font: inherit; font-size: 12.5px; cursor: pointer; }
+.paper { border-radius: var(--r-lg); overflow: hidden; background: #fff; box-shadow: 0 1px 0 var(--hover), 0 12px 30px -12px rgba(0, 0, 0, 0.6); }
 .paper iframe { display: block; width: 100%; min-height: 120px; border: none; }
 .text { font-size: 15px; line-height: 1.7; color: var(--text); overflow-wrap: anywhere; max-width: 68ch; }
 .text::ng-deep a { color: var(--accent); }

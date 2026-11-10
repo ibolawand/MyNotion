@@ -1,13 +1,13 @@
 .compose { flex: 1; display: flex; flex-direction: column; gap: 8px; padding: 18px 20px; min-height: 0; height: 100%; }
 label { display: grid; grid-template-columns: 56px 1fr; align-items: center; gap: 10px; font-size: 13px; color: var(--text-2); }
-input, textarea { flex: 1; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--bg-sunken); color: var(--text); font: inherit; font-size: 14px; outline: none; }
+input, textarea { flex: 1; padding: 8px 10px; border-radius: var(--r-md); border: 1px solid var(--line-strong); background: var(--bg-sunken); color: var(--text); font: inherit; font-size: 14px; outline: none; }
 input:focus, textarea:focus { border-color: var(--accent-strong); }
 textarea { min-height: 240px; resize: none; line-height: 1.5; }
 .files { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; font-size: 13px; color: var(--text-2); }
-.files li { padding: 4px 8px; border-radius: 6px; background: var(--hover); }
+.files li { padding: 4px 8px; border-radius: var(--r-md); background: var(--hover); }
 .files button { border: none; background: none; color: var(--text-2); cursor: pointer; }
 .error { color: var(--danger); font-size: 13px; }
 .buttons { display: flex; gap: 6px; }
-.buttons button { padding: 7px 14px; border-radius: 6px; border: 1px solid var(--line-strong); background: var(--hover); color: var(--text-2); font: inherit; font-size: 13px; cursor: pointer; }
+.buttons button { padding: 7px 14px; border-radius: var(--r-md); border: 1px solid var(--line-strong); background: var(--hover); color: var(--text-2); font: inherit; font-size: 13px; cursor: pointer; }
 .buttons .primary { background: var(--accent-fill); color: var(--on-accent); border-color: transparent; font-weight: 600; }
 .buttons .primary:hover { background: var(--accent); }

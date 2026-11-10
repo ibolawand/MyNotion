@@ -14,7 +14,7 @@
 
 .event-adder {
     background: var(--bg-overlay);
-    border-radius: 12px;
+    border-radius: var(--r-lg);
     width: 90%;
     max-width: 500px;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
@@ -48,7 +48,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: 6px;
+    border-radius: var(--r-md);
     transition: all 0.2s;
 }
 
@@ -79,7 +79,7 @@ form {
     padding: 10px 12px;
     background: var(--bg-sunken);
     border: 1px solid var(--line-strong);
-    border-radius: 6px;
+    border-radius: var(--r-md);
     color: var(--text);
     font-size: 14px;
     transition: all 0.2s;
@@ -115,7 +115,7 @@ form {
 
 .actions button {
     padding: 10px 20px;
-    border-radius: 6px;
+    border-radius: var(--r-md);
     font-size: 14px;
     font-weight: 500;
     cursor: pointer;

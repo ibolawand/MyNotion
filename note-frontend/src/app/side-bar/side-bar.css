@@ -141,7 +141,7 @@
 .menu-badge {
   margin-left: auto;
   padding: 0 7px;
-  border-radius: 9px;
+  border-radius: var(--r-lg);
   background: var(--accent);
   color: var(--on-accent);
   font-size: 11px;
@@ -166,7 +166,7 @@
 
 .notebooks-section::-webkit-scrollbar-thumb {
   background: var(--line-strong);
-  border-radius: 3px;
+  border-radius: var(--r-sm);
 }
 
 .section-header {
@@ -240,7 +240,7 @@
   top: 6px;
   bottom: 6px;
   width: 3px;
-  border-radius: 2px;
+  border-radius: var(--r-sm);
   background: var(--spine, var(--accent));
   opacity: 0;
   transition: opacity 0.2s;
@@ -276,7 +276,7 @@
   justify-content: center;
   flex-shrink: 0;
   border: none;
-  border-radius: 3px;
+  border-radius: var(--r-sm);
   background: transparent;
   color: var(--text-2);
   cursor: pointer;
