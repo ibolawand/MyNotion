@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('electron', () => ({ ipcMain: {}, BrowserWindow: {}, app: { getPath: () => '/tmp' } }));
 vi.mock('./database/database', () => ({ DB: {} }));
-import { AriaEvent, AriaLink, isOurSocket, launcherFrom, socketPath, splitLines } from './aria';
+import { AriaEvent, AriaLink, isOurSocket, launch, launcherFrom, socketPath, splitLines } from './aria';
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'aria-link-'));
 let n = 0;
@@ -195,6 +195,17 @@ describe('talking to Aria', () => {
 
 describe('starting Aria', () => {
     const there = () => true;
+    it('starts her without the orb', () => {
+        const calls: any[] = [];
+        let unref = false;
+        launch('/x/aria.sh', ((cmd: string, args: string[], opts: object) => {
+            calls.push([cmd, args, opts]);
+            return { unref: () => { unref = true; } };
+        }) as any);
+        expect(calls).toEqual([['/x/aria.sh', ['--hidden'], { detached: true, stdio: 'ignore', cwd: '/x' }]]);
+        expect(unref).toBe(true);
+    });
+
     it('starts the launcher Aria wrote down', () => {
         expect(launcherFrom('/home/me/BetterAI/aria.sh', there)).toBe('/home/me/BetterAI/aria.sh');
     });

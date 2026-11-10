@@ -9,7 +9,8 @@
  *  quiz is running now (the panel then shows Hint, Skip and Stop).
  *
  *  Nothing here leaves the computer. If Aria isn't running, the panel offers to start her: she writes where her
- *  launcher is into the shared app_state table (key aria_launcher) every time she starts. */
+ *  launcher is into the shared app_state table (key aria_launcher) every time she starts. Start runs the launcher
+ *  with --hidden: she starts without the orb, which appears when Lala presses the hotkey or a card needs it. */
 import { spawn } from 'child_process';
 import { randomUUID } from 'crypto';
 import fs from 'fs';
@@ -194,6 +195,14 @@ export class AriaLink {
     }
 }
 
+/** What Start passes to aria.sh: the full Aria, without showing her orb. */
+export const LAUNCH_ARGS = ['--hidden'];
+
+/** Start Aria from the panel, detached so she keeps running when MyNotion closes. */
+export function launch(launcher: string, run: typeof spawn = spawn): void {
+    run(launcher, LAUNCH_ARGS, { detached: true, stdio: 'ignore', cwd: path.dirname(launcher) }).unref();
+}
+
 /** Aria's launcher, as she wrote it down: only an existing aria.sh with a full path is ever started. */
 export function launcherFrom(value: unknown, exists: (p: string) => boolean = p => fs.existsSync(p)): string | null {
     if (typeof value !== 'string' || !path.isAbsolute(value) || path.basename(value) !== 'aria.sh') return null;
@@ -231,7 +240,7 @@ export function setUpAria() {
             }
             if (!launcher) return { ok: false, error: 'no-launcher' as const };
             try {
-                spawn(launcher, [], { detached: true, stdio: 'ignore', cwd: path.dirname(launcher) }).unref();
+                launch(launcher);
             } catch (err) {
                 console.error('aria:start error:', err);
                 return { ok: false, error: 'no-launcher' as const };
