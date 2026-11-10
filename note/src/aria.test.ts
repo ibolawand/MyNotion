@@ -117,7 +117,7 @@ describe('talking to Aria', () => {
         expect(got).toEqual([{ id, type: 'chat', text: '  hallo Größe  ' }]);
         expect(events).toEqual([
             { id, type: 'text', delta: 'Schön ' },
-            { id, type: 'done', reply: 'Schön.', tools: ['add_note'], confirm: null },
+            { id, type: 'done', reply: 'Schön.', tools: ['add_note'], confirm: null, quiz: false },
         ]);
     });
 
@@ -283,5 +283,36 @@ describe('an answer only', () => {
         await until(() => got.length === 2);
         expect(got[0].tools).toBe(false);
         expect('tools' in got[1]).toBe(false);
+    });
+});
+
+describe('study buttons', () => {
+    it('sends a study action and relays text and done with the quiz flag', async () => {
+        const got: any[] = [];
+        const file = await fakeAria((req, sock) => {
+            got.push(req);
+            sock.write(line({ id: req.id, type: 'text', delta: 'Quiz on Bio. ' }));
+            sock.write(line({ id: req.id, type: 'done', reply: 'Quiz on Bio.', tools: ['start_quiz'], confirm: null, quiz: true }));
+        });
+        const events: AriaEvent[] = [];
+        const r = await link(file, events).study('quiz');
+        const id = (r as { id: string }).id;
+        await until(() => events.length === 2);
+        expect(got).toEqual([{ id, type: 'study', action: 'quiz' }]);
+        expect(events[1]).toEqual({ id, type: 'done', reply: 'Quiz on Bio.', tools: ['start_quiz'], confirm: null, quiz: true });
+    });
+
+    it('only quiz: true counts as a running quiz', async () => {
+        const file = await fakeAria((req, sock) => {
+            sock.write(line({ id: req.id, type: 'done', reply: 'x', tools: [], confirm: null, quiz: 'yes' }));
+        });
+        const events: AriaEvent[] = [];
+        await link(file, events).study('explain');
+        await until(() => events.length === 1);
+        expect((events[0] as any).quiz).toBe(false);
+    });
+
+    it('study says not-running when she is not there', async () => {
+        expect(await link(path.join(dir, 'nobody3.sock')).study('prep')).toEqual({ ok: false, error: 'not-running' });
     });
 });

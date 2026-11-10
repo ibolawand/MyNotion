@@ -40,6 +40,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
         ask: (text: string, tools = true) => ipcRenderer.invoke('aria:ask', text, tools),
         // "Select text, ask Aria": her version of the selection comes back as a 'proposal' event
         edit: (request: unknown) => ipcRenderer.invoke('aria:edit', request),
+        // a study button (Quiz me, Explain simply, Test prep) on the open note; answered like ask
+        study: (action: string) => ipcRenderer.invoke('aria:study', action),
         status: (): Promise<'running' | 'not-running'> => ipcRenderer.invoke('aria:status'),
         start: (): Promise<{ ok: boolean; error?: 'no-launcher' | 'timeout' }> => ipcRenderer.invoke('aria:start'),
         onEvent: (callback: (event: unknown) => void) => {

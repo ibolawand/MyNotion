@@ -3,8 +3,10 @@
  *  Aria listens on a private Unix socket (BetterAI/ui/app_bridge.py). One JSON object per line, both ways:
  *    →  {"id","type":"chat","text"}   |  {"id","type":"status"}
  *    →  {"id","type":"edit","action","html",…}   her version of a selection; answered with {"id","type":"proposal","html"}
- *    ←  {"id","type":"text","delta"}  |  {"id","type":"done","reply","tools","confirm"}  |  {"id","type":"error","message"}
- *  "done" carries her final reply (it replaces what was streamed) and a yes/no question that is waiting.
+ *    →  {"id","type":"study","action":"quiz|explain|prep"}   a study button, on the open note; answered like chat
+ *    ←  {"id","type":"text","delta"}  |  {"id","type":"done","reply","tools","confirm","quiz"}  |  {"id","type":"error","message"}
+ *  "done" carries her final reply (it replaces what was streamed), a yes/no question that is waiting, and whether a
+ *  quiz is running now (the panel then shows Hint, Skip and Stop).
  *
  *  Nothing here leaves the computer. If Aria isn't running, the panel offers to start her: she writes where her
  *  launcher is into the shared app_state table (key aria_launcher) every time she starts. */
@@ -18,7 +20,7 @@ import { DB } from './database/database';
 
 export type AriaEvent = { id: string } & (
     | { type: 'text'; delta: string }
-    | { type: 'done'; reply: string; tools: string[]; confirm: string | null }
+    | { type: 'done'; reply: string; tools: string[]; confirm: string | null; quiz: boolean }
     | { type: 'proposal'; html: string }
     | { type: 'error'; message: string });
 /** "Select text, ask Aria": the selection and what to do with it. */
@@ -26,6 +28,9 @@ export type EditRequest = {
     action: 'rewrite' | 'shorter' | 'spelling' | 'table' | 'custom';
     html: string; instruction: string; title: string; context: string; previous: string;
 };
+/** The Aria panel's study buttons: Quiz me, Explain simply, Test prep. */
+export type StudyAction = 'quiz' | 'explain' | 'prep';
+export const STUDY_ACTIONS: readonly StudyAction[] = ['quiz', 'explain', 'prep'];
 export type AskResult = { ok: true; id: string } | { ok: false; error: 'not-running' };
 
 const STATUS_TIMEOUT_MS = 2000;
@@ -116,6 +121,7 @@ export class AriaLink {
                 id: e.id, type: 'done', reply: typeof e.reply === 'string' ? e.reply : '',
                 tools: Array.isArray(e.tools) ? e.tools.filter((t: unknown) => typeof t === 'string') : [],
                 confirm: typeof e.confirm === 'string' ? e.confirm : null,
+                quiz: e.quiz === true,
             });
         } else if (e.type === 'proposal' && typeof e.html === 'string' && e.html) {
             this.open.delete(e.id);
@@ -147,6 +153,11 @@ export class AriaLink {
     edit(r: EditRequest): Promise<AskResult> {
         return this.request({ type: 'edit', action: r.action, html: r.html, instruction: r.instruction,
                               title: r.title, context: r.context, previous: r.previous });
+    }
+
+    /** A study button on the open note: answered like a chat message. */
+    study(action: StudyAction): Promise<AskResult> {
+        return this.request({ type: 'study', action });
     }
 
     private async request(body: Record<string, unknown>): Promise<AskResult> {
@@ -203,6 +214,8 @@ export function setUpAria() {
         return link.edit({ action: r.action as EditRequest['action'], html: r.html, instruction: text(r.instruction, 500),
                            title: text(r.title, 200), context: text(r.context, 2000), previous: text(r.previous, 40000) });
     });
+    ipcMain.handle('aria:study', (_e, action: unknown): Promise<AskResult> =>
+        STUDY_ACTIONS.includes(action as StudyAction) ? link.study(action as StudyAction) : Promise.resolve({ ok: false, error: 'not-running' }));
     ipcMain.handle('aria:status', () => link.status());
     let starting: Promise<{ ok: boolean; error?: 'no-launcher' | 'timeout' }> | null = null;
     ipcMain.handle('aria:start', () => {

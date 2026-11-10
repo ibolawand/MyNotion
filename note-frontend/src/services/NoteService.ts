@@ -12,9 +12,11 @@ export enum SaveStatus {
 /** What Aria sends back for a message from the Aria panel (note/src/aria.ts). */
 export type AriaEvent = { id: string } & (
   | { type: 'text'; delta: string }
-  | { type: 'done'; reply: string; tools: string[]; confirm: string | null }
+  | { type: 'done'; reply: string; tools: string[]; confirm: string | null; quiz?: boolean }
   | { type: 'proposal'; html: string }
   | { type: 'error'; message: string });
+/** The Aria panel's study buttons (note/src/aria.ts). */
+export type StudyAction = 'quiz' | 'explain' | 'prep';
 /** "Select text, ask Aria": what is sent for a selection. */
 export type AriaEditRequest = {
   action: 'rewrite' | 'shorter' | 'spelling' | 'table' | 'custom';
@@ -88,6 +90,7 @@ declare global {
         editing: () => Promise<number | null>;
         ask?: (text: string, tools?: boolean) => Promise<{ ok: true; id: string } | { ok: false; error: 'not-running' }>;
         edit?: (request: AriaEditRequest) => Promise<{ ok: true; id: string } | { ok: false; error: 'not-running' }>;
+        study?: (action: StudyAction) => Promise<{ ok: true; id: string } | { ok: false; error: 'not-running' }>;
         status?: () => Promise<'running' | 'not-running'>;
         start?: () => Promise<{ ok: boolean; error?: 'no-launcher' | 'timeout' }>;
         onEvent?: (callback: (event: AriaEvent) => void) => () => void;
