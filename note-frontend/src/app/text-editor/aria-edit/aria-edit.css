@@ -65,7 +65,7 @@ button.quiet { background: none; border-color: transparent; color: var(--text-2)
   scrollbar-width: thin;
 }
 /* her version is only to look at: a click must not open the formula box or follow a link */
-.preview::ng-deep .tiptap-editor-content { pointer-events: none; min-height: 0; padding: 0; }
+.preview ::ng-deep .tiptap-editor-content { pointer-events: none; min-height: 0; padding: 0; }
 .buttons { display: flex; gap: 6px; margin-top: 8px; }
 
 .thinking { display: inline-flex; gap: 4px; }

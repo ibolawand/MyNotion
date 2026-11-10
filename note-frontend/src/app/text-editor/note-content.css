@@ -12,7 +12,7 @@
   font-variant-numeric: oldstyle-nums;
 }
 
-.sans::ng-deep .tiptap-editor-content {
+.sans ::ng-deep .tiptap-editor-content {
   font-family: var(--sans);
   font-size: 16px;
   line-height: 1.65;
@@ -23,7 +23,7 @@
   overflow: visible;           /* the app sets overflow: hidden on everything */
 }
 
-::ng-deep .tiptap-editor-content::selection {
+::ng-deep .tiptap-editor-content ::selection {
   background: var(--accent-line);
 }
 
@@ -152,7 +152,7 @@
 
 ::ng-deep .tiptap-editor-content u,
 ::ng-deep .tiptap-editor-content s {
-  text-decoration-color: var(--line-strong);
+  text-decoration-color: color-mix(in srgb, var(--text) 50%, transparent);
 }
 
 /* placeholders */

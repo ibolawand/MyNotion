@@ -130,7 +130,7 @@
   cursor: pointer;
 }
 
-.math-snippets button:hover { background: var(--line); }
+.math-snippets button:hover { background: var(--hover-strong); }
 .math-snippets button:focus-visible, .math-save:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
 .math-actions {
@@ -199,7 +199,7 @@
 
 .matrix-kinds button { font-family: var(--serif); }
 .matrix-kinds button.on { border-color: var(--accent-strong); background: var(--accent-soft); color: var(--accent); }
-.matrix-kinds button:hover, .matrix-steps button:hover:not(:disabled), .matrix-latex:hover { background: var(--line); }
+.matrix-kinds button:hover, .matrix-steps button:hover:not(:disabled), .matrix-latex:hover { background: var(--hover-strong); }
 .matrix-steps button:disabled { opacity: 0.35; cursor: default; }
 .matrix-latex { margin-left: auto; color: var(--text-3); }
 
@@ -236,7 +236,7 @@
 }
 .matrix-tab.on, .matrix-place button.on { border-color: var(--accent-strong); background: var(--accent-soft); color: var(--accent); }
 .matrix-add { border-style: dashed; }
-.matrix-tab:hover, .matrix-add:hover, .matrix-remove:hover, .matrix-place button:hover, .math-matrices button:hover { background: var(--line); }
+.matrix-tab:hover, .matrix-add:hover, .matrix-remove:hover, .matrix-place button:hover, .math-matrices button:hover { background: var(--hover-strong); }
 .matrix-op { height: 26px; padding: 0 4px; border-radius: var(--r-md); border: 1px solid var(--line-strong); background: var(--bg); color: var(--text); font: 15px var(--serif); cursor: pointer; }
 .matrix-op option { background: var(--bg-raised); }
 .matrix-remove { margin-left: auto; }
@@ -254,7 +254,7 @@
 }
 .box-align .align-btn svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
 .box-align .align-btn.on { border-color: var(--accent-strong); background: var(--accent-soft); color: var(--accent); }
-.box-align .align-btn:hover { background: var(--line); }
+.box-align .align-btn:hover { background: var(--hover-strong); }
 .box-align .align-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 
 /* ── moving the formula / matrix box: the grip at the top (or its empty edge) ── */

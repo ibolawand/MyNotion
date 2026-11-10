@@ -10,7 +10,7 @@ h1 { font-size: 22px; font-weight: 650; line-height: 1.3; color: var(--text-stro
 time { align-self: start; font-size: 12.5px; color: var(--text-3); white-space: nowrap; }
 .actions { display: flex; flex-wrap: wrap; gap: 6px; margin: 18px 0 16px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
 .actions button { display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: var(--r-lg); border: 1px solid var(--line); background: var(--hover); color: var(--text-2); font: inherit; font-size: 13px; cursor: pointer; transition: background 0.15s, border-color 0.15s; }
-.actions button:hover { background: var(--line); border-color: var(--accent-line); }
+.actions button:hover { background: var(--hover-strong); border-color: var(--accent-line); }
 .actions button.primary { background: var(--accent-fill); border-color: transparent; color: var(--on-accent); font-weight: 600; }
 .actions button.primary:hover { background: var(--accent); }
 svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
@@ -25,5 +25,5 @@ svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width:
 .paper { border-radius: var(--r-lg); overflow: hidden; background: #fff; box-shadow: 0 1px 0 var(--hover), 0 12px 30px -12px rgba(0, 0, 0, 0.6); }
 .paper iframe { display: block; width: 100%; min-height: 120px; border: none; }
 .text { font-size: 15px; line-height: 1.7; color: var(--text); overflow-wrap: anywhere; max-width: 68ch; }
-.text::ng-deep a { color: var(--accent); }
+.text ::ng-deep a { color: var(--accent); }
 @media (max-width: 700px) { .sheet { padding: 20px 16px 40px; } .from { grid-template-columns: auto 1fr; } time { grid-column: 2; } }

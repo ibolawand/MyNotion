@@ -194,7 +194,7 @@ input:focus {
 .submit-btn {
     width: 100%;
     padding: 13px;
-    background: var(--line-strong);
+    background: var(--bg-overlay);
     color: var(--text-2);
     border: none;
     border-radius: var(--r-lg);
@@ -225,7 +225,7 @@ input:focus {
 
 .submit-btn.active {
     background: var(--accent-fill);
-    color: var(--text-strong);
+    color: var(--on-accent);
     box-shadow: 0 4px 12px var(--accent-line);
 }
 

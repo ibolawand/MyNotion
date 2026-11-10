@@ -136,7 +136,7 @@ h1 {
 
 .option-card:hover {
     transform: translateY(-12px) scale(1.02);
-    background: var(--line);
+    background: var(--hover-strong);
     border-color: var(--accent-line);
     box-shadow:
         0 24px 48px -12px rgba(0, 0, 0, 0.6),

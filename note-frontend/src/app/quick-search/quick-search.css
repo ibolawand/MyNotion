@@ -144,8 +144,8 @@ kbd {
 }
 
 .row-snippet mark {
-  background: var(--accent-line);
-  color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--text-strong);
   border-radius: var(--r-sm);
   padding: 0 1px;
 }

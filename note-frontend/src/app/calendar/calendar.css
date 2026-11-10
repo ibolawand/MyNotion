@@ -522,7 +522,7 @@
 }
 
 .btn-cancel:hover {
-  background: var(--line);
+  background: var(--hover-strong);
   border-color: var(--line-strong);
   color: var(--text);
 }

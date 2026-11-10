@@ -99,13 +99,49 @@ function literals(file) {
   return found;
 }
 
+// Mistakes a colour swap tends to make, found per rule block.
+function lint(file) {
+  const css = readFileSync(file, 'utf8').replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '));
+  const lineOf = (i) => css.slice(0, i).split('\n').length;
+  const found = [];
+  // ".x::ng-deep" is not ".x ::ng-deep": the space decides which elements match
+  for (const m of css.matchAll(/[\w)\]-]::(ng-deep|selection)\b/g)) {
+    found.push(`${file}:${lineOf(m.index)}: "${m[0]}" without a space before ::${m[1]}`);
+  }
+  for (const m of css.matchAll(/(?:^|[;{\s])(?:color|background(?:-color)?|border(?:-[a-z]+)?)\s*:\s*[^;}]*\b(white|black)\b/g)) {
+    found.push(`${file}:${lineOf(m.index)}: colour name "${m[1]}" instead of a token`);
+  }
+  const blocks = new Map();
+  for (const m of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    const body = m[2];
+    const bg = body.match(/(?:^|;|\s)background(?:-color)?\s*:\s*([^;]+)/)?.[1].trim();
+    const color = body.match(/(?:^|;|\s)color\s*:\s*([^;]+)/)?.[1].trim();
+    if (/^var\(--accent(-fill)?\)$/.test(bg ?? '') && color && !/^(var\(--on-accent\)|inherit)$/.test(color)) {
+      found.push(`${file}:${lineOf(m.index)}: text ${color} on ${bg} (use var(--on-accent))`);
+    }
+    for (const sel of m[1].split(',').map((s) => s.trim())) blocks.set(sel, { bg, at: m.index });
+  }
+  // a hover must look different: --hover (5%) and --line (7%) are too close to count as a change
+  const near = (v) => v?.replace('var(--line)', 'var(--hover)');
+  for (const [sel, { bg, at }] of blocks) {
+    if (!sel.includes(':hover') || !bg) continue;
+    const base = blocks.get(sel.replace(/:hover|:not\([^)]*\)/g, ''));
+    if (base?.bg && near(base.bg) === near(bg)) {
+      found.push(`${file}:${lineOf(at)}: ${sel} background ${bg} barely differs from its base ${base.bg}`);
+    }
+  }
+  return found;
+}
+
 const args = process.argv.slice(2);
 const strict = args.includes('--strict');
 const files = args.filter((a) => a !== '--strict');
 
 const failures = checkContrast(rootTokens());
 const left = files.flatMap(literals);
+const lints = files.flatMap(lint);
 for (const l of left) console.log(`literal ${l}`);
-console.log(`${left.length} hard-coded colour(s) in ${files.length} file(s)`);
+for (const l of lints) console.log(`lint ${l}`);
+console.log(`${left.length} hard-coded colour(s), ${lints.length} lint problem(s) in ${files.length} file(s)`);
 for (const f of failures) console.error(f);
-if (failures.length || (strict && left.length)) process.exit(1);
+if (failures.length || (strict && (left.length || lints.length))) process.exit(1);
