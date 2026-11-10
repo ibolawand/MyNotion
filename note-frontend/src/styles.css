@@ -99,6 +99,7 @@ body {
   color-scheme: dark;
 }
 .field-input:focus, input.input:focus { border-color: var(--accent-strong); }
+.field-input::placeholder, input.input::placeholder { color: var(--text-faint); }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 /* calendar: to-dos due that day, in the all-day row (here, not in calendar.css, which is at its size budget) */
