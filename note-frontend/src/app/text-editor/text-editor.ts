@@ -131,6 +131,7 @@ export const MATH_SNIPPETS: { label: string; tex: string; at?: number; sel?: num
   { label: 'Vector v', tex: '\\vec{v}', at: 5, sel: 1, face: '\\vec{v}' },
   { label: 'Vector from A to B', tex: '\\overrightarrow{AB}', at: 16, sel: 2, face: '\\overrightarrow{AB}' },
   { label: 'Length of a vector', tex: '\\left| \\vec{v} \\right|', at: 12, sel: 1, face: '|\\vec{v}|' },
+  { label: 'Bar over a letter', tex: '\\overline{x}', at: 10, sel: 1, face: '\\overline{x}' },
   { label: 'Δ', tex: '\\Delta ' }, { label: 'λ', tex: '\\lambda' }, { label: 'μ', tex: '\\mu' }, { label: 'Ω', tex: '\\Omega' },
 ];
 
