@@ -1,6 +1,6 @@
 import { Injectable, NgZone } from '@angular/core';
 import { Category, Folder, MailDraft, MailMessage, MailSendResult, MailStatus, MailSummary, Note, User } from '../model/models';
-import { Subject, Observable, BehaviorSubject, debounceTime, distinctUntilChanged, switchMap, tap, Subscription, of, from } from 'rxjs';
+import { Subject, Observable, BehaviorSubject } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
 export enum SaveStatus {
@@ -114,6 +114,8 @@ export class NoteService {
     // Another program (e.g. Aria) changed the database: reload everything that's cached.
     // The IPC callback arrives outside Angular's zone, so re-enter it for change detection.
     window.electronAPI?.onDbChanged?.(() => this.zone.run(() => this.reloadFromDatabase()));
+    // closing the window: write what is still waiting for its autosave timer
+    window.addEventListener('beforeunload', () => void this.flushSaves());
   }
 
   //#region Outside changes
@@ -149,9 +151,7 @@ export class NoteService {
 
   //#region Notes
   private notesChangedSubject = new Subject<Note>();
-  private saveSubject = new Subject<Note>();
 
-  private saveSub?: Subscription;
   private saveStatusSubject = new BehaviorSubject<SaveStatus>(SaveStatus.IDLE);
   public readonly saveStatus$ = this.saveStatusSubject.asObservable();
 
@@ -187,30 +187,6 @@ export class NoteService {
     }
     return res;
   }
-  private initAutoSave() {
-    this.saveSub = this.saveSubject.pipe(
-      debounceTime(600),
-      distinctUntilChanged(
-        (previous, current) => previous === current,
-        (note: Note) => JSON.stringify({ title: note.title, content: note.content, categoryID: note.categoryID, folderID: note.folderID })
-      ),
-      switchMap(note => {
-        this.saveStatusSubject.next(SaveStatus.SAVING);
-        if (note.id !== undefined && note.id !== null) {
-          return from(this.updateNote(note));
-        }
-        return from(this.createNote(note));
-      }),
-      tap((res: any) => {
-        if (res && res.ok) {
-          this.saveStatusSubject.next(SaveStatus.SAVED);
-        } else {
-          this.saveStatusSubject.next(SaveStatus.ERROR);
-        }
-      })
-    ).subscribe();
-  }
-
   async deleteNote(id: number) {
     const res = await window.electronAPI.notes.deleteNote(id);
     if (res && res.ok) {
@@ -285,7 +261,9 @@ export class NoteService {
   async loadNotes(): Promise<void> {
     try {
       const rows = await window.electronAPI.notes.getAllNotes(this.userIdSource.value);
-      this.notesCache = Array.isArray(rows) ? rows : [];
+      const fresh: Note[] = Array.isArray(rows) ? rows : [];
+      // typing that isn't saved yet wins over the (older) row in the database
+      this.notesCache = fresh.map(n => n.id != null && this.unsaved.has(n.id) ? { ...n, ...this.unsaved.get(n.id)! } : n);
       this.emitNotes();
     } catch (err) {
       console.error('Failed to load notes:', err);
@@ -321,26 +299,84 @@ export class NoteService {
     return window.electronAPI.notes.createNote(note);
   }
 
+  // ── autosave ──
+  // Each note has its own 600 ms timer, so typing in one note never cancels another note's save.
+  // `unsaved` holds what was typed but isn't in the database yet: a reload from the database
+  // (the watcher fires on every write, e.g. when you switch notes) must not throw it away.
+  private saveTimers = new Map<number | 'new', { note: Note; timer: any }>();
+  private saving = new Map<number | 'new', Promise<unknown>>();
+  private lastSaved = new Map<number, string>();
+  private unsaved = new Map<number, Note>();
+
+  private saveKey(note: Note): number | 'new' {
+    return note.id != null ? note.id : 'new';
+  }
+
   // Public method components can call to trigger a debounced auto-save
   triggerAutoSave(note: Note) {
-    // lazy init the autosave pipeline
-    if (!this.saveSub) this.initAutoSave();
     this.lastLocalEdit = Date.now();
 
     // Update cache immediately for real-time UI updates
     if (note.id !== undefined && note.id !== null) {
+      this.unsaved.set(note.id, { ...note });
       const idx = this.notesCache.findIndex(n => n.id === note.id);
       if (idx !== -1) {
         this.notesCache[idx] = { ...this.notesCache[idx], ...note };
       }
-    } else {
-      // For new notes being typed, we don't have an ID yet.
-      // We might want to avoid adding them to the cache multiple times.
-      // Usually, the first auto-save will create it and set the ID.
     }
+    // (a new note has no id yet: the first save creates it and sets the id)
     this.emitNotes();
 
-    this.saveSubject.next(note);
+    const key = this.saveKey(note);
+    clearTimeout(this.saveTimers.get(key)?.timer);
+    this.saveTimers.set(key, { note, timer: setTimeout(() => void this.saveNow(key), 600) });
+  }
+
+  /** Writes every change that is still waiting for its timer (switching notes, closing the app). */
+  async flushSaves(): Promise<void> {
+    await Promise.all([...this.saveTimers.keys()].map(key => this.saveNow(key)));
+  }
+
+  private saveNow(key: number | 'new'): Promise<unknown> {
+    const waiting = this.saveTimers.get(key);
+    if (!waiting) return this.saving.get(key) ?? Promise.resolve();
+    clearTimeout(waiting.timer);
+    this.saveTimers.delete(key);
+    // one save per note at a time, in order (a new note: the later saves update what the first created)
+    const run = (this.saving.get(key) ?? Promise.resolve()).then(() => this.write(waiting.note));
+    this.saving.set(key, run);
+    void run.finally(() => { if (this.saving.get(key) === run) this.saving.delete(key); });
+    return run;
+  }
+
+  private async write(note: Note) {
+    const snapshot = { ...note };
+    const sig = JSON.stringify({ title: note.title, content: note.content, categoryID: note.categoryID, folderID: note.folderID });
+    if (note.id != null && this.lastSaved.get(note.id) === sig) { this.settle(snapshot); return; }
+    this.saveStatusSubject.next(SaveStatus.SAVING);
+    let res: any;
+    try {
+      res = note.id != null ? await this.updateNote(note) : await this.createNote(note);
+    } catch (err) {
+      console.error('Autosave failed:', err);
+      res = null;
+    }
+    if (res && res.ok) {
+      if (note.id != null) this.lastSaved.set(note.id, sig);
+      this.settle(snapshot);
+      this.saveStatusSubject.next(SaveStatus.SAVED);
+    } else {
+      this.saveStatusSubject.next(SaveStatus.ERROR);
+    }
+  }
+
+  /** The database now has this version: stop protecting it, unless something newer was typed since. */
+  private settle(saved: Note) {
+    if (saved.id == null) return;
+    const local = this.unsaved.get(saved.id);
+    if (local && local.content === saved.content && local.title === saved.title && !this.saveTimers.has(saved.id)) {
+      this.unsaved.delete(saved.id);
+    }
   }
 
   public getNotesCache(): Note[] {

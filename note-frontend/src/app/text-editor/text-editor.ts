@@ -347,6 +347,8 @@ export class TextEditor implements OnInit, OnDestroy {
     this.noteSub = this.modelService.currentNote$.subscribe((note: Note | null) => {
       if (note) {
         const switched = note.id !== this.currentNote?.id;
+        // the note you leave is written now, not after its autosave timer
+        if (switched) void this.noteService.flushSaves();
         this.currentNote = note;
         // Only reload when the content differs: this also fires on every keystroke,
         // and resetting identical content would move the cursor.
