@@ -8,31 +8,18 @@
   @if (modelService.openDashboard$ | async) {
   <app-quick-search></app-quick-search>
   <app-undo-bar></app-undo-bar>
-  <app-side-bar></app-side-bar>
-  @let calendarShown = (modelService.openCalendar$ | async) && !(modelService.isOpen$ | async)
-    && !(modelService.isExistingNoteOpen$ | async);
-  <!-- the notes list makes room when the calendar is open (it squeezed event names to "C# e…") -->
-  @let inboxShown = modelService.openInbox$ | async;
-  @if (!calendarShown && !inboxShown) {
-  <app-overview-panel></app-overview-panel>
-  }
-
-  @if (inboxShown) {
-  <app-inbox></app-inbox>
-  } @else if (modelService.isExistingNoteOpen$ | async) {
-  <app-editor></app-editor>
-  } @else if (modelService.openCalendar$ | async) {
-  <app-calendar></app-calendar>
-  } @else {
-  <div class="empty-workspace">
-    <h2>Pick a note, or start a new one</h2>
-    <ul class="shortcuts">
-      <li><kbd>Ctrl</kbd><kbd>N</kbd><span>New note</span></li>
-      <li><kbd>Ctrl</kbd><kbd>P</kbd><span>Find a note</span></li>
-      <li><kbd>Ctrl</kbd><kbd>D</kbd><span>Today's note</span></li>
-    </ul>
+  <div class="workspace-col">
+    <app-top-bar></app-top-bar>
+    <div class="workspace">
+      @switch ((modelService.workspace$ | async)?.view) {
+      @case ('inbox') { <app-inbox></app-inbox> }
+      @case ('calendar') { <app-calendar></app-calendar> }
+      @case ('book') { <app-open-book></app-open-book> }
+      @case ('slip') { <app-editor></app-editor> }
+      @default { <app-bookshelf></app-bookshelf> }
+      }
+    </div>
   </div>
-  }
   @if (modelService.ariaPanelOpen$ | async) {
   <app-aria-panel></app-aria-panel>
   }

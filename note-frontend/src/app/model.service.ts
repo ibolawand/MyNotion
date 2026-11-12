@@ -65,6 +65,23 @@ export class ModelService {
   /** The book that was open last: the shelf shows it closing and going back to its place, once. */
   lastBookId: number | null = null;
 
+  /** The folders, kept current by the home screen, so a note opened from anywhere (search, calendar, a link in a
+   *  note, Aria) shows up inside its own book. */
+  folders = new BehaviorSubject<Folder[]>([]);
+  folders$ = this.folders.asObservable();
+  setFolders(folders: Folder[]) { this.folders.next(folders || []); }
+
+  private showWhereItLives(note: Note) {
+    const folders = this.folders.value;
+    if (!folders.length) return;                       // not known yet: whoever opened the note chose the book
+    const bookId = bookIdOf(note.folderID, folders);
+    if (bookId === this.openBookSubject.value) return;
+    const book = folders.find(f => f.id === bookId) ?? null;
+    this.setCurrentFolder(book, book ? descendantIds(book.id, folders) : []);
+    if (book) this.lastBookId = book.id;
+    this.openBookSubject.next(book ? book.id : null);
+  }
+
   /** Open a book from the shelf: it becomes the current folder, so a new note lands in it. */
   openBook(folder: Folder, descendantIds: number[] = []) {
     this.openInbox.next(false);
@@ -169,6 +186,7 @@ export class ModelService {
 
   onNoteClicked(note: Note) {
     this.openInbox.next(false);
+    this.showWhereItLives(note);
     this.noteClicked.next(note);
     this.isExistingNoteOpen.next(true);
     this.currentNoteSubject.next(note);

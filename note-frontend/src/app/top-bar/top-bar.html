@@ -1,0 +1,53 @@
+<nav class="top-bar" aria-label="Main">
+  @if (inNote) {
+  <button type="button" class="tb tb-back" (click)="back()" title="Back to the shelf (Esc)" aria-label="Back to the shelf">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"></polyline></svg>
+  </button>
+  }
+  <button type="button" class="tb tb-home" [class.active]="view === 'shelf'" (click)="back()">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19V5a2 2 0 0 1 2-2h3v18H6a2 2 0 0 1-2-2zM9 3h4v18H9zM13 6l4-1 4 15-4 1z"></path></svg>
+    Shelf
+  </button>
+  <button type="button" class="tb tb-inbox" [class.active]="view === 'inbox'" (click)="modelService.showInbox()">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="4" width="20" height="16" rx="2" /><path d="M22 7l-10 6L2 7" /></svg>
+    Inbox
+    @if ((mail.status$ | async)?.unread; as unread) {<span class="menu-badge">{{ unread }}</span>}
+  </button>
+  <button type="button" class="tb tb-calendar" [class.active]="view === 'calendar'" (click)="modelService.showCalendar()">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="3" y1="10" x2="21" y2="10" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /></svg>
+    Calendar
+  </button>
+
+  <label class="search-box tb-search">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg>
+    <input type="text" placeholder="Search notes…  Ctrl+P" aria-label="Search notes">
+  </label>
+
+  <span class="spacer"></span>
+
+  <div class="new-note-wrap">
+    <button type="button" class="tb tb-new-note accent" (click)="newNote()" [attr.aria-expanded]="choosing" title="New note (Ctrl+N)">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+      New note
+    </button>
+    @if (choosing) {
+    <div class="new-note-where" role="menu" aria-label="Where should the new note go?">
+      <button type="button" role="menuitem" class="where desk" (click)="newNoteIn(null)">On the desk</button>
+      @for (book of books; track book.id) {
+      <button type="button" role="menuitem" class="where" (click)="newNoteIn(book)">
+        <span class="dot" [style.background]="book.colour || '#4ade80'"></span>{{ book.name }}
+      </button>
+      }
+    </div>
+    }
+  </div>
+  <button type="button" class="tb tb-new-book" (click)="newBook()" title="New notebook">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V3H6.5A2.5 2.5 0 0 0 4 5.5z"></path><line x1="12" y1="7" x2="12" y2="13"></line><line x1="9" y1="10" x2="15" y2="10"></line></svg>
+    New book
+  </button>
+  <button type="button" class="tb tb-aria" [class.active]="modelService.ariaPanelOpen$ | async" (click)="modelService.toggleAriaPanel()" title="Talk to Aria (Ctrl+J)">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="3"></circle></svg>
+    Aria
+  </button>
+</nav>
+<app-folder-adder></app-folder-adder>

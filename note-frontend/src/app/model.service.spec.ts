@@ -73,6 +73,21 @@ describe('what the workspace shows', () => {
     expect(await shown()).toEqual({ view: 'slip' });
   });
 
+  it('once the folders are known, any opened note shows in its own book', async () => {
+    const german: Folder = { id: 5, name: 'German', colour: '#ef4444', parentID: null, userID: 1 };
+    model.setFolders([math, sub, german]);
+    model.openBook(german, []);
+    model.onNoteClicked(note(13, 11));                   // e.g. a link in a note, the calendar, the search
+    expect(await shown()).toEqual({ view: 'book', folderId: 3 });
+    expect(model.getCurrentFolder()).toBe(math);
+    model.onNoteClicked(note(1, 0));
+    expect(await shown()).toEqual({ view: 'slip' });
+    expect(model.getCurrentFolder()).toBeNull();
+    model.openBook(math, [11]);
+    model.toggleOpenNewNote();
+    expect(await shown()).toEqual({ view: 'book', folderId: 3 });
+  });
+
   it('a new note can be started in a chosen book or on the desk', async () => {
     model.newNoteIn(math, [11]);
     expect((await current())?.folderID).toBe(3);

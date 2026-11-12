@@ -3,10 +3,11 @@ import { ModelService } from '../model.service';
 import { NoteService } from '../../services/NoteService';
 import { Category, Folder, Note } from '../../model/models';
 import { BehaviorSubject, Subscription } from 'rxjs';
-import { OverviewPanel } from '../overview-panel/overview-panel';
+import { Bookshelf } from '../bookshelf/bookshelf';
+import { OpenBook } from '../open-book/open-book';
+import { TopBar } from '../top-bar/top-bar';
 import { AsyncPipe } from '@angular/common';
 import { Editor } from '../editor/editor';
-import { SideBar } from '../side-bar/side-bar';
 import { QuickSearch } from '../quick-search/quick-search';
 import { UndoBar } from '../undo-bar/undo-bar';
 import { Calendar } from '../calendar/calendar';
@@ -22,10 +23,11 @@ import { AriaPanel } from '../aria-panel/aria-panel';
     Inbox,
     QuickSearch,
     UndoBar,
-    OverviewPanel,
+    Bookshelf,
+    OpenBook,
+    TopBar,
     Editor,
     AsyncPipe,
-    SideBar,
     Calendar,
     CreateAccount,
     WindowBar,
@@ -39,6 +41,7 @@ export class HomeApp implements OnDestroy, OnInit {
   categories: Category[] = []
   private notesSub?: Subscription;
   private categoriesSub?: Subscription;
+  private foldersSub?: Subscription;
 
 
   private stopOpenListener?: () => void;
@@ -48,12 +51,17 @@ export class HomeApp implements OnDestroy, OnInit {
 
   ngOnDestroy(): void {
     this.notesSub?.unsubscribe();
+    this.foldersSub?.unsubscribe();
     this.stopOpenListener?.();
   }
   async ngOnInit() {
     await this.noteService.loadNotes();
     this.noteService.categories$.subscribe(list => this.categories = list);
     this.notesSub = this.noteService.notes$.subscribe(list => this.notes = list);
+    // the shelf's books: ModelService needs them to show an opened note inside its own book
+    const folders = async () => this.modelService.setFolders(await this.noteService.loadFolders());
+    this.foldersSub = this.noteService.folderChanged$.subscribe(() => void folders());
+    await folders();
 
     if (this.modelService.isLoggedIn.value) {
       this.modelService.openDashboard();
@@ -77,10 +85,7 @@ export class HomeApp implements OnDestroy, OnInit {
       const id = Number(target.slice('note:'.length));
       await this.noteService.loadNotes();
       const note = this.noteService.getNotesCache().find(n => n.id === id);
-      if (note) {
-        this.modelService.openHome();
-        this.modelService.onNoteClicked(note);
-      }
+      if (note) this.modelService.openNote(note, await this.noteService.loadFolders());
     } else {
       this.modelService.openHome();
     }

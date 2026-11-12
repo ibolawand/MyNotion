@@ -13,18 +13,19 @@
   color: var(--text);
 }
 
-app-side-bar {
-  display: flex;
-  flex: 0 0 280px;
+.workspace-col {
+  flex: 1;
   min-width: 0;
   height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: visible;
 }
 
-app-overview-panel {
+.workspace {
+  flex: 1;
+  min-height: 0;
   display: flex;
-  flex: 0 0 360px;
-  min-width: 0;
-  height: 100%;
 }
 
 /* Aria, next to whatever is open (Ctrl+J) */
@@ -36,6 +37,8 @@ app-aria-panel {
 }
 
 app-adder,
+app-bookshelf,
+app-open-book,
 app-editor,
 app-inbox,
 app-calendar {

@@ -62,7 +62,7 @@ export class QuickSearch implements OnInit, OnDestroy {
               private cdr: ChangeDetectorRef) {}
 
   ngOnInit() {
-    // The sidebar's "Search all notes…" box opens this search (without changing the sidebar's own code).
+    // The top bar's "Search notes…" box opens this search.
     document.addEventListener('focusin', this.onFocusIn);
   }
 
@@ -72,7 +72,7 @@ export class QuickSearch implements OnInit, OnDestroy {
 
   private sidebarFocus(e: FocusEvent) {
     const el = e.target as HTMLElement | null;
-    if (el instanceof HTMLInputElement && el.closest('app-side-bar .search-box')) {
+    if (el instanceof HTMLInputElement && el.closest('app-top-bar .search-box')) {
       const typed = el.value;
       el.blur();
       this.show(typed);
