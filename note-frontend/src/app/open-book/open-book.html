@@ -1,0 +1,84 @@
+@if (book) {
+<div class="open-book" [class.narrow]="collapsed" [style.--cover]="book.colour || '#4ade80'">
+  <aside class="contents" [class.collapsed]="collapsed" aria-label="Contents">
+    <button type="button" class="fold" (click)="collapsed = !collapsed" [attr.aria-expanded]="!collapsed"
+      [title]="collapsed ? 'Show the contents' : 'Hide the contents'" [attr.aria-label]="collapsed ? 'Show the contents' : 'Hide the contents'">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" [class.flip]="collapsed">
+        <polyline points="15 18 9 12 15 6"></polyline>
+      </svg>
+    </button>
+
+    @if (!collapsed) {
+    <header class="book-head">
+      <input class="book-title" type="text" [(ngModel)]="name" (blur)="rename()" (keydown.enter)="$any($event.target).blur()"
+        aria-label="Notebook name" spellcheck="false">
+      <button type="button" class="icon-btn menu-btn" (click)="menuOpen = !menuOpen" [attr.aria-expanded]="menuOpen"
+        title="Colour, sections, categories" aria-label="Notebook settings">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>
+      </button>
+    </header>
+
+    @if (menuOpen) {
+    <div class="book-menu">
+      <div class="menu-label">Colour</div>
+      <div class="swatches" role="radiogroup" aria-label="Notebook colour">
+        @for (c of colours; track c) {
+        <button type="button" class="book-colour" role="radio" [attr.aria-checked]="book.colour === c" [class.on]="book.colour === c"
+          [style.background]="c" [attr.aria-label]="c" (click)="recolour(c)"></button>
+        }
+      </div>
+      <button type="button" class="menu-row add-section" (click)="addSection()">Add a section</button>
+      <div class="menu-label">Categories</div>
+      @for (cat of categories; track cat.id) {
+      <div class="category-row">
+        <span>{{ cat.name }}</span>
+        <button type="button" class="icon-btn" (click)="deleteCategory(cat)" [attr.aria-label]="'Delete the category ' + cat.name" title="Delete category">×</button>
+      </div>
+      }
+      <form class="category-add" (ngSubmit)="addCategory()">
+        <input type="text" name="newCategory" [(ngModel)]="newCategory" placeholder="New category" aria-label="New category">
+        <button type="submit" class="menu-row">Add</button>
+      </form>
+      <button type="button" class="menu-row danger book-delete" (click)="deleteBook()">Delete this notebook</button>
+    </div>
+    }
+
+    <nav class="contents-list">
+      @if (isNew) {
+      <div class="contents-note active new"><span class="note-title">{{ current?.title || 'New note' }}</span><span class="note-when">not saved yet</span></div>
+      }
+      @for (section of sections; track section.folder.id) {
+        @if (section.depth > 0) {
+        <div class="section-title" [style.--depth]="section.depth">
+          <span>{{ section.folder.name }}</span>
+          <button type="button" class="icon-btn" (click)="deleteSection(section)" [attr.aria-label]="'Delete the section ' + section.folder.name" title="Delete section">×</button>
+        </div>
+        }
+        @for (note of section.notes; track note.id) {
+        <div class="contents-note" [class.active]="isActive(note)" [style.--depth]="section.depth" role="button" tabindex="0"
+          (click)="select(note)" (keydown.enter)="select(note)" [title]="edited(note, true)">
+          @if (note.pinned) { <span class="pin" aria-label="Pinned">★</span> }
+          <span class="note-title">{{ note.title || 'Untitled' }}</span>
+          @if (categoryOf(note)) { <span class="category-tag">{{ categoryOf(note) }}</span> }
+          <span class="note-when">{{ edited(note) }}</span>
+          <button type="button" class="icon-btn note-delete" (click)="deleteNote(note, $event)" [attr.aria-label]="'Delete the note ' + (note.title || 'Untitled')" title="Delete note">×</button>
+        </div>
+        }
+      }
+    </nav>
+    <button type="button" class="new-note" (click)="newNote()">+ New note</button>
+    }
+  </aside>
+
+  <section class="page-right">
+    @if (modelService.isExistingNoteOpen$ | async) {
+    <app-editor></app-editor>
+    } @else {
+    <div class="empty-book">
+      <h2>{{ empty ? 'No note yet' : 'Pick a note' }}</h2>
+      <button type="button" class="new-note big" (click)="newNote()">+ New note</button>
+    </div>
+    }
+  </section>
+</div>
+}
