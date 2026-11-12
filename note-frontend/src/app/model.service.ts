@@ -62,12 +62,16 @@ export class ModelService {
         : book != null ? { view: 'book', folderId: book } : { view: 'shelf' }),
     distinctUntilChanged((a, b) => a.view === b.view && (a as any).folderId === (b as any).folderId));
 
+  /** The book that was open last: the shelf shows it closing and going back to its place, once. */
+  lastBookId: number | null = null;
+
   /** Open a book from the shelf: it becomes the current folder, so a new note lands in it. */
   openBook(folder: Folder, descendantIds: number[] = []) {
     this.openInbox.next(false);
     this.openCalendar.next(false);
     this.isStartingPageOpen.next(false);
     this.setCurrentFolder(folder, descendantIds);
+    this.lastBookId = folder.id;
     this.openBookSubject.next(folder.id);
   }
 

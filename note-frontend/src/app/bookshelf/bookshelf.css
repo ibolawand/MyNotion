@@ -1,0 +1,46 @@
+:host { display: block; flex: 1; min-width: 0; height: 100%; position: relative; background: var(--bg-sunken); }
+.shelf { position: absolute; inset: 0; overflow: hidden; transition: opacity 0.22s ease 0.42s; }
+.shelf.leaving { opacity: 0; }
+canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+
+/* 3D: the buttons are invisible and lie exactly over what three.js drew */
+.shelf:not(.flat) .pick { position: absolute; background: transparent; border: 0; color: transparent; cursor: pointer;
+  border-radius: var(--r-sm); font-size: 0; }
+.shelf:not(.flat) .pick:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.shelf:not(.flat) .pick span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.shelf:not(.flat) .shelf-row, .shelf:not(.flat) .desk, .shelf:not(.flat) .aria-stack { position: static; }
+.stack-close { position: absolute; right: var(--space-5); bottom: var(--space-4); padding: 6px 14px; cursor: pointer;
+  background: var(--bg-raised); color: var(--text); border: 1px solid var(--line-strong); border-radius: var(--r-md);
+  font: 500 13px var(--sans); }
+.stack-close:hover { background: var(--bg-overlay); }
+.stack-close:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.no-books { position: absolute; left: 0; right: 0; top: 38%; text-align: center; color: var(--text-2); font: 15px var(--sans); }
+.no-books strong { color: var(--accent); font-weight: 600; }
+
+/* Flat: no WebGL. The same buttons, drawn as coloured spines and paper slips. */
+.shelf.flat canvas { display: none; }
+.shelf.flat { overflow-y: auto; padding: var(--space-6); }
+.shelf.flat .shelf-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 6px; padding: var(--space-4);
+  border-bottom: 10px solid var(--bg-overlay); background: var(--bg); border-radius: var(--r-lg) var(--r-lg) 0 0; min-height: 190px; }
+.shelf.flat .book { width: var(--spine, 40px); height: 170px; background: var(--cover, #4ade80); color: var(--ink, #11131c);
+  border: 0; border-radius: 3px; cursor: pointer; display: flex; flex-direction: column; align-items: center;
+  justify-content: space-between; padding: 10px 0; font: 600 13px var(--sans); transition: transform 0.15s ease; }
+.shelf.flat .book:hover, .shelf.flat .book:focus-visible { transform: translateY(-8px); outline: none; box-shadow: 0 0 0 2px var(--accent); }
+.shelf.flat .spine-name { writing-mode: vertical-rl; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-height: 125px; }
+.shelf.flat .spine-count { font-weight: 500; font-size: 11px; opacity: 0.75; }
+.shelf.flat .desk { display: flex; flex-wrap: wrap; gap: var(--space-3); padding: var(--space-5) var(--space-4); }
+.shelf.flat .aria-stack { display: flex; flex-wrap: wrap; gap: var(--space-3); margin-left: auto; }
+.shelf.flat .slip, .shelf.flat .stack-top { width: 150px; height: 120px; padding: 10px; text-align: left; cursor: pointer;
+  background: #e9e5d6; color: #1b1e2e; border: 0; border-top: 6px solid #b9b3a0; border-radius: 2px; display: flex;
+  flex-direction: column; gap: 6px; font: 12px var(--sans); }
+.shelf.flat .slip.aria, .shelf.flat .stack-top { border-top-color: var(--accent-fill); }
+.shelf.flat .slip:focus-visible, .shelf.flat .stack-top:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.shelf.flat .slip-title { font-weight: 700; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.shelf.flat .slip-text { color: #4b5060; overflow: hidden; }
+.shelf.flat .stack-close { position: static; align-self: flex-end; }
+.shelf.flat .no-books { position: static; margin-top: var(--space-5); }
+
+@media (prefers-reduced-motion: reduce) {
+  .shelf { transition: none; }
+  .shelf.flat .book { transition: none; }
+}

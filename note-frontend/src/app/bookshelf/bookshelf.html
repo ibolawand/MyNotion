@@ -1,0 +1,58 @@
+<div class="shelf" [class.flat]="flat" [class.leaving]="leaving">
+  <canvas #canvas aria-hidden="true"></canvas>
+
+  <div class="shelf-row" role="list" aria-label="Notebooks">
+    @for (book of shelf.books; track book.folder.id) {
+    <button type="button" class="pick book" role="listitem" [style]="place('book:' + book.folder.id)"
+      [style.--cover]="book.colour" [style.--ink]="book.ink" [style.--spine.px]="book.spine"
+      [attr.aria-label]="bookLabel(book)" [title]="book.folder.name"
+      (click)="openBook(book)" (mouseenter)="hover('book:' + book.folder.id)" (mouseleave)="hover(null)"
+      (focus)="hover('book:' + book.folder.id)" (blur)="hover(null)"
+      (dragover)="dragOver($event, 'book:' + book.folder.id)" (dragleave)="hover(null)" (drop)="drop($event, book)">
+      <span class="spine-name">{{ book.folder.name }}</span>
+      <span class="spine-count">{{ book.count }}</span>
+    </button>
+    }
+  </div>
+
+  <div class="desk" aria-label="Desk">
+    @for (note of shelf.slips; track note.id) {
+    <button type="button" class="pick slip" [style]="place('slip:' + note.id)" draggable="true"
+      [attr.aria-label]="'Open the note ' + (note.title || 'Untitled')" [title]="note.title || 'Untitled'"
+      (click)="openNote(note)" (dragstart)="dragStart($event, note)"
+      (mouseenter)="hover('slip:' + note.id)" (mouseleave)="hover(null)"
+      (focus)="hover('slip:' + note.id)" (blur)="hover(null)">
+      <span class="slip-title">{{ note.title || 'Untitled' }}</span>
+      <span class="slip-text">{{ preview(note) }}</span>
+    </button>
+    }
+    @if (shelf.aria.length) {
+    <div class="aria-stack" [class.fanned]="fanned">
+      @if (!fanned) {
+      <button type="button" class="pick stack-top" [style]="place('aria')" [attr.aria-expanded]="false"
+        [attr.aria-label]="'Aria\'s notes, ' + shelf.aria.length" title="Aria's notes"
+        (click)="toggleFan()" (mouseenter)="hover('aria')" (mouseleave)="hover(null)"
+        (focus)="hover('aria')" (blur)="hover(null)">
+        <span class="slip-title">Aria's notes</span>
+        <span class="slip-text">{{ shelf.aria.length }}</span>
+      </button>
+      } @else {
+      @for (note of shelf.aria; track note.id) {
+      <button type="button" class="pick slip aria" [style]="place('aria:' + note.id)"
+        [attr.aria-label]="'Open the note ' + note.title" [title]="note.title"
+        (click)="openNote(note)" (mouseenter)="hover('aria:' + note.id)" (mouseleave)="hover(null)"
+        (focus)="hover('aria:' + note.id)" (blur)="hover(null)">
+        <span class="slip-title">{{ note.title }}</span>
+        <span class="slip-text">{{ preview(note) }}</span>
+      </button>
+      }
+      <button type="button" class="stack-close" (click)="toggleFan()" aria-label="Put Aria's notes back in a stack">Stack</button>
+      }
+    </div>
+    }
+  </div>
+
+  @if (loaded && !shelf.books.length) {
+  <p class="no-books">No notebooks yet. Use <strong>New book</strong> at the top to start one.</p>
+  }
+</div>
