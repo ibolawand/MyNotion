@@ -1,6 +1,13 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Subject } from 'rxjs';
+import { BehaviorSubject, Subject, combineLatest } from 'rxjs';
+import { distinctUntilChanged, map } from 'rxjs/operators';
 import { Folder, Note } from '../model/models';
+import { bookIdOf } from './shelf/shelf-model';
+
+/** What fills the workspace under the top bar: the shelf (home), an opened book, a single note from the desk,
+ *  the calendar or the inbox. */
+export type Workspace = { view: 'shelf' } | { view: 'book'; folderId: number } | { view: 'slip' }
+  | { view: 'calendar' } | { view: 'inbox' };
 
 @Injectable({ providedIn: 'root' })
 export class ModelService {
@@ -42,6 +49,47 @@ export class ModelService {
 
 
 
+  /** The book (top-level folder) that lies open, or null. */
+  private openBookSubject = new BehaviorSubject<number | null>(null);
+  openBookId$ = this.openBookSubject.asObservable();
+
+  /** Derived from the switches above, so every old way in (onNoteClicked, openHome, showCalendar…) still works. */
+  workspace$ = combineLatest([this.openInbox, this.isExistingNoteOpen, this.openCalendar, this.openBookSubject]).pipe(
+    map(([inbox, note, calendar, book]): Workspace =>
+      inbox ? { view: 'inbox' }
+        : note ? (book != null ? { view: 'book', folderId: book } : { view: 'slip' })
+        : calendar ? { view: 'calendar' }
+        : book != null ? { view: 'book', folderId: book } : { view: 'shelf' }),
+    distinctUntilChanged((a, b) => a.view === b.view && (a as any).folderId === (b as any).folderId));
+
+  /** Open a book from the shelf: it becomes the current folder, so a new note lands in it. */
+  openBook(folder: Folder, descendantIds: number[] = []) {
+    this.openInbox.next(false);
+    this.openCalendar.next(false);
+    this.isStartingPageOpen.next(false);
+    this.setCurrentFolder(folder, descendantIds);
+    this.openBookSubject.next(folder.id);
+  }
+
+  /** Back to the shelf. */
+  closeBook() { this.openHome(); }
+
+  /** Open an existing note where it lives: inside its book, or as a slip from the desk. */
+  openNote(note: Note, folders: Folder[]) {
+    const bookId = bookIdOf(note.folderID, folders);
+    const book = folders.find(f => f.id === bookId);
+    if (book) this.openBook(book, descendantIds(book.id, folders));
+    else this.openHome();
+    this.onNoteClicked(note);
+  }
+
+  /** A blank note in this book, or on the desk (null). */
+  newNoteIn(book: Folder | null, descendants: number[] = []) {
+    if (book) this.openBook(book, descendants);
+    else this.openHome();
+    this.toggleOpenNewNote();
+  }
+
   /** The Aria panel on the right (Ctrl+J): it sits next to whatever is open, so it has its own switch. */
   private ariaPanelOpen = new BehaviorSubject(false);
   ariaPanelOpen$ = this.ariaPanelOpen.asObservable();
@@ -61,11 +109,13 @@ export class ModelService {
     this.isOpen.next(false);
     this.isExistingNoteOpen.next(false);
     this.inboxTarget.next(mailId);
+    this.openBookSubject.next(null);
     this.openInbox.next(true);
   }
 
   toggleCalendar() {
     this.openInbox.next(false);
+    this.openBookSubject.next(null);
     if (this.isStartingPageOpen.value) {
       this.isStartingPageOpen.next(false);
       this.openOverview.next(false);
@@ -79,6 +129,8 @@ export class ModelService {
 
   openHome() {
     this.openInbox.next(false);
+    this.openBookSubject.next(null);
+    this.setCurrentFolder(null, []);
     this.isStartingPageOpen.next(false);
     this.openOverview.next(true);
     this.openCalendar.next(false);
@@ -88,6 +140,7 @@ export class ModelService {
   /** Always shows the calendar (toggleCalendar flips it, which is wrong for "open the calendar"). */
   showCalendar() {
     this.openInbox.next(false);
+    this.openBookSubject.next(null);
     this.isStartingPageOpen.next(false);
     this.openOverview.next(false);
     this.isOpen.next(false);
@@ -191,3 +244,14 @@ export class ModelService {
 
 }
 
+/** Every folder below this one. */
+export function descendantIds(folderId: number, folders: Folder[]): number[] {
+  const ids: number[] = [];
+  const add = (parent: number) => {
+    for (const f of folders) {
+      if (f.parentID === parent && !ids.includes(f.id) && f.id !== folderId) { ids.push(f.id); add(f.id); }
+    }
+  };
+  add(folderId);
+  return ids;
+}
