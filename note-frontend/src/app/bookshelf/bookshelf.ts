@@ -3,12 +3,14 @@ import { Subscription } from 'rxjs';
 import { Folder, Note } from '../../model/models';
 import { NoteService } from '../../services/NoteService';
 import { ModelService, descendantIds } from '../model.service';
-import { Book, Shelf, buildShelf } from '../shelf/shelf-model';
-import { SceneOptions, SceneRect, ShelfScene, plainText, startShelfScene } from './shelf-scene';
+import { Book, Shelf, buildShelf, plainText } from '../shelf/shelf-model';
+import type { SceneOptions, SceneRect, ShelfScene } from './shelf-scene';
 
 export type SceneFactory = (canvas: HTMLCanvasElement, shelf: Shelf, opts: SceneOptions) => ShelfScene;
-/** How the shelf is drawn. null (or a machine without WebGL) = flat coloured books, same buttons. */
-export const SHELF_SCENE = new InjectionToken<SceneFactory | null>('shelf scene', { providedIn: 'root', factory: () => startShelfScene });
+/** How the shelf is drawn: loaded when the shelf is first shown, so three.js isn't part of the app's start.
+ *  null (or a machine without WebGL) = flat coloured books, same buttons. */
+export const SHELF_SCENE = new InjectionToken<(() => Promise<SceneFactory>) | null>('shelf scene',
+  { providedIn: 'root', factory: () => () => import('./shelf-scene').then(m => m.startShelfScene) });
 const NOTE_DRAG = 'application/x-mynotion-note';
 
 /** The home screen: the folders as books on a shelf, loose notes as slips on the desk, Aria's notes as a stack.
@@ -33,9 +35,10 @@ export class Bookshelf implements OnInit, AfterViewInit, OnDestroy {
   private scene?: ShelfScene;
   private subs: Subscription[] = [];
   private observer?: ResizeObserver;
+  private gone = false;
 
   constructor(private noteService: NoteService, public modelService: ModelService, private zone: NgZone,
-              private host: ElementRef<HTMLElement>, @Inject(SHELF_SCENE) private makeScene: SceneFactory | null) {}
+              private host: ElementRef<HTMLElement>, @Inject(SHELF_SCENE) private loadScene: (() => Promise<SceneFactory>) | null) {}
 
   async ngOnInit() {
     this.subs.push(
@@ -46,7 +49,7 @@ export class Bookshelf implements OnInit, AfterViewInit, OnDestroy {
   }
 
   ngAfterViewInit() {
-    queueMicrotask(() => this.startScene());
+    void this.startScene();
     if (typeof ResizeObserver !== 'undefined') {
       this.observer = new ResizeObserver(() => this.zone.run(() => { this.scene?.resize(); this.readRects(); }));
       this.observer.observe(this.host.nativeElement);
@@ -55,6 +58,7 @@ export class Bookshelf implements OnInit, AfterViewInit, OnDestroy {
 
   ngOnDestroy() {
     this.subs.forEach(s => s.unsubscribe());
+    this.gone = true;
     this.observer?.disconnect();
     this.scene?.dispose();
   }
@@ -72,15 +76,17 @@ export class Bookshelf implements OnInit, AfterViewInit, OnDestroy {
     this.readRects();
   }
 
-  private startScene() {
+  private async startScene() {
     const canvas = this.canvas?.nativeElement;
-    if (!canvas || !this.makeScene || this.scene) return;
+    if (!canvas || !this.loadScene || this.scene) return;
     const still = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
     const returnFrom = this.modelService.lastBookId;
     this.modelService.lastBookId = null;
     try {
+      const makeScene = await this.loadScene();
+      if (this.gone) return;
       this.zone.runOutsideAngular(() => {
-        this.scene = this.makeScene!(canvas, this.shelf, { still, returnFrom, onLayout: () => this.zone.run(() => this.readRects()) });
+        this.scene = makeScene(canvas, this.shelf, { still, returnFrom, onLayout: () => this.zone.run(() => this.readRects()) });
       });
       this.flat = false;
       this.readRects();

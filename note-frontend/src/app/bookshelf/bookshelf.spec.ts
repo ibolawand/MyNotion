@@ -47,7 +47,7 @@ describe('Bookshelf', () => {
     return scene;
   };
 
-  async function make(scene: SceneFactory | null, list: Note[], lastBook: number | null = null) {
+  async function make(scene: SceneFactory | null | 'broken', list: Note[], lastBook: number | null = null) {
     notes$ = new BehaviorSubject<Note[]>(list);
     folderChanged$ = new Subject<void>();
     updated = [];
@@ -59,7 +59,7 @@ describe('Bookshelf', () => {
     };
     await TestBed.configureTestingModule({
       imports: [Bookshelf],
-      providers: [{ provide: NoteService, useValue: noteService }, { provide: SHELF_SCENE, useValue: scene }],
+      providers: [{ provide: NoteService, useValue: noteService }, { provide: SHELF_SCENE, useValue: scene === 'broken' ? async () => { throw new Error('no WebGL'); } : scene && (async () => scene) }],
     }).compileComponents();
     model = TestBed.inject(ModelService);
     model.lastBookId = lastBook;
@@ -227,7 +227,7 @@ describe('Bookshelf', () => {
 
     it('a scene that cannot start leaves the flat shelf', async () => {
       spyOn(console, 'warn');
-      await make(() => { throw new Error('no WebGL'); }, sample());
+      await make('broken', sample());
       expect(el().querySelector('.shelf')!.classList).toContain('flat');
       expect(all('.book').length).toBe(2);
     });

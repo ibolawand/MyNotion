@@ -4,7 +4,7 @@
  *  over it, at the places rects() reports. It renders when something moves, not all the time.
  *  startShelfScene(canvas, shelf) returns the scene; with still: true nothing is animated ("reduce motion"). */
 import * as THREE from 'three';
-import { Book, Shelf } from '../shelf/shelf-model';
+import { Book, Shelf, plainText } from '../shelf/shelf-model';
 import { Note } from '../../model/models';
 
 export interface SceneRect { key: string; x: number; y: number; w: number; h: number; }
@@ -28,11 +28,6 @@ const FONT = "-apple-system, 'Segoe UI', Roboto, Ubuntu, Cantarell, 'Noto Sans',
 
 type Item = { key: string; group: THREE.Group; home: THREE.Vector3; out: number; want: number; cover?: THREE.Group; tilt: number;
   rect?: Omit<SceneRect, 'key'> };     // where it stands at rest: the button over it doesn't move when it's hovered
-
-export function plainText(html: string): string {
-  return (html || '').replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>').replace(/\s+/g, ' ').trim();
-}
 
 function fit(ctx: CanvasRenderingContext2D, text: string, max: number): string {
   if (ctx.measureText(text).width <= max) return text;
@@ -155,6 +150,7 @@ export function startShelfScene(canvas: HTMLCanvasElement, first: Shelf, opts: S
   const furniture = new THREE.Group(), things = new THREE.Group();
   scene.add(furniture, things);
   let shelf = first, items: Item[] = [], fanned = false, opening = false, disposed = false;
+  let fanStep = SLIP_W + 0.15;                        // how far apart Aria's notes lie when fanned out
   let frame = 0, last = 0, running = false, ready = false;      // ready: the caller has the scene, onLayout may be called
 
   const size = () => ({ w: canvas.clientWidth || canvas.width || 1, h: canvas.clientHeight || canvas.height || 1 });
@@ -190,7 +186,8 @@ export function startShelfScene(canvas: HTMLCanvasElement, first: Shelf, opts: S
     for (; z <= 80; z += 1.5) {
       const visH = 2 * z * Math.tan(THREE.MathUtils.degToRad(FOV / 2));
       const all = made.reduce((sum, b) => sum + b.t + GAP, 0);
-      width = Math.max(6, Math.min(visH * aspect * 0.8, Math.max(9, all + 1.2)));     // a few books: a narrower shelf
+      const desk = shelf.slips.length * (SLIP_W + 0.3) + shelf.aria.length * (SLIP_W + 0.15) + 1.4;   // room to fan Aria's notes
+      width = Math.max(6, Math.min(visH * aspect * 0.8, Math.max(9, all + 1.2, desk)));     // a few books: a narrower shelf
       rows = [[]];
       let used = 0;
       for (const b of made) {
@@ -242,6 +239,9 @@ export function startShelfScene(canvas: HTMLCanvasElement, first: Shelf, opts: S
       things.add(group);
       items.push({ key: `aria:${note.id}`, group, home: group.position.clone(), out: 0, want: 0, tilt });
     });
+    const loose = items.filter(i => i.key.startsWith('slip:'));
+    const leftEnd = loose.length ? loose[loose.length - 1].home.x + SLIP_W * 1.05 : -width / 2 + 0.5 + SLIP_W / 2;
+    fanStep = shelf.aria.length > 1 ? Math.max(0.6, Math.min(SLIP_W + 0.15, (ariaX - leftEnd) / (shelf.aria.length - 1))) : 0;
     placeAria(1);
 
     const cy = (top + deskY) / 2 - 0.2;
@@ -266,7 +266,7 @@ export function startShelfScene(canvas: HTMLCanvasElement, first: Shelf, opts: S
   function placeAria(k: number) {
     const aria = items.filter(i => i.key.startsWith('aria:'));
     aria.forEach((item, i) => {
-      const spread = fanned ? -(aria.length - 1 - i) * (SLIP_W + 0.15) : 0;
+      const spread = fanned ? -(aria.length - 1 - i) * fanStep : 0;
       const target = item.home.x + spread;
       item.group.position.x += (target - item.group.position.x) * k;
     });

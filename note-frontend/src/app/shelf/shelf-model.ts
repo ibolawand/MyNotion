@@ -102,6 +102,12 @@ export function latestNote(sections: Section[]): Note | null {
   return latest;
 }
 
+/** A note's text without its HTML. */
+export function plainText(html: string): string {
+  return (html || '').replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>').replace(/\s+/g, ' ').trim();
+}
+
 /** When a note was last edited: "14:02" today, "Yesterday", "Tue", or "3 Nov". long: full date and time.
  *  SQLite's CURRENT_TIMESTAMP is UTC, written without a zone. */
 export function edited(note: Note, long = false): string {
