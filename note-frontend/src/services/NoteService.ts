@@ -51,6 +51,7 @@ declare global {
       folder: {
         addFolder: (folder: any) => Promise<any>,
         getAllFolders: (userId?: number) => Promise<Folder[]>,
+        updateFolder: (folder: { id: number; name: string; colour?: string }) => Promise<any>;
         deleteFolder: (folder: Folder | number) => Promise<any>,
       },
       images: {
@@ -455,6 +456,15 @@ export class NoteService {
   }
   async addFolder(folder: Partial<Folder>): Promise<any> {
     return await window.electronAPI.folder.addFolder(folder);
+  }
+  /** Rename or recolour a folder. An empty name changes nothing. */
+  async updateFolder(folder: Folder): Promise<Folder> {
+    const name = (folder.name ?? '').trim();
+    if (!name) return folder;
+    const updated = { ...folder, name };
+    await window.electronAPI.folder.updateFolder({ id: updated.id, name, colour: updated.colour });
+    this.notifyFolderChanged();
+    return updated;
   }
   async deleteFolder(folder: Folder | number): Promise<any> {
     return await window.electronAPI.folder.deleteFolder(folder);

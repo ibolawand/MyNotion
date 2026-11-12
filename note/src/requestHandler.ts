@@ -339,6 +339,20 @@ export function setUpHandlers() {
         }
     });
 
+    // rename / recolour (the opened book's title and colour); never moves the folder or changes its owner
+    ipcMain.handle('updateFolder', async (event, folder: { id: number; name: string; colour: string }) => {
+        try {
+            const name = String(folder?.name ?? '').trim();
+            if (!folder?.id || !name) return { ok: false, error: 'Invalid folder' };
+            const db = await DB.getConnection();
+            await db.run(`UPDATE FOLDERS SET name = ?, colour = ? WHERE id = ?`, [name, folder.colour || '#4ade80', folder.id]);
+            return { ok: true };
+        } catch (err) {
+            console.error('updateFolder error:', err);
+            return { ok: false, error: String(err) };
+        }
+    });
+
     ipcMain.handle('getAllFolders', async (event, userId?: number) => {
         try {
             const db = await DB.getConnection();
