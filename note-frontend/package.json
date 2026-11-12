@@ -49,6 +49,7 @@
     "marked": "^16.4.2",
     "ngx-tiptap": "^14.0.1",
     "rxjs": "~7.8.0",
+    "three": "^0.187.0",
     "tslib": "^2.3.0",
     "zone.js": "~0.15.0"
   },
@@ -58,6 +59,7 @@
     "@angular/compiler-cli": "^20.3.0",
     "@types/bcryptjs": "^2.4.6",
     "@types/jasmine": "~5.1.0",
+    "@types/three": "^0.187.0",
     "baseline-browser-mapping": "^2.9.14",
     "jasmine-core": "~5.9.0",
     "karma": "~6.4.0",
