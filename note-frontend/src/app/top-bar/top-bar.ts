@@ -37,7 +37,7 @@ export class TopBar implements OnInit, OnDestroy {
   /** Back to the shelf; what is being typed is written first. */
   async back() {
     await this.noteService.flushSaves();
-    this.modelService.openHome();
+    await this.modelService.leaveBook();
   }
 
   newNote() {

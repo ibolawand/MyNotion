@@ -123,6 +123,7 @@ describe('Home screen', () => {
     expect(has('app-open-book')).toBeTrue();
     expect((await current())?.id).toBeDefined();
     el().querySelector<HTMLButtonElement>('.tb-back')!.click();
+    await new Promise(r => setTimeout(r, 550));          // the book shuts first
     await settle();
     el().querySelector<HTMLButtonElement>('app-bookshelf .desk > .slip')!.click();
     await settle();

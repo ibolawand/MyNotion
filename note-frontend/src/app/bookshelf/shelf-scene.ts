@@ -6,17 +6,24 @@
 import * as THREE from 'three';
 import { Book, Shelf, plainText } from '../shelf/shelf-model';
 import { Note } from '../../model/models';
+import { ARM_PLAY, ARM_REST, PIANO_W, PLAYER_W, makePiano, makePlayer } from './desk-things';
 
-export interface SceneRect { key: string; x: number; y: number; w: number; h: number; }
+/** clip: the exact outline inside the box (a CSS polygon), for things that stand at a slant, like the piano's keys. */
+export interface SceneRect { key: string; x: number; y: number; w: number; h: number; clip?: string; }
 export interface ShelfScene {
   update(shelf: Shelf): void;
   resize(): void;
-  /** Where each book ("book:3"), slip ("slip:12"), Aria's stack ("aria") or her fanned notes ("aria:5") is, in CSS px. */
+  /** Where each book ("book:3"), slip ("slip:12"), Aria's stack ("aria") or her fanned notes ("aria:5") is, in CSS px.
+   *  Also the piano's keys ("key:0" = middle C …) and the record player ("radio"). */
   rects(): SceneRect[];
   highlight(key: string | null): void;
   fan(open: boolean): void;
   /** The book comes forward and opens; resolves when the page can take over. */
   open(bookId: number): Promise<void>;
+  /** A piano key goes down for a moment. */
+  press(key: number): void;
+  /** The radio is on: the record turns and the arm lies on it. */
+  setPlaying(on: boolean): void;
   dispose(): void;
 }
 export interface SceneOptions { still?: boolean; returnFrom?: number | null; onLayout?: () => void; }
@@ -152,6 +159,9 @@ export function startShelfScene(canvas: HTMLCanvasElement, first: Shelf, opts: S
   let shelf = first, items: Item[] = [], fanned = false, opening = false, disposed = false;
   let fanStep = SLIP_W + 0.15;                        // how far apart Aria's notes lie when fanned out
   let frame = 0, last = 0, running = false, ready = false;      // ready: the caller has the scene, onLayout may be called
+  let keys: THREE.Mesh[] = [], disc: THREE.Mesh | null = null, arm: THREE.Group | null = null;
+  let decoRects: SceneRect[] = [], playing = false, turned = 0, shifting = false;
+  const down = new Map<number, number>();              // piano key → when it comes up again
 
   const size = () => ({ w: canvas.clientWidth || canvas.width || 1, h: canvas.clientHeight || canvas.height || 1 });
 
@@ -244,6 +254,17 @@ export function startShelfScene(canvas: HTMLCanvasElement, first: Shelf, opts: S
     fanStep = shelf.aria.length > 1 ? Math.max(0.6, Math.min(SLIP_W + 0.15, (ariaX - leftEnd) / (shelf.aria.length - 1))) : 0;
     placeAria(1);
 
+    // company on the front of the desk: the piano on the left, the record player on the right
+    const deskW = width + 2.4, front = 3.45;
+    const piano = makePiano(), player = makePlayer();
+    piano.group.position.set(-deskW / 2 + 0.45 + PIANO_W / 2, deskY, front);
+    player.group.position.set(deskW / 2 - 0.45 - PLAYER_W / 2, deskY, front);
+    things.add(piano.group, player.group);
+    keys = piano.keys; disc = player.disc; arm = player.arm;
+    disc.rotation.y = turned;
+    arm.rotation.y = playing ? ARM_PLAY : ARM_REST;
+    down.clear();
+
     const cy = (top + deskY) / 2 - 0.2;
     camera.position.set(-width * 0.06, cy + 2.2, z);
     camera.lookAt(0, cy, 0);
@@ -258,6 +279,7 @@ export function startShelfScene(canvas: HTMLCanvasElement, first: Shelf, opts: S
     renderer.setSize(w, h, false);
     things.updateMatrixWorld(true);
     for (const item of items) item.rect = projected(item.group);
+    decoRects = [...keys.map((mesh, k) => ({ key: `key:${k}`, ...keyRect(mesh) })), { key: 'radio', ...projected(player.group) }];
     if (ready) opts.onLayout?.();
     render();
   }
@@ -277,9 +299,11 @@ export function startShelfScene(canvas: HTMLCanvasElement, first: Shelf, opts: S
   function tick(now: number) {
     frame = 0;
     if (disposed) return;
-    const k = last ? 1 - Math.exp(-Math.min(100, now - last) / 70) : 0.2;     // the same speed at any frame rate
+    const dt = last ? Math.min(100, now - last) : 16;
+    const k = last ? 1 - Math.exp(-dt / 70) : 0.2;     // the same speed at any frame rate
     last = now;
-    let moving = false;
+    let moving = false, busy = false;        // busy: something turns or settles that no button follows
+    const wasMoving = shifting;
     for (const item of items) {
       if (opening && item.want === 2) continue;
       const d = item.want - item.out;
@@ -293,8 +317,21 @@ export function startShelfScene(canvas: HTMLCanvasElement, first: Shelf, opts: S
     const before = aria.map(i => i.group.position.x);
     placeAria(k);
     if (aria.some((i, n) => Math.abs(i.group.position.x - before[n]) > 0.002)) moving = true;
+    if (disc && playing && !opts.still) { turned -= dt * 0.0035; disc.rotation.y = turned; busy = true; }      // 33 turns a minute
+    if (arm) {
+      const d = (playing ? ARM_PLAY : ARM_REST) - arm.rotation.y;
+      if (Math.abs(d) > 0.003) { arm.rotation.y += d * k * 0.5; busy = true; } else arm.rotation.y += d;
+    }
+    for (const [key, until] of down) {
+      const mesh = keys[key];
+      if (!mesh || performance.now() >= until) { if (mesh) mesh.position.y = mesh.userData['restY']; down.delete(key); }
+      else { mesh.position.y = mesh.userData['restY'] - 0.035; busy = true; }
+    }
     render();
-    if (moving) { opts.onLayout?.(); schedule(); } else { running = false; last = 0; opts.onLayout?.(); }
+    shifting = moving;
+    if (moving) { opts.onLayout?.(); schedule(); }
+    else if (busy) { if (wasMoving) opts.onLayout?.(); schedule(); }
+    else { running = false; last = 0; opts.onLayout?.(); }
   }
   function schedule() { running = true; if (!frame) frame = requestAnimationFrame(tick); }
 
@@ -344,11 +381,25 @@ export function startShelfScene(canvas: HTMLCanvasElement, first: Shelf, opts: S
     return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
   }
 
+  /** The top of a key as it is seen: a slanted four-sided shape, so a click lands on the key that is drawn there. */
+  function keyRect(mesh: THREE.Mesh): Omit<SceneRect, 'key'> {
+    const { w, h } = size();
+    const p = (mesh.geometry as THREE.BoxGeometry).parameters;
+    const pts = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([sx, sz]) => {
+      const v = mesh.localToWorld(new THREE.Vector3(sx * p.width / 2, p.height / 2, sz * p.depth / 2)).project(camera);
+      return { x: (v.x + 1) / 2 * w, y: (1 - v.y) / 2 * h };
+    });
+    const x = Math.min(...pts.map(q => q.x)), y = Math.min(...pts.map(q => q.y));
+    const bw = Math.max(...pts.map(q => q.x)) - x, bh = Math.max(...pts.map(q => q.y)) - y;
+    const clip = `polygon(${pts.map(q => `${(q.x - x).toFixed(1)}px ${(q.y - y).toFixed(1)}px`).join(', ')})`;
+    return { x, y, w: bw, h: bh, clip };
+  }
+
   build();
   ready = true;
   if (opts.returnFrom != null && !opts.still) {
     const item = items.find(i => i.key === `book:${opts.returnFrom}`);
-    if (item) { opening = true; item.want = 2; pose(item, 1); render(); play(item, 1, 0, 420).then(() => { opening = false; item.want = 0; item.group.scale.setScalar(1); schedule(); }); }
+    if (item) { opening = true; item.want = 2; pose(item, 1); render(); play(item, 1, 0, 560).then(() => { opening = false; item.want = 0; item.group.scale.setScalar(1); schedule(); }); }
   }
 
   return {
@@ -368,7 +419,7 @@ export function startShelfScene(canvas: HTMLCanvasElement, first: Shelf, opts: S
         const x = Math.min(...boxes.map(b => b.x)), y = Math.min(...boxes.map(b => b.y));
         out.push({ key: 'aria', x, y, w: Math.max(...boxes.map(b => b.x + b.w)) - x, h: Math.max(...boxes.map(b => b.y + b.h)) - y });
       }
-      return out;
+      return out.concat(decoRects);
     },
     highlight(key) {
       for (const item of items) {
@@ -383,6 +434,15 @@ export function startShelfScene(canvas: HTMLCanvasElement, first: Shelf, opts: S
       if (!item || opts.still || opening) return;
       opening = true; item.want = 2;
       await play(item, 0, 1, 620);
+    },
+    press(key) {
+      if (!keys[key]) return;
+      down.set(key, performance.now() + 160);
+      schedule();
+    },
+    setPlaying(on) {
+      playing = on;
+      if (opts.still && arm) { arm.rotation.y = on ? ARM_PLAY : ARM_REST; render(); } else schedule();
     },
     dispose() {
       disposed = true;

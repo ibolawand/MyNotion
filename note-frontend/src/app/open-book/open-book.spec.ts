@@ -192,4 +192,35 @@ describe('Open book', () => {
     expect(all('.contents-note').length).toBe(4);
     expect(currentId()).toBe(8);
   });
+
+  it('turns the page to another note: forwards down the contents, back up them', async () => {
+    await open(math);                                  // order: Matrizen, Schularbeiten, Differentialgleichung (open)
+    const leaf = () => el().querySelector('.leaf')!;
+    all('.contents-note')[0].click();
+    expect(leaf().classList.contains('back')).toBeTrue();
+    expect(el().querySelector('.under .stub-editor')).not.toBeNull();      // the old page stays underneath
+    all('.contents-note')[2].click();
+    expect(leaf().classList.contains('forward')).toBeTrue();
+    expect(leaf().classList.contains('back')).toBeFalse();
+    expect(el().querySelector('.leaf-front .stub-editor')).not.toBeNull(); // the old page is the one that lifts
+    await new Promise(r => setTimeout(r, 700));
+    expect(leaf().classList.contains('on')).toBeFalse();
+    expect(all('.stub-editor').length).toBe(1);                            // the pictures are gone again
+  });
+
+  it('saving the open note turns no page', async () => {
+    await open(math);
+    model.updateCurrentNote({ ...sample()[2], content: '<p>more</p>' });
+    expect(el().querySelector('.leaf')!.classList.contains('on')).toBeFalse();
+  });
+
+  it('shuts the book before the shelf comes back', async () => {
+    await open(math);
+    const home = spyOn(model, 'openHome').and.callThrough();
+    const left = model.leaveBook();
+    expect(el().querySelector('.open-book')!.classList.contains('closing')).toBeTrue();
+    expect(home).not.toHaveBeenCalled();
+    await left;
+    expect(home).toHaveBeenCalled();
+  });
 });

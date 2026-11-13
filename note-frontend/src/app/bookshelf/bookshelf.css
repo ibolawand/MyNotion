@@ -44,3 +44,8 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block
   .shelf { transition: none; }
   .shelf.flat .book { transition: none; }
 }
+
+/* the piano's keys: the black ones lie on the white ones */
+.piano-key { cursor: pointer; z-index: 1; border-radius: 0 !important; }
+.piano-key.black { z-index: 2; }
+.record-player { z-index: 1; }

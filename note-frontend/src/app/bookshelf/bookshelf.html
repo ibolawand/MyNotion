@@ -52,6 +52,21 @@
     }
   </div>
 
+  @if (hasPlayer) {
+  <button type="button" class="pick record-player" [style]="place('radio')" [attr.aria-pressed]="radio.playing"
+    [attr.aria-label]="radio.playing ? 'Stop the radio' : 'Play ' + radio.station.name"
+    [title]="radio.playing ? 'Stop the radio' : 'Play ' + radio.station.name" (click)="radio.toggle()"></button>
+  }
+  @if (!flat && pianoKeys.length) {
+  <div class="piano" role="group" aria-label="Piano" (mouseleave)="leavePiano()">
+    @for (key of pianoKeys; track key) {
+    <button type="button" class="pick piano-key" [class.black]="isBlack(key)" [style]="place('key:' + key)" tabindex="-1"
+      [attr.aria-label]="noteName(key)" (mousedown)="playKey(key)" (mouseenter)="slideOnto(key, $event)"
+      (keydown.enter)="playKey(key)"></button>
+    }
+  </div>
+  }
+
   @if (loaded && !shelf.books.length) {
   <p class="no-books">No notebooks yet. Use <strong>New book</strong> at the top to start one.</p>
   }

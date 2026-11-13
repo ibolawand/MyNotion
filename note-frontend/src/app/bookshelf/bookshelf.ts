@@ -1,8 +1,10 @@
-import { AfterViewInit, Component, ElementRef, HostListener, Inject, InjectionToken, NgZone, OnDestroy, OnInit, ViewChild } from '@angular/core';
+import { AfterViewInit, Component, DoCheck, ElementRef, HostListener, Inject, InjectionToken, NgZone, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { Folder, Note } from '../../model/models';
 import { NoteService } from '../../services/NoteService';
 import { ModelService, descendantIds } from '../model.service';
+import { RadioService } from '../../services/RadioService';
+import { PianoSound, isBlack, keyForLetter, noteName } from './piano';
 import { Book, Shelf, buildShelf, plainText } from '../shelf/shelf-model';
 import type { SceneOptions, SceneRect, ShelfScene } from './shelf-scene';
 
@@ -22,13 +24,19 @@ const NOTE_DRAG = 'application/x-mynotion-note';
   templateUrl: './bookshelf.html',
   styleUrl: './bookshelf.css',
 })
-export class Bookshelf implements OnInit, AfterViewInit, OnDestroy {
+export class Bookshelf implements OnInit, AfterViewInit, DoCheck, OnDestroy {
   @ViewChild('canvas') canvas?: ElementRef<HTMLCanvasElement>;
   shelf: Shelf = { books: [], slips: [], aria: [] };
-  flat = true;              // until the 3D scene is up
+  flat = false;             // flat coloured books: only where there is no 3D (set in the constructor, or when it fails)
   fanned = false;
   leaving = false;          // a book is opening: the shelf fades
   loaded = false;
+  pianoKeys: number[] = [];           // the keys the picture shows (none in the flat shelf)
+  readonly isBlack = isBlack;
+  readonly noteName = noteName;
+  private sound = new PianoSound();
+  private overPiano = false;
+  private spinning = false;
   private notes: Note[] = [];
   private folders: Folder[] = [];
   private rects = new Map<string, SceneRect>();
@@ -36,11 +44,16 @@ export class Bookshelf implements OnInit, AfterViewInit, OnDestroy {
   private subs: Subscription[] = [];
   private observer?: ResizeObserver;
   private gone = false;
+  private foldersKnown!: () => void;
+  private folderList = new Promise<void>(done => this.foldersKnown = done);
 
-  constructor(private noteService: NoteService, public modelService: ModelService, private zone: NgZone,
-              private host: ElementRef<HTMLElement>, @Inject(SHELF_SCENE) private loadScene: (() => Promise<SceneFactory>) | null) {}
+  constructor(private noteService: NoteService, public modelService: ModelService, private zone: NgZone, public radio: RadioService,
+              private host: ElementRef<HTMLElement>, @Inject(SHELF_SCENE) private loadScene: (() => Promise<SceneFactory>) | null) {
+    this.flat = !loadScene;       // the canvas must be on the page, at its real size, when the scene starts
+  }
 
   async ngOnInit() {
+    this.folders = this.modelService.folders.value;       // known already on the way back from a book: no empty shelf
     this.subs.push(
       this.noteService.notes$.subscribe(list => { this.notes = list || []; this.rebuild(); }),
       this.noteService.folderChanged$.subscribe(() => this.loadFolders()),
@@ -61,12 +74,14 @@ export class Bookshelf implements OnInit, AfterViewInit, OnDestroy {
     this.gone = true;
     this.observer?.disconnect();
     this.scene?.dispose();
+    this.sound.close();
   }
 
   private async loadFolders() {
     this.folders = (await this.noteService.loadFolders()) || [];
     this.loaded = true;
     this.rebuild();
+    this.foldersKnown();
   }
 
   private rebuild() {
@@ -84,11 +99,14 @@ export class Bookshelf implements OnInit, AfterViewInit, OnDestroy {
     this.modelService.lastBookId = null;
     try {
       const makeScene = await this.loadScene();
+      await this.folderList;                // the book that was open must stand there to be seen closing
       if (this.gone) return;
       this.zone.runOutsideAngular(() => {
         this.scene = makeScene(canvas, this.shelf, { still, returnFrom, onLayout: () => this.zone.run(() => this.readRects()) });
       });
       this.flat = false;
+      this.spinning = this.radio.playing;
+      (this.scene as ShelfScene | undefined)?.setPlaying(this.spinning);
       this.readRects();
     } catch (e) {
       console.warn('Bookshelf: no 3D here, showing flat books', e);     // no WebGL: the flat shelf works the same
@@ -99,12 +117,32 @@ export class Bookshelf implements OnInit, AfterViewInit, OnDestroy {
 
   private readRects() {
     this.rects = new Map((this.scene?.rects() ?? []).map(r => [r.key, r]));
+    const keys = [...this.rects.keys()].filter(k => k.startsWith('key:')).map(k => Number(k.slice(4)));
+    keys.sort((a, b) => Number(isBlack(a)) - Number(isBlack(b)) || a - b);            // black keys last: they lie on top
+    if (keys.join() !== this.pianoKeys.join()) this.pianoKeys = keys;
   }
+
+  /** The record turns exactly while the radio is on, wherever it was switched on. */
+  ngDoCheck() {
+    if (this.radio.playing === this.spinning) return;
+    this.spinning = this.radio.playing;
+    this.scene?.setPlaying(this.spinning);
+  }
+
+  get hasPlayer(): boolean { return !this.flat && this.rects.has('radio'); }
+
+  // the piano: a click, a drag along the keys, or the letter keys while the mouse is over it
+  playKey(key: number) {
+    this.sound.play(key);
+    this.scene?.press(key);
+  }
+  slideOnto(key: number, e: MouseEvent) { this.overPiano = true; if (e.buttons & 1) this.playKey(key); }
+  leavePiano() { this.overPiano = false; }
 
   /** Where the button for this book / slip lies over the picture (nothing in the flat shelf: CSS lays it out). */
   place(key: string): Record<string, string> | null {
     const r = this.flat ? undefined : this.rects.get(key);
-    return r ? { left: r.x + 'px', top: r.y + 'px', width: r.w + 'px', height: r.h + 'px' } : null;
+    return r ? { left: r.x + 'px', top: r.y + 'px', width: r.w + 'px', height: r.h + 'px', ...(r.clip ? { 'clip-path': r.clip } : {}) } : null;
   }
 
   preview(note: Note): string { return plainText(note.content).slice(0, 90); }
@@ -133,10 +171,21 @@ export class Bookshelf implements OnInit, AfterViewInit, OnDestroy {
     if (e.key === 'Escape' && this.fanned) { this.toggleFan(); e.preventDefault(); return; }
     const step = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0;
     if (!step) return;
-    const buttons = Array.from(this.host.nativeElement.querySelectorAll<HTMLButtonElement>('button.pick'));
+    const buttons = Array.from(this.host.nativeElement.querySelectorAll<HTMLButtonElement>('button.pick:not(.piano-key)'));
     if (!buttons.length) return;
     const at = buttons.indexOf(document.activeElement as HTMLButtonElement);
     buttons[at < 0 ? 0 : (at + step + buttons.length) % buttons.length].focus();
+    e.preventDefault();
+  }
+
+  /** Mouse over the piano: A W S E D … play it (not while typing somewhere, not with Ctrl). */
+  @HostListener('document:keydown', ['$event'])
+  onLetter(e: KeyboardEvent) {
+    if (!this.overPiano || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+    if ((e.target as HTMLElement | null)?.closest?.('input, textarea, select, [contenteditable]')) return;
+    const key = keyForLetter(e.key);
+    if (key < 0 || !this.pianoKeys.includes(key)) return;
+    this.playKey(key);
     e.preventDefault();
   }
 

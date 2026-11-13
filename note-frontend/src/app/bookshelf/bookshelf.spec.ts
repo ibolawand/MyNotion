@@ -37,11 +37,15 @@ describe('Bookshelf', () => {
         ...current.slips.map((n, i) => ({ key: `slip:${n.id}`, x: 10 + i * 60, y: 200, w: 50, h: 60 })),
         ...(fanned ? current.aria.map((n, i) => ({ key: `aria:${n.id}`, x: 300 + i * 60, y: 200, w: 50, h: 60 }))
           : current.aria.length ? [{ key: 'aria', x: 400, y: 200, w: 50, h: 60 }] : []),
+        ...[0, 1, 2].map(k => ({ key: `key:${k}`, x: 10 + k * 12, y: 300, w: 10, h: 30 })),
+        { key: 'radio', x: 500, y: 300, w: 60, h: 60 },
       ],
       highlight: k => sceneCalls.push(`highlight:${k}`),
       fan: o => { fanned = o; sceneCalls.push(`fan:${o}`); },
       open: id => { sceneCalls.push(`open:${id}`); return new Promise<void>(r => { opened = r; }); },
       dispose: () => sceneCalls.push('dispose'),
+      press: k => sceneCalls.push(`press:${k}`),
+      setPlaying: on => sceneCalls.push(`playing:${on}`),
     };
     sceneCalls.push(`start:${opts.returnFrom ?? '-'}`);
     return scene;
@@ -236,6 +240,53 @@ describe('Bookshelf', () => {
       await make(fakeScene, sample());
       fixture.destroy();
       expect(sceneCalls).toContain('dispose');
+    });
+  });
+
+  describe('piano and record player', () => {
+    it('a key plays its note and goes down; the black keys lie on top', async () => {
+      await make(fakeScene, sample());
+      const played: number[] = [];
+      spyOn((fixture.componentInstance as any).sound, 'play').and.callFake((k: number) => played.push(k));
+      const keys = all('.piano-key');
+      expect(keys.map(k => k.getAttribute('aria-label'))).toEqual(['C 4', 'D 4', 'C sharp 4']);
+      keys[1].dispatchEvent(new MouseEvent('mousedown', { bubbles: true }));
+      expect(played).toEqual([2]);
+      expect(sceneCalls).toContain('press:2');
+    });
+
+    it('the letter keys play only while the mouse is over the piano', async () => {
+      await make(fakeScene, sample());
+      const played: number[] = [];
+      spyOn((fixture.componentInstance as any).sound, 'play').and.callFake((k: number) => played.push(k));
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', bubbles: true }));
+      expect(played).toEqual([]);
+      all('.piano-key')[0].dispatchEvent(new MouseEvent('mouseenter'));
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', bubbles: true }));
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'w', bubbles: true }));
+      expect(played).toEqual([0, 1]);
+      el().querySelector('.piano')!.dispatchEvent(new MouseEvent('mouseleave'));
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'a', bubbles: true }));
+      expect(played).toEqual([0, 1]);
+    });
+
+    it('the record player switches the radio, and the record turns while it is on', async () => {
+      await make(fakeScene, sample());
+      const radio = (fixture.componentInstance as any).radio;
+      const toggle = spyOn(radio, 'toggle').and.callFake(() => { radio.state = radio.state === 'off' ? 'playing' : 'off'; });
+      el().querySelector<HTMLButtonElement>('.record-player')!.click();
+      fixture.detectChanges();
+      expect(toggle).toHaveBeenCalled();
+      expect(sceneCalls).toContain('playing:true');
+      radio.state = 'off';                               // switched off somewhere else (the editor's bar)
+      fixture.detectChanges();
+      expect(sceneCalls[sceneCalls.length - 1]).toBe('playing:false');
+    });
+
+    it('the flat shelf has neither', async () => {
+      await make(null, sample());
+      expect(all('.piano-key').length).toBe(0);
+      expect(el().querySelector('.record-player')).toBeNull();
     });
   });
 });

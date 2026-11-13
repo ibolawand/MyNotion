@@ -95,6 +95,14 @@ export class ModelService {
   /** Back to the shelf. */
   closeBook() { this.openHome(); }
 
+  /** The open book's closing animation (set by the open book while it shows). */
+  bookCloser: (() => Promise<void>) | null = null;
+  /** Back to the shelf the slow way: the book shuts first. */
+  async leaveBook() {
+    try { await this.bookCloser?.(); } catch { /* no animation: just go */ }
+    this.openHome();
+  }
+
   /** Open an existing note where it lives: inside its book, or as a slip from the desk. */
   openNote(note: Note, folders: Folder[]) {
     const bookId = bookIdOf(note.folderID, folders);
