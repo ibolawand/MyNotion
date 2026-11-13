@@ -4,6 +4,11 @@
  *    →  {"id","type":"chat","text"}   |  {"id","type":"status"}
  *    →  {"id","type":"edit","action","html",…}   her version of a selection; answered with {"id","type":"proposal","html"}
  *    →  {"id","type":"study","action":"quiz|explain|prep"}   a study button, on the open note; answered like chat
+ *    →  {"id","type":"study","action":"test","test":"<card id>"}   study for one upcoming test; answered like chat
+ *    →  {"id","type":"tests"}  |  {"id","type":"tests","map":{"subject","notebook"}}   the cards for upcoming tests (the
+ *       map also saves which notebook belongs to a school subject); answered with {"id","type":"tests","cards","notebooks"}
+ *       or {"id","type":"error"}. She answers a connection's requests in order, so while she answers a chat message
+ *       this waits: tests() gives up after TESTS_TIMEOUT_MS.
  *    ←  {"id","type":"text","delta"}  |  {"id","type":"done","reply","tools","confirm","quiz"}  |  {"id","type":"error","message"}
  *  "done" carries her final reply (it replaces what was streamed), a yes/no question that is waiting, and whether a
  *  quiz is running now (the panel then shows Hint, Skip and Stop).
@@ -30,8 +35,30 @@ export type EditRequest = {
     html: string; instruction: string; title: string; context: string; previous: string;
 };
 /** The Aria panel's study buttons: Quiz me, Explain simply, Test prep. */
-export type StudyAction = 'quiz' | 'explain' | 'prep';
-export const STUDY_ACTIONS: readonly StudyAction[] = ['quiz', 'explain', 'prep'];
+export type StudyAction = 'quiz' | 'explain' | 'prep' | 'test';
+export const STUDY_ACTIONS: readonly StudyAction[] = ['quiz', 'explain', 'prep', 'test'];
+/** An upcoming school test, as the panel shows it. */
+export type TestCard = { id: string; subject: string; headline: string; topic: string; days: number;
+                         notebook: { id: number; name: string } | null; notes: number };
+export type Notebook = { id: number; name: string };
+export type TestCards = { ok: boolean; cards: TestCard[]; notebooks: Notebook[] };
+export const TESTS_TIMEOUT_MS = 8000;
+const NO_TESTS = (): TestCards => ({ ok: false, cards: [], notebooks: [] });
+
+const asNotebook = (v: any): Notebook | null =>
+    v && typeof v.id === 'number' && typeof v.name === 'string' ? { id: v.id, name: v.name } : null;
+const asNumber = (v: unknown): number => typeof v === 'number' && Number.isFinite(v) ? v : 0;
+
+/** What she sent for a tests request, with anything of the wrong shape dropped or defaulted. */
+export function parseTests(e: any): TestCards {
+    const cards: TestCard[] = (Array.isArray(e.cards) ? e.cards : [])
+        .filter((c: any) => c && typeof c.id === 'string' && typeof c.subject === 'string' && typeof c.headline === 'string')
+        .map((c: any) => ({ id: c.id, subject: c.subject, headline: c.headline,
+                            topic: typeof c.topic === 'string' ? c.topic : '', days: asNumber(c.days),
+                            notebook: asNotebook(c.notebook), notes: asNumber(c.notes) }));
+    const notebooks = (Array.isArray(e.notebooks) ? e.notebooks : []).map(asNotebook).filter((n: Notebook | null): n is Notebook => !!n);
+    return { ok: true, cards, notebooks };
+}
 export type AskResult = { ok: true; id: string } | { ok: false; error: 'not-running' };
 
 const STATUS_TIMEOUT_MS = 2000;
@@ -71,6 +98,7 @@ export class AriaLink {
     private connecting: Promise<net.Socket | null> | null = null;
     private open = new Set<string>();                               // chat requests still being answered
     private waiting = new Map<string, (running: boolean) => void>(); // status requests
+    private asking = new Map<string, (r: TestCards) => void>();      // tests requests
 
     constructor(private file: string, private emit: (e: AriaEvent) => void,
                 private trusted: (file: string) => boolean = ours) {}
@@ -113,6 +141,12 @@ export class AriaLink {
             this.waiting.get(e.id)?.(true);
             return;
         }
+        const tests = this.asking.get(e.id);
+        if (tests) {
+            if (e.type === 'tests') tests(parseTests(e));
+            else if (e.type === 'error') tests(NO_TESTS());
+            return;
+        }
         if (!this.open.has(e.id)) return;
         if (e.type === 'text' && typeof e.delta === 'string') {
             this.emit({ id: e.id, type: 'text', delta: e.delta });
@@ -139,6 +173,7 @@ export class AriaLink {
         this.open.clear();
         ids.forEach(id => this.emit({ id, type: 'error', message: STOPPED }));
         [...this.waiting.values()].forEach(done => done(false));
+        [...this.asking.values()].forEach(done => done(NO_TESTS()));
     }
 
     private write(sock: net.Socket, obj: unknown): boolean {
@@ -157,8 +192,23 @@ export class AriaLink {
     }
 
     /** A study button on the open note: answered like a chat message. */
-    study(action: StudyAction): Promise<AskResult> {
-        return this.request({ type: 'study', action });
+    study(action: StudyAction, test?: string): Promise<AskResult> {
+        return this.request(action === 'test' ? { type: 'study', action, test } : { type: 'study', action });
+    }
+
+    /** The cards for upcoming tests; with `map` it first saves which notebook belongs to a subject. Never rejects:
+     *  anything but an answer (not running, error, dropped, no answer in time) is ok: false. */
+    async tests(map?: { subject: string; notebook: number }): Promise<TestCards> {
+        const sock = await this.connect();
+        if (!sock) return NO_TESTS();
+        const id = randomUUID();
+        const result = await new Promise<TestCards>(resolve => {
+            const timer = setTimeout(() => resolve(NO_TESTS()), TESTS_TIMEOUT_MS);
+            this.asking.set(id, r => { clearTimeout(timer); resolve(r); });
+            if (!this.write(sock, map ? { id, type: 'tests', map } : { id, type: 'tests' })) { clearTimeout(timer); resolve(NO_TESTS()); }
+        });
+        this.asking.delete(id);
+        return result;
     }
 
     private async request(body: Record<string, unknown>): Promise<AskResult> {
@@ -223,8 +273,16 @@ export function setUpAria() {
         return link.edit({ action: r.action as EditRequest['action'], html: r.html, instruction: text(r.instruction, 500),
                            title: text(r.title, 200), context: text(r.context, 2000), previous: text(r.previous, 40000) });
     });
-    ipcMain.handle('aria:study', (_e, action: unknown): Promise<AskResult> =>
-        STUDY_ACTIONS.includes(action as StudyAction) ? link.study(action as StudyAction) : Promise.resolve({ ok: false, error: 'not-running' }));
+    ipcMain.handle('aria:study', (_e, action: unknown, test: unknown): Promise<AskResult> => {
+        if (!STUDY_ACTIONS.includes(action as StudyAction) || (action === 'test' && typeof test !== 'string'))
+            return Promise.resolve({ ok: false, error: 'not-running' });
+        return link.study(action as StudyAction, typeof test === 'string' ? test : undefined);
+    });
+    ipcMain.handle('aria:tests', (_e, map: unknown): Promise<TestCards> => {
+        const m = map as { subject?: unknown; notebook?: unknown } | null | undefined;
+        if (m && typeof m.subject === 'string' && typeof m.notebook === 'number') return link.tests({ subject: m.subject, notebook: m.notebook });
+        return link.tests();
+    });
     ipcMain.handle('aria:status', () => link.status());
     let starting: Promise<{ ok: boolean; error?: 'no-launcher' | 'timeout' }> | null = null;
     ipcMain.handle('aria:start', () => {

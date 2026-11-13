@@ -6,7 +6,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('electron', () => ({ ipcMain: {}, BrowserWindow: {}, app: { getPath: () => '/tmp' } }));
 vi.mock('./database/database', () => ({ DB: {} }));
-import { AriaEvent, AriaLink, isOurSocket, launch, launcherFrom, socketPath, splitLines } from './aria';
+import { AriaEvent, AriaLink, TESTS_TIMEOUT_MS, isOurSocket, launch, launcherFrom, socketPath, splitLines } from './aria';
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'aria-link-'));
 let n = 0;
@@ -325,5 +325,119 @@ describe('study buttons', () => {
 
     it('study says not-running when she is not there', async () => {
         expect(await link(path.join(dir, 'nobody3.sock')).study('prep')).toEqual({ ok: false, error: 'not-running' });
+    });
+});
+
+describe('study with a test', () => {
+    it("study('test', id) sends the test id", async () => {
+        const got: any[] = [];
+        const file = await fakeAria((req, sock) => {
+            got.push(req);
+            sock.write(line({ id: req.id, type: 'done', reply: 'ok', tools: [], confirm: null }));
+        });
+        const r = await link(file).study('test', '20261117-DBI-0800');
+        const id = (r as { id: string }).id;
+        await until(() => got.length === 1);
+        expect(got).toEqual([{ id, type: 'study', action: 'test', test: '20261117-DBI-0800' }]);
+    });
+
+    it("study('quiz') sends no test", async () => {
+        const got: any[] = [];
+        const file = await fakeAria((req, sock) => {
+            got.push(req);
+            sock.write(line({ id: req.id, type: 'done', reply: 'ok', tools: [], confirm: null }));
+        });
+        await link(file).study('quiz', 'ignored');
+        await until(() => got.length === 1);
+        expect('test' in got[0]).toBe(false);
+    });
+});
+
+describe('the test cards', () => {
+    const none = { ok: false, cards: [], notebooks: [] };
+
+    it('tests() sends {"type":"tests"} and resolves the cards', async () => {
+        const got: any[] = [];
+        const file = await fakeAria((req, sock) => {
+            got.push(req);
+            sock.write(line({
+                id: req.id, type: 'tests',
+                cards: [{ id: '20261117-DBI-0800', subject: 'DBI', headline: 'DBI test on Tuesday · in 5 days',
+                          notebook: { id: 12, name: 'Databases' }, notes: 3 }, { id: 7 }],
+                notebooks: [{ id: 12, name: 'Databases' }, { name: 'x' }],
+            }));
+        });
+        const r = await link(file).tests();
+        expect(got.map(g => ({ type: g.type, map: g.map }))).toEqual([{ type: 'tests', map: undefined }]);
+        expect(r).toEqual({
+            ok: true,
+            cards: [{ id: '20261117-DBI-0800', subject: 'DBI', headline: 'DBI test on Tuesday · in 5 days', topic: '', days: 0,
+                      notebook: { id: 12, name: 'Databases' }, notes: 3 }],
+            notebooks: [{ id: 12, name: 'Databases' }],
+        });
+    });
+
+    it('tests(map) sends the map', async () => {
+        const got: any[] = [];
+        const file = await fakeAria((req, sock) => {
+            got.push(req);
+            sock.write(line({ id: req.id, type: 'tests', cards: [], notebooks: [] }));
+        });
+        const r = await link(file).tests({ subject: 'DBI', notebook: 12 });
+        expect(r.ok).toBe(true);
+        expect(got[0].map).toEqual({ subject: 'DBI', notebook: 12 });
+    });
+
+    it('an error answer to tests resolves ok:false and emits no event', async () => {
+        const file = await fakeAria((req, sock) => sock.write(line({ id: req.id, type: 'error', message: 'nope' })));
+        const events: AriaEvent[] = [];
+        expect(await link(file, events).tests()).toEqual(none);
+        await new Promise(r => setTimeout(r, 50));
+        expect(events).toEqual([]);
+    });
+
+    it('tests gives up after TESTS_TIMEOUT_MS', async () => {
+        const file = await fakeAria(status);                 // never answers tests
+        const l = link(file);
+        expect(await l.status()).toBe('running');            // connect first, with real timers
+        vi.useFakeTimers();
+        try {
+            const p = l.tests();
+            await vi.advanceTimersByTimeAsync(TESTS_TIMEOUT_MS - 1);
+            let settled = false;
+            p.then(() => { settled = true; });
+            await Promise.resolve();
+            expect(settled).toBe(false);
+            await vi.advanceTimersByTimeAsync(1);
+            expect(await p).toEqual(none);
+        } finally {
+            vi.useRealTimers();
+        }
+    });
+
+    it("tests resolves ok:false when Aria isn't running", async () => {
+        expect(await link(path.join(dir, 'nobody4.sock')).tests()).toEqual(none);
+    });
+
+    it('tests resolves ok:false when the connection drops', async () => {
+        const file = await fakeAria((req, sock) => sock.destroy());
+        const events: AriaEvent[] = [];
+        expect(await link(file, events).tests()).toEqual(none);
+        expect(events).toEqual([]);
+    });
+
+    it("a waiting tests request doesn't make status() skip its own request", async () => {
+        const got: any[] = [];
+        const file = await fakeAria((req, sock) => {
+            got.push(req.type);
+            status(req, sock);                                // tests is never answered
+        });
+        const l = link(file);
+        const pending = l.tests();
+        await until(() => got.includes('tests'));
+        expect(await l.status()).toBe('running');
+        expect(got).toEqual(['tests', 'status']);
+        l.close();
+        expect(await pending).toEqual(none);
     });
 });

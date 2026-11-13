@@ -1,6 +1,6 @@
 import { Injectable, NgZone } from '@angular/core';
 import { Subject } from 'rxjs';
-import { AriaEvent, StudyAction } from '../../services/NoteService';
+import { AriaEvent, Notebook, StudyAction, TestCard } from '../../services/NoteService';
 
 export type PanelMessage = {
   role: 'user' | 'aria';
@@ -12,10 +12,11 @@ export type PanelMessage = {
   confirm?: string | null;   // a yes/no question waiting for an answer
   question?: string;         // what was asked, for Retry
   study?: StudyAction;       // a study button sent it (Retry presses it again)
+  test?: string;             // the test card it was for (Retry sends the same test)
 };
 
 /** What a study button shows as the user's message. */
-export const STUDY_LABELS: Record<StudyAction, string> = { quiz: 'Quiz me', explain: 'Explain simply', prep: 'Test prep' };
+export const STUDY_LABELS: Record<StudyAction, string> = { quiz: 'Quiz me', explain: 'Explain simply', prep: 'Test prep', test: 'Quiz me' };
 
 type Sent = { ok: true; id: string } | { ok: false; error: 'not-running' } | undefined;
 
@@ -37,6 +38,9 @@ export class AriaChat {
   /** a quiz is running: the panel shows Hint, Skip and Stop (every reply from Aria says) */
   quizActive = false;
   startError = '';
+  /** school tests coming up in the next week, one card each (from Aria), and the notebooks a subject can map to */
+  tests: TestCard[] = [];
+  notebooks: Notebook[] = [];
   /** fires whenever the messages changed (the panel scrolls down) */
   readonly changed = new Subject<void>();
 
@@ -82,6 +86,32 @@ export class AriaChat {
     return this.deliver(STUDY_LABELS[action], () => this.api?.study?.(action), action);
   }
 
+  /** The "Quiz me" on a test card: a quiz for that test. */
+  async studyTest(card: TestCard): Promise<boolean> {
+    if (this.busy) return false;
+    return this.deliver(`Quiz me for my ${card.subject} test`, () => this.api?.study?.('test', card.id), 'test', card.id);
+  }
+
+  /** Ask Aria for the test cards. Anything but a clear answer keeps what is shown. */
+  async loadTests() {
+    await this.fetchTests();
+  }
+
+  /** The user chose which notebook a subject belongs to. */
+  async mapTest(subject: string, notebook: number) {
+    await this.fetchTests({ subject, notebook });
+  }
+
+  private async fetchTests(map?: { subject: string; notebook: number }) {
+    try {
+      const r = await (map ? this.api?.tests?.(map) : this.api?.tests?.());
+      if (r?.ok && Array.isArray(r.cards) && Array.isArray(r.notebooks)) {
+        this.tests = r.cards;
+        this.notebooks = r.notebooks;
+      }
+    } catch { /* an older preload or Aria not answering: keep what we have */ }
+  }
+
   /** Hint / Skip / Stop during a quiz: the same words typed would do, and Aria handles them in code. */
   async quizButton(word: 'hint' | 'skip' | 'stop') {
     if (this.busy) return;
@@ -100,17 +130,18 @@ export class AriaChat {
     if (at < 0) return;
     const from = at > 0 && this.messages[at - 1].role === 'user' ? at - 1 : at;
     this.messages.splice(from, at - from + 1);
-    if (m.study) await this.study(m.study);
+    if (m.study === 'test' && m.test) await this.deliver(m.question, () => this.api?.study?.('test', m.test), 'test', m.test);
+    else if (m.study) await this.study(m.study);
     else await this.deliver(m.question);
   }
 
   /** tools === false: an answer only, Aria can't change anything for this message. `send` replaces the chat
    *  request (a study button); `text` is then what the panel shows for it. */
   private deliver(text: string, tools?: boolean): Promise<boolean>;
-  private deliver(text: string, send: () => Promise<Sent> | undefined, study: StudyAction): Promise<boolean>;
-  private async deliver(text: string, how: boolean | (() => Promise<Sent> | undefined) = true, study?: StudyAction): Promise<boolean> {
+  private deliver(text: string, send: () => Promise<Sent> | undefined, study: StudyAction, test?: string): Promise<boolean>;
+  private async deliver(text: string, how: boolean | (() => Promise<Sent> | undefined) = true, study?: StudyAction, test?: string): Promise<boolean> {
     this.messages.forEach(m => m.confirm = null);         // an older question is answered or dropped by this
-    const reply: PanelMessage = { role: 'aria', text: '', pending: true, question: text, study };
+    const reply: PanelMessage = { role: 'aria', text: '', pending: true, question: text, study, test };
     this.messages.push({ role: 'user', text }, reply);
     this.changed.next();
     this.asking = true;
@@ -144,7 +175,9 @@ export class AriaChat {
       m.text = e.reply || m.text;     // her final wording replaces the draft that was streamed
       m.pending = false;
       m.confirm = e.confirm;
+      const wasQuiz = this.quizActive;
       this.quizActive = e.quiz === true;
+      if (wasQuiz && !this.quizActive) void this.loadTests();     // a finished quiz changes what is due
     } else if (e.type === 'error') {
       m.pending = false;
       m.failed = true;

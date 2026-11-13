@@ -69,6 +69,29 @@ button { font: inherit; }
 }
 .problem button:hover, .confirm button:hover, .study button:hover:not(:disabled) { background: var(--bg-overlay); }
 .problem button:disabled, .study button:disabled { opacity: 0.5; cursor: default; }
+.tests { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+.test-card {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 2px 8px;
+  padding: 7px 10px;
+  border-radius: var(--r-md);
+  background: var(--bg);
+  border: 1px solid var(--line);
+}
+.test-headline { flex-basis: 100%; font-size: 13px; font-weight: 600; }
+.test-detail { flex: 1; min-width: 0; font-size: 12px; color: var(--text-2); overflow-wrap: anywhere; }
+.test-card button, .test-card select {
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line-strong);
+  background: var(--bg-raised);
+  color: var(--text);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.test-card button:hover:not(:disabled) { background: var(--bg-overlay); }
+.test-card button:disabled { opacity: 0.5; cursor: default; }
+.test-card select { max-width: 100%; }
 .study { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
 .study button { padding: 4px 10px; font-size: 12.5px; border-radius: 999px; }
 button.yes {

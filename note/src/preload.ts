@@ -41,7 +41,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
         // "Select text, ask Aria": her version of the selection comes back as a 'proposal' event
         edit: (request: unknown) => ipcRenderer.invoke('aria:edit', request),
         // a study button (Quiz me, Explain simply, Test prep) on the open note; answered like ask
-        study: (action: string) => ipcRenderer.invoke('aria:study', action),
+        study: (action: string, test?: string) => ipcRenderer.invoke('aria:study', action, test),
+        // the cards for upcoming tests; with a map it also saves which notebook belongs to a school subject
+        tests: (map?: { subject: string; notebook: number }) => ipcRenderer.invoke('aria:tests', map),
         status: (): Promise<'running' | 'not-running'> => ipcRenderer.invoke('aria:status'),
         start: (): Promise<{ ok: boolean; error?: 'no-launcher' | 'timeout' }> => ipcRenderer.invoke('aria:start'),
         onEvent: (callback: (event: unknown) => void) => {

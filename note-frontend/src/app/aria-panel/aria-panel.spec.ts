@@ -1,7 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { AriaPanel } from './aria-panel';
 import { ModelService } from '../model.service';
-import { AriaEvent } from '../../services/NoteService';
+import { AriaChat } from './aria-chat';
+import { AriaEvent, TestCard, TestCards } from '../../services/NoteService';
 import { Note } from '../../model/models';
 
 describe('Aria panel', () => {
@@ -15,6 +16,10 @@ describe('Aria panel', () => {
   let push: (e: AriaEvent) => void;
   let status: 'running' | 'not-running';
   let before: unknown;
+  let mapped: unknown[];
+  let testCalls: number;
+  let studiedTests: (string | undefined)[];
+  let nextTests: TestCards | (() => Promise<TestCards>);
 
   const settle = async () => { await fixture.whenStable(); fixture.detectChanges(); };
   const text = () => (fixture.nativeElement as HTMLElement).textContent ?? '';
@@ -28,6 +33,10 @@ describe('Aria panel', () => {
   beforeEach(async () => {
     asked = [];
     studied = [];
+    mapped = [];
+    testCalls = 0;
+    studiedTests = [];
+    nextTests = { ok: true, cards: [], notebooks: [] };
     let n = 0;
     askResult = () => ({ ok: true, id: `r${++n}` });
     startResult = { ok: true };
@@ -36,7 +45,8 @@ describe('Aria panel', () => {
     (window as any).electronAPI = {
       aria: {
         ask: async (t: string) => { asked.push(t); return askResult(); },
-        study: async (a: string) => { studied.push(a); return askResult(); },
+        study: async (a: string, test?: string) => { studied.push(a); studiedTests.push(test); return askResult(); },
+        tests: async (map?: unknown) => { testCalls++; mapped.push(map); return typeof nextTests === 'function' ? nextTests() : nextTests; },
         status: async () => status,
         start: async () => startResult,
         onEvent: (cb: (e: AriaEvent) => void) => { push = cb; return () => { push = () => undefined; }; },
@@ -361,6 +371,180 @@ describe('Aria panel', () => {
       expect(text()).toContain('Ask about this note, your lists or your calendar.');
       await openBio();
       expect(text()).toContain('Ask about this note, or use the buttons below to study it.');
+    });
+  });
+
+  describe('test cards', () => {
+    const chat = () => TestBed.inject(AriaChat);
+    const el = () => fixture.nativeElement as HTMLElement;
+    const card = (over: Partial<TestCard> = {}): TestCard => ({
+      id: 'dbi-1', subject: 'DBI', headline: 'DBI test on Tuesday · in 5 days', topic: 'Normalformen', days: 5,
+      notebook: { id: 12, name: 'Databases' }, notes: 3, ...over });
+    const show = async (cards: TestCard[], notebooks = [{ id: 12, name: 'Databases' }, { id: 13, name: 'Maths' }]) => {
+      nextTests = { ok: true, cards, notebooks };
+      await chat().loadTests();
+      await settle();
+    };
+    const cardButtons = () => Array.from(el().querySelectorAll('.test-card button')) as HTMLButtonElement[];
+
+    it('shows a card with headline, notebook line and Quiz me, with no note open', async () => {
+      await show([card()]);
+      expect(text()).toContain('DBI test on Tuesday · in 5 days');
+      expect(text()).toContain('Normalformen · Databases · 3 notes');
+      expect(cardButtons().map(b => b.textContent?.trim())).toEqual(['Quiz me']);
+      expect(el().querySelector('.study')).toBeNull();
+    });
+
+    it('says "1 note" for one note', async () => {
+      await show([card({ notes: 1 })]);
+      expect(text()).toContain('Normalformen · Databases · 1 note');
+      expect(text()).not.toContain('1 notes');
+    });
+
+    it('Quiz me on a card sends study(\'test\', id) and shows "Quiz me for my DBI test"', async () => {
+      await show([card()]);
+      cardButtons()[0].click();
+      await settle();
+      expect(studied).toEqual(['test']);
+      expect(studiedTests).toEqual(['dbi-1']);
+      expect(panel.messages.map(m => [m.role, m.text])).toEqual([['user', 'Quiz me for my DBI test'], ['aria', '']]);
+      expect(cardButtons().every(b => b.disabled)).toBeTrue();
+    });
+
+    it('an unmapped card asks which notebook and saves the choice', async () => {
+      await show([card({ notebook: null, notes: 0, topic: '' })]);
+      expect(text()).toContain('Which notebook is DBI?');
+      const select = el().querySelector('select') as HTMLSelectElement;
+      const label = el().querySelector('label') as HTMLLabelElement;
+      expect(label.htmlFor).toBe(select.id);
+      expect(Array.from(select.options).map(o => o.textContent?.trim())).toEqual(['Choose…', 'Databases', 'Maths']);
+      nextTests = { ok: true, cards: [card()], notebooks: [{ id: 12, name: 'Databases' }] };
+      select.value = '12';
+      select.dispatchEvent(new Event('change'));
+      await settle();
+      expect(mapped[mapped.length - 1]).toEqual({ subject: 'DBI', notebook: 12 });
+      expect(el().querySelector('select')).toBeNull();
+      expect(text()).toContain('Normalformen · Databases · 3 notes');
+    });
+
+    it('an unmapped card with no notebooks says to make one', async () => {
+      await show([card({ notebook: null, notes: 0 })], []);
+      expect(text()).toContain('Make a notebook for it first.');
+      expect(el().querySelector('select')).toBeNull();
+      expect(cardButtons()).toEqual([]);
+    });
+
+    it('a card with no usable notes has no button', async () => {
+      await show([card({ notes: 0 })]);
+      expect(text()).toContain('Databases · no notes with enough text yet');
+      expect(cardButtons()).toEqual([]);
+    });
+
+    it('cards are hidden while a quiz runs and reloaded when it ends', async () => {
+      await show([card()]);
+      cardButtons()[0].click();
+      await settle();
+      push({ id: 'r1', type: 'done', reply: 'Quiz on DBI.', tools: ['start_quiz'], confirm: null, quiz: true });
+      await settle();
+      expect(el().querySelector('.test-card')).toBeNull();
+      const before = testCalls;
+      push({ id: 'r1', type: 'done', reply: 'x', tools: [], confirm: null, quiz: true });
+      await panel.quizButton('stop');
+      push({ id: 'r2', type: 'done', reply: 'You got 3 of 8.', tools: ['quiz'], confirm: null, quiz: false });
+      await settle();
+      expect(testCalls).toBe(before + 1);
+      expect(el().querySelector('.test-card')).not.toBeNull();
+    });
+
+    it('a failed load keeps the cards that were there', async () => {
+      await show([card()]);
+      nextTests = { ok: false, cards: [], notebooks: [] };
+      await chat().loadTests();
+      await settle();
+      expect(text()).toContain('DBI test on Tuesday');
+    });
+
+    it('no cards and no error when tests() is missing or throws', async () => {
+      delete (window as any).electronAPI.aria.tests;
+      await chat().loadTests();
+      (window as any).electronAPI.aria.tests = async () => { throw new Error('old'); };
+      await chat().loadTests();
+      await chat().mapTest('DBI', 12);
+      await settle();
+      expect(chat().tests).toEqual([]);
+      expect(el().querySelector('.test-card')).toBeNull();
+    });
+
+    it('keeps the cards that were there when tests() later throws or goes missing', async () => {
+      await show([card()]);
+      (window as any).electronAPI.aria.tests = async () => { throw new Error('gone'); };
+      await chat().loadTests();
+      await chat().mapTest('DBI', 12);
+      await settle();
+      expect(text()).toContain('DBI test on Tuesday');
+      delete (window as any).electronAPI.aria.tests;
+      await chat().loadTests();
+      await settle();
+      expect(text()).toContain('DBI test on Tuesday');
+      expect(chat().notebooks.length).toBe(2);
+    });
+
+    it('opening the panel loads the cards without a manual loadTests', async () => {
+      nextTests = { ok: true, cards: [card()], notebooks: [] };
+      const before = testCalls;
+      const opened = TestBed.createComponent(AriaPanel);
+      opened.detectChanges();
+      await opened.whenStable();
+      opened.detectChanges();
+      expect(testCalls).toBeGreaterThan(before);
+      expect(opened.nativeElement.textContent).toContain('DBI test on Tuesday');
+    });
+
+    it('with no note open, a running test quiz still shows Hint, Skip and Stop', async () => {
+      await show([card()]);
+      cardButtons()[0].click();
+      await settle();
+      push({ id: 'r1', type: 'done', reply: 'Quiz on DBI.', tools: ['start_quiz'], confirm: null, quiz: true });
+      await settle();
+      expect(panel.noteTitle).toBeFalsy();
+      const labels = Array.from(el().querySelectorAll('.study button')).map(b => b.textContent?.trim());
+      expect(labels).toEqual(['Hint', 'Skip', 'Stop']);
+    });
+
+    it('with no note open and no quiz there are no study buttons', async () => {
+      await show([card()]);
+      expect(el().querySelector('.study')).toBeNull();
+    });
+
+    it('pressing Start loads the cards', async () => {
+      panel.running = false;
+      nextTests = { ok: true, cards: [card()], notebooks: [] };
+      const before = testCalls;
+      await panel.startAria();
+      await settle();
+      expect(testCalls).toBeGreaterThan(before);
+      expect(text()).toContain('DBI test on Tuesday');
+    });
+
+    it('the notebook choice is disabled while Aria is answering', async () => {
+      await show([card({ notebook: null, notes: 0 })]);
+      const select = () => el().querySelector('.test-card select') as HTMLSelectElement;
+      expect(select().disabled).toBeFalse();
+      await say('hello');
+      expect(select().disabled).toBeTrue();
+    });
+
+    it('retry resends the same test', async () => {
+      await show([card()]);
+      cardButtons()[0].click();
+      await settle();
+      push({ id: 'r1', type: 'error', message: 'Aria stopped answering.' });
+      await settle();
+      await panel.retry(panel.messages[1]);
+      await settle();
+      expect(studied).toEqual(['test', 'test']);
+      expect(studiedTests).toEqual(['dbi-1', 'dbi-1']);
+      expect(panel.messages.map(m => [m.role, m.text])).toEqual([['user', 'Quiz me for my DBI test'], ['aria', '']]);
     });
   });
 });

@@ -3,7 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { Subscription, combineLatest } from 'rxjs';
 import { ModelService } from '../model.service';
 import { AriaChat, PanelMessage } from './aria-chat';
-import { StudyAction } from '../../services/NoteService';
+import { Notebook, StudyAction, TestCard } from '../../services/NoteService';
 
 export type { PanelMessage } from './aria-chat';
 
@@ -35,12 +35,14 @@ export class AriaPanel implements OnInit, AfterViewInit, OnDestroy {
   get startError() { return this.chat.startError; }
   get busy() { return this.chat.busy; }
   get quizActive() { return this.chat.quizActive; }
+  get tests() { return this.chat.tests; }
+  get notebooks() { return this.chat.notebooks; }
 
   ngOnInit() {
     this.subs.add(combineLatest([this.modelService.currentNote$, this.modelService.isExistingNoteOpen$])
       .subscribe(([note, open]) => this.noteTitle = open && note ? (note.title?.trim() || 'Untitled note') : null));
     this.subs.add(this.chat.changed.subscribe(() => this.scrollDown()));
-    void this.chat.checkRunning();
+    void this.chat.checkRunning().then(() => this.chat.loadTests());
   }
 
   ngAfterViewInit() {
@@ -56,10 +58,23 @@ export class AriaPanel implements OnInit, AfterViewInit, OnDestroy {
   answer(text: 'yes' | 'no') { return this.chat.answer(text); }
   retry(m: PanelMessage) { return this.chat.retry(m); }
   study(action: StudyAction) { return this.chat.study(action); }
+  studyTest(card: TestCard) { return this.chat.studyTest(card); }
+  mapTest(subject: string, notebook: string) { return notebook ? this.chat.mapTest(subject, +notebook) : undefined; }
+  /** "Normalformen · Databases · 3 notes", or why there is no Quiz me */
+  detail(card: TestCard): string {
+    const nb = card.notebook;
+    if (!nb) return this.notebooks.length ? '' : 'Make a notebook for it first.';
+    if (card.notes === 0) return `${nb.name} · no notes with enough text yet`;
+    const notes = card.notes === 1 ? '1 note' : `${card.notes} notes`;
+    return [card.topic, nb.name, notes].filter(Boolean).join(' · ');
+  }
   quizButton(word: 'hint' | 'skip' | 'stop') { return this.chat.quizButton(word); }
 
   async startAria() {
-    if (await this.chat.startAria()) setTimeout(() => this.input?.nativeElement.focus());
+    if (await this.chat.startAria()) {
+      void this.chat.loadTests();
+      setTimeout(() => this.input?.nativeElement.focus());
+    }
   }
 
   onKey(e: KeyboardEvent) {

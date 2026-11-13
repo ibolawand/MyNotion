@@ -16,7 +16,12 @@ export type AriaEvent = { id: string } & (
   | { type: 'proposal'; html: string }
   | { type: 'error'; message: string });
 /** The Aria panel's study buttons (note/src/aria.ts). */
-export type StudyAction = 'quiz' | 'explain' | 'prep';
+export type StudyAction = 'quiz' | 'explain' | 'prep' | 'test';
+/** An upcoming school test, as the panel shows it (note/src/aria.ts). */
+export type TestCard = { id: string; subject: string; headline: string; topic: string; days: number;
+                         notebook: { id: number; name: string } | null; notes: number };
+export type Notebook = { id: number; name: string };
+export type TestCards = { ok: boolean; cards: TestCard[]; notebooks: Notebook[] };
 /** "Select text, ask Aria": what is sent for a selection. */
 export type AriaEditRequest = {
   action: 'rewrite' | 'shorter' | 'spelling' | 'table' | 'custom';
@@ -91,7 +96,8 @@ declare global {
         editing: () => Promise<number | null>;
         ask?: (text: string, tools?: boolean) => Promise<{ ok: true; id: string } | { ok: false; error: 'not-running' }>;
         edit?: (request: AriaEditRequest) => Promise<{ ok: true; id: string } | { ok: false; error: 'not-running' }>;
-        study?: (action: StudyAction) => Promise<{ ok: true; id: string } | { ok: false; error: 'not-running' }>;
+        study?: (action: StudyAction, test?: string) => Promise<{ ok: true; id: string } | { ok: false; error: 'not-running' }>;
+        tests?: (map?: { subject: string; notebook: number }) => Promise<TestCards>;
         status?: () => Promise<'running' | 'not-running'>;
         start?: () => Promise<{ ok: boolean; error?: 'no-launcher' | 'timeout' }>;
         onEvent?: (callback: (event: AriaEvent) => void) => () => void;

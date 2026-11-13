@@ -47,10 +47,35 @@
   }
 
   <footer>
+    @if (running !== false && !quizActive && tests.length) {
+    <div class="tests" role="group" aria-label="Tests coming up">
+      @for (card of tests; track card.id) {
+      <div class="test-card">
+        <div class="test-headline">{{ card.headline }}</div>
+        @if (card.notebook) {
+        <div class="test-detail">{{ detail(card) }}</div>
+        @if (card.notes > 0) {
+        <button type="button" (click)="studyTest(card)" [disabled]="busy" title="8 questions, your earlier mistakes first">Quiz me</button>
+        }
+        } @else if (notebooks.length) {
+        <label class="test-detail" [for]="'test-notebook-' + card.id">Which notebook is {{ card.subject }}?</label>
+        <select [id]="'test-notebook-' + card.id" [disabled]="busy" (change)="mapTest(card.subject, $any($event.target).value)">
+          <option value="">Choose…</option>
+          @for (n of notebooks; track n.id) {
+          <option [value]="n.id">{{ n.name }}</option>
+          }
+        </select>
+        } @else {
+        <div class="test-detail">{{ detail(card) }}</div>
+        }
+      </div>
+      }
+    </div>
+    }
     @if (noteTitle) {
     <div class="chip" title="Aria knows which note is open">This note: {{ noteTitle }}</div>
     }
-    @if (noteTitle && running !== false) {
+    @if ((noteTitle || quizActive) && running !== false) {
     <div class="study" role="group" [attr.aria-label]="quizActive ? 'Quiz' : 'Study this note'">
       @if (quizActive) {
       <button type="button" (click)="quizButton('hint')" [disabled]="busy">Hint</button>
